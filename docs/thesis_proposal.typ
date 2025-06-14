@@ -3,9 +3,11 @@
   header: align(right)[
             BSc Thesis Proposal
             ],
-            numbering: "1",
-            columns: 2,
+  numbering: "1",
+  columns: 2,
 )
+
+#set par(justify: true)
 
 #set text(
   hyphenate: true,
@@ -15,7 +17,7 @@
   top + center,
   float: true,
   scope: "parent",
-  clearance: 2em,
+  clearance: 3em,
 )[
   #align(center, text(14pt)[
     *A Foundational Formalization of Grounded Deduction In Isabelle\/Pure*
@@ -38,7 +40,7 @@
       EPFL \
       Co-Supervisor
     ],
-  )\
+  )
 ]
 
 == Introduction
@@ -70,4 +72,4 @@ The thesis aims to:
 // - Encode and prove internal correctness of recursive definitions for pairing, sequences, and other basic structures.
 // - Design macros or syntactic constructs to simulate native datatype and function definitions, while maintaining reduction to GA primitives.
 
-#bibliography("proposal.bib")
+#bibliography("proposal.bib", title: heading(level: 3, "Bibliography"))
