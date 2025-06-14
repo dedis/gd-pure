@@ -42,16 +42,16 @@
 ]
 
 == Introduction
-Modern theorem provers such as Coq and Lean rely on strong foundational logics to support inductive definitions, recursive functions, and structured proofs. These systems offer powerful definitional mechanisms but ensure consistency by tightly constraining those mechanisms, typically requiring termination, well-foundedness, or syntactic criteria on recursive definitions.
+Modern theorem provers such as Coq and Lean rely on strong foundational logics to support inductive definitions and recursive functions. These powerful definitional mechanisms can only remain consistency by being tightly constrained, typically requiring termination, well-foundedness, or other syntactic criteria on recursion.
 
 Grounded Deduction (GD) is a novel logical framework developed to invert this model @gd. Rather than constraining what users may define, GD permits arbitrary definitional recursion, even non-terminating or circular definitions such as $L equiv not L$.
 
-To maintain consistency, expansions of definitions in proofs are syntactically restricted and generate proof obligations. This principle is the foundational promise of GD: definitional freedom without compromising consistency.
+To maintain consistency in the presence of such unconstrained recursion, expansions of definitions in proofs are syntactically restricted and generate proof obligations. This principle is the foundational promise of GD: definitional freedom without compromising consistency.
 
 == Goal
 GD is not well studied yet and in particular remains to be proven consistent relative to any logic. Ongoing work formalizes GD in Isabelle/HOL to study such meta-logical properties.
 
-However, it is desirable to formalize GD within a minimal base logic, as this essentially removes a layer of abstraction in the form of the usual object logic used as meta-theory. With such a formalization, reasoning within the embedded GD logic is simpler and closer to the intended foundational principle, without being clouded by the language of a rich logic. Such a development would also make GD more usable as a tool for automated reasoning itself.
+However, it is desirable to formalize GD within a minimal base logic, as this essentially removes a layer of abstraction in the form of the usual object logic used as meta-theory. With such a formalization, reasoning within the embedded GD logic is simpler and closer to the intended foundational principles, without being clouded by the language of a rich meta-logic. Such a development would also make GD more usable as a tool for automated reasoning itself.
 
 This thesis seeks to realize such an implementation in Isabelle’s minimal base logic, _Pure_, which is designed for precisely such a task @isa.
 
