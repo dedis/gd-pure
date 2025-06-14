@@ -72,4 +72,5 @@ The thesis aims to:
 // - Encode and prove internal correctness of recursive definitions for pairing, sequences, and other basic structures.
 // - Design macros or syntactic constructs to simulate native datatype and function definitions, while maintaining reduction to GA primitives.
 
-#bibliography("proposal.bib", title: heading(level: 3, "Bibliography"))
+== Bibliography
+#bibliography("proposal.bib", title: none)
