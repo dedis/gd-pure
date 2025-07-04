@@ -136,9 +136,7 @@
 
   in-frontmatter.update(false)  // end of frontmatter
 
-  // Reset page numbering and start the main content.
-  set page(numbering: "1 / 1")
-  counter(page).update(1)
+  counter(page).update(0)
 
   // ========== DOCUMENT BODY ===============================
 
