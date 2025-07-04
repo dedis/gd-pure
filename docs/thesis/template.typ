@@ -4,19 +4,11 @@
 #let std-bibliography = bibliography
 #let template(
   title-page: none,
-  title: none,
-  thesistype: none,
-  author: none,
-  email: none,
-  supervisors: none, 
-  institute: none,
-  date: none,
   abstract: none,
   appendix: none,
   bibliography: none,
   bib-style: "ieee",
   math-numbering: "(1)",
-  date-format: "[day].[month].[year]",
   body,
 ) = {
   // ===================
@@ -42,12 +34,8 @@
   set math.equation(numbering: math-numbering)
 
   title-page()
+  counter(page).update(0)  
 
-  // Reset page numbering and start the main content.
-  // pagebreak()
-  set page(numbering: "1 / 1")
-  counter(page).update(1)
-  
   set text(
     font: body-font, 
     lang: "en", 
@@ -142,7 +130,12 @@
   )
 
   in-frontmatter.update(false)  // end of frontmatter
-  counter(page).update(0)       // so the first chapter starts at page 1 (now in arabic numbers)
+
+  // Reset page numbering and start the main content.
+  set page(numbering: "1 / 1")
+  counter(page).update(1)
+  
+
 
   // ========== DOCUMENT BODY =================================
 
