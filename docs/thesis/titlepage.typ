@@ -1,3 +1,9 @@
+// =====================================================
+// This file constructs the title page.
+// =====================================================
+
+#let consecutive-line-spacing = 0.6em
+
 #let title-page(
   title: none,
   thesistype: none,
@@ -18,19 +24,24 @@
   )
 
   let title-block = stack(
-    spacing: 1.5em,
+    spacing: 1.0em,
     text(16pt, weight: "bold")[#title],
     text(12pt)[#thesistype],
   )
 
   let author-block = stack(
-    spacing: 0.5em,
+    spacing: consecutive-line-spacing,
     author,
     email,
   )
 
+  let institute-block = stack(
+    spacing: consecutive-line-spacing,
+    ..institute
+  )
+
   let supervisor-block = stack(
-    spacing: 0.6em,
+    spacing: consecutive-line-spacing,
     [*Supervisors*:],
     ..supervisors
   )
@@ -43,7 +54,7 @@
     v(1fr),
     author-block,
     v(1fr),
-    institute,
+    institute-block,
     v(1.5fr),
     supervisor-block,
     v(0.5fr),

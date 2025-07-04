@@ -1,14 +1,19 @@
+// =====================================================
+// This file contains all formalisms, definitions,
+// formulae and tables to clean up the main thesis.typ
+// file.
+// =====================================================
+
 #import "@preview/codelst:2.0.2": *
 #import "@preview/hydra:0.6.1": hydra
 
 #let std-bibliography = bibliography
-#let template(
+#let thesis-template(
   title-page: none,
   abstract: none,
   appendix: none,
   bibliography: none,
   bib-style: "ieee",
-  math-numbering: "(1)",
   body,
 ) = {
   // ===================
@@ -31,33 +36,33 @@
   set figure.caption(separator: [ --- ], position: bottom)
 
   // math numbering
-  set math.equation(numbering: math-numbering)
+  // set math.equation(numbering: math-numbering)
 
   title-page()
   counter(page).update(0)  
 
+  // --- Global Text and Paragraph Styles ---
   set text(
-    font: body-font, 
-    lang: "en", 
-    size: body-size - 0.5pt,
-    top-edge: 0.75 * body-size, 
-    bottom-edge: -0.25 * body-size,
-    fill: luma(0),
-  )
-  set par(
-    spacing: page-grid,
-    leading: page-grid - body-size, 
-    justify: true,
+    font: body-font,
+    size: body-size,
+    lang: "en",
   )
 
+  set par(
+    justify: true,
+    leading: 0.65em,
+  )
+
+  // --- Page and Header Setup ---
   set page(
     paper: "a4",
     margin: (
       top: 2.5cm,
       bottom: 3.0cm,
-      left: 3.0cm + 5mm,
+      left: 3.0cm,
       right: 2.5cm,
-    ),
+    ), 
+
     header:
       grid(
         columns: (1fr, 1fr),
@@ -70,7 +75,8 @@
         )),
         text(font: heading-font, size: body-size, 
           number-type: "lining",
-          context {if in-frontmatter.get() {
+          context {
+            if in-frontmatter.get() {
               counter(page).display("i")      // roman page numbers for the frontmatter
             } else {
               counter(page).display("1")      // arabic page numbers for the rest of the document
@@ -82,21 +88,20 @@
       header-ascent: page-grid,
   )
 
-
-  // ========== FRONTMATTER ===================================
+  // ========== FRONTMATTER =================================
   
-  // ---------- Heading Format (Part I) -----------------------
+  // ---------- Heading Format (Part I) ---------------------
 
   show heading: set text(weight: "bold", font: heading-font)
   show heading.where(level: 1): it => {v(2 * page-grid) + text(size: 2 * page-grid, it)}
 
-  // ---------- Abstract --------------------------------------
+  // ---------- Abstract ------------------------------------
 
   heading(level: 1, numbering: none, outlined: false, "Abstract")
   text(abstract)
   pagebreak()
 
-  // ---------- ToC (Outline) ---------------------------------
+  // ---------- ToC (Outline) -------------------------------
 
   // top-level TOC entries in bold without filling
   show outline.entry.where(level: 1): it => {
@@ -134,12 +139,10 @@
   // Reset page numbering and start the main content.
   set page(numbering: "1 / 1")
   counter(page).update(1)
-  
 
+  // ========== DOCUMENT BODY ===============================
 
-  // ========== DOCUMENT BODY =================================
-
-  // ---------- Heading Format (Part II: H1-H4) ---------------
+  // ---------- Heading Format (Part II: H1-H4) -------------
 
   set heading(numbering: "1.1.1")
 
@@ -172,7 +175,7 @@
         )
       } else {
         v(2 * page-grid) 
-        text(size: 2 * page-grid, counter(heading).display() + h(0.5em) + it.body)   // appendix
+        text(size: 2 * page-grid, counter(heading).display() + h(0.5em) + it.body)
       }
     }
   }
@@ -181,18 +184,17 @@
   show heading.where(level: 3): it => {v(16pt) + text(size: h3-size, it)}
   show heading.where(level: 4): it => {v(16pt) + smallcaps(text(size: h4-size, weight: "semibold", it.body))}
 
- // ---------- Body Text ---------------------------------------
+ // ---------- Body Text ------------------------------------
 
   body
 
-
-  // ========== APPENDIX ========================================
+  // ========== APPENDIX ====================================
 
   in-body.update(false)
   set heading(numbering: "A.1")
   counter(heading).update(0)
 
-  // ---------- Bibliography ---------------------------------------
+  // ---------- Bibliography --------------------------------
 
   show std-bibliography: set heading(numbering: "A.1")
   if bibliography != none {
@@ -203,15 +205,15 @@
     bibliography
   }
 
-  // ---------- Appendix (other contents) ---------------------
+  // ---------- Appendix (other contents) -------------------
 
   if (appendix != none) {
     appendix
   }
 
-  // ========== LEGAL BACKMATTER ==============================
+  // ========== LEGAL BACKMATTER ============================
 
   set heading(numbering: it => h(-18pt) + "", outlined: false)
 
-  // ---------- Confidentiality Statement ---------------------
+  // ---------- Confidentiality Statement -------------------
 }
