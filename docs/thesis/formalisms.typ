@@ -23,19 +23,19 @@
 }
 
 #let pure-implication-rules = {
-  let tall-implication-premise = stack(dir: ttb, spacing: 0.4em, [$[phi]$], [$psi$], v(0.3em))
+  let introduction-premise = stack(dir: ttb, spacing: 0.4em, [$[phi]$], [$psi$], v(0.3em))
+  let elimination-premise = stack(dir: ttb, spacing: 0.4em, hide([$[phi]$]), [$phi arrow.double.long psi #h(2em) phi$], v(0.3em))
 
   let implication-intro = $
     frac(
-      #tall-implication-premise,
+      #introduction-premise,
       phi arrow.double.long psi
     ) #h(1em) (arrow.double.long I)
   $
 
-
   let implication-elim = $
     frac(
-      phi arrow.double.long psi #h(2em) phi #hide(tall-implication-premise),
+      #elimination-premise,
       psi
     ) #h(1em) (arrow.double.long E)
   $
@@ -45,7 +45,6 @@
   grid(
     columns: (1fr, 1fr),
     column-gutter: 10em,
-    row-gutter: 4em,
     implication-intro,
     implication-elim
   )
@@ -71,7 +70,6 @@
   grid(
     columns: (1fr, 1fr),
     column-gutter: 10em,
-    row-gutter: 4em,
     universal-intro,
     universal-elim
   )
