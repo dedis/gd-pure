@@ -9,7 +9,6 @@
   image-right: none,
   date: none
 ) = {
-  set page(numbering: none)
   set align(center)
   
   let logo-row = grid(
@@ -47,7 +46,7 @@
     institute,
     v(1.5fr),
     supervisor-block,
-    v(1em),
-    date,
+    v(0.5fr),
+    [#date.display("[day].[month].[year]")],
   )
 }

@@ -12,7 +12,6 @@
   "Prof. Dr. Roger Wattenhofer"
 )
 
-
 #show: template.with(
   title-page: title-page.with(
     title: "A Foundational Formalization of GD in Isabelle/Pure",
@@ -22,7 +21,8 @@
     supervisors: supervisors,
     institute: institute,
     image-left: image("figures/eth-logo.png", width: 75%),
-    image-right: image("figures/disco-logo.png", width: 50%)
+    image-right: image("figures/disco-logo.png", width: 50%),
+    date: datetime.today()
   ),
   bibliography: bibliography("references.bib"),
 )
