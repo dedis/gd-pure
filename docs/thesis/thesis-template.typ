@@ -7,21 +7,41 @@
 #import "@preview/codelst:2.0.2": *
 #import "@preview/hydra:0.6.1": hydra
 
-// =====================================================
-//                   HELPER FUNCTIONS
-// =====================================================
-#let set-global-settings = {
+#let std-bibliography = bibliography
+#let thesis-template(
+  title-page: none,
+  abstract: none,
+  appendix: none,
+  bibliography: none,
+  bib-style: "ieee",
+  body,
+) = {
+  // ========== Document-wide variables and setting ==========
+  let body-font = "New Computer Modern"
+  let body-size = 11pt
+  let heading-font = "New Computer Modern"
+  let h1-size = 20pt
+  let h2-size = 11pt
+  let h3-size = 11pt
+  let h4-size = 11pt
+  let page-grid = 13.6pt
+  let in-frontmatter = state("in-frontmatter", true)
+  let in-body = state("in-body", true)
   set par(justify: true)
   set figure.caption(separator: [ --- ], position: bottom)
   // set math.equation(numbering: math-numbering)
-}
+  // =========================================================
 
-#let set-content-settings(
-  body-font,
-  heading-font,
-  body-size,
-  page-grid
-) = { 
+
+
+  // ========== Title Page ===================================
+  title-page()
+  counter(page).update(0)
+  // =========================================================
+
+
+
+  // settings applying to all content except title-page
   set text(
     font: body-font,
     size: body-size,
@@ -67,17 +87,22 @@
       ),
       header-ascent: page-grid,
   )
-}
+  in-body.update(true)
 
-#let set-frontmatter-settings(
-  heading-font
-) = {
-  // ---------- Heading Format (Part I) ---------------------
+
+
+  // ========== Frontmatter ===================================
+  in-frontmatter.update(true)
   show heading: set text(weight: "bold", font: heading-font)
   show heading.where(level: 1): it => {v(2 * page-grid) + text(size: 2 * page-grid, it)}
-}
 
-#let set-toc-settings = { 
+  // ---------- Abstract ---------------------------------
+  heading(level: 1, numbering: none, outlined: false, "Abstract")
+  text(abstract)
+  pagebreak()
+  // -----------------------------------------------------
+
+  // ---------- ToC (Outline) ----------------------------
   show outline.entry.where(level: 1): it => {
     set block(above: page-grid)
     set text(font: heading-font, weight: "semibold", size: body-size)
@@ -101,9 +126,22 @@
       )
     )
   }
-}
+  
+  outline(
+    title: "Contents",
+    indent: auto,
+    depth: 3,
+  )
+  // -----------------------------------------------------
 
-#let set-body-headings = { 
+  in-frontmatter.update(false)
+  counter(page).update(0)
+  // =========================================================
+
+
+
+  // ========== Body Text ====================================
+
   set heading(numbering: "1.1.1")
 
   show heading: it => {
@@ -143,73 +181,7 @@
   show heading.where(level: 2): it => {v(16pt) + text(size: h2-size, it)}
   show heading.where(level: 3): it => {v(16pt) + text(size: h3-size, it)}
   show heading.where(level: 4): it => {v(16pt) + smallcaps(text(size: h4-size, weight: "semibold", it.body))}
-}
 
-#let std-bibliography = bibliography
-#let thesis-template(
-  title-page: none,
-  abstract: none,
-  appendix: none,
-  bibliography: none,
-  bib-style: "ieee",
-  body,
-) = {
-  // ========== Document-wide variables and setting ==========
-  let body-font = "New Computer Modern"
-  let body-size = 11pt
-  let heading-font = "New Computer Modern"
-  let h1-size = 20pt
-  let h2-size = 11pt
-  let h3-size = 11pt
-  let h4-size = 11pt
-  let page-grid = 13.6pt
-  let in-frontmatter = state("in-frontmatter", true)
-  let in-body = state("in-body", true)
-  set-global-settings
-  // =========================================================
-
-
-
-  // ========== Title Page ===================================
-  title-page()
-  // =========================================================
-
-
-
-  // settings applying to all content except title-page
-  set-content-settings(body-font, heading-font, body-size, page-grid)
-  in-body.update(true)
-
-
-
-  // ========== Frontmatter ===================================
-  in-frontmatter.update(true)
-  set-frontmatter-settings(heading-font)
-  counter(page).update(0)
-
-  // ---------- Abstract ---------------------------------
-  heading(level: 1, numbering: none, outlined: false, "Abstract")
-  text(abstract)
-  pagebreak()
-  // -----------------------------------------------------
-
-  // ---------- ToC (Outline) ----------------------------
-  set-toc-settings
-  outline(
-    title: "Contents",
-    indent: auto,
-    depth: 3,
-  )
-  // -----------------------------------------------------
-
-  in-frontmatter.update(false)
-  counter(page).update(0)
-  // =========================================================
-
-
-
-  // ========== Body Text ====================================
-  set-body-headings
   body
   in-body.update(false)
   // =========================================================

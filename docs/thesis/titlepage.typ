@@ -25,7 +25,7 @@
 
   let title-block = stack(
     spacing: 1.0em,
-    text(16pt, weight: "bold")[#title],
+    text(17pt, weight: "bold")[#title],
     text(12pt)[#thesistype],
   )
 

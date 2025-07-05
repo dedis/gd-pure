@@ -8,7 +8,7 @@
 
 #show: thesis-template.with(
   title-page: title-page.with(
-    title: "A Foundational Formalization of GD in Isabelle/Pure",
+    title: "A Foundational Formalization of Grounded Deduction in Isabelle/Pure",
     thesistype: "BSc Thesis",
     author: "Sascha Kehrli",
     email: "skehrli@ethz.ch",
