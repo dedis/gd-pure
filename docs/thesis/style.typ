@@ -9,7 +9,9 @@
     radius: 4pt,
     width: 100%,
     {
-      text(weight: "bold", title)
+      if title != none {
+        text(weight: "bold", title)
+      }
       body
     }
   )

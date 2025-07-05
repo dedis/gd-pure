@@ -7,41 +7,21 @@
 #import "@preview/codelst:2.0.2": *
 #import "@preview/hydra:0.6.1": hydra
 
-#let std-bibliography = bibliography
-#let thesis-template(
-  title-page: none,
-  abstract: none,
-  appendix: none,
-  bibliography: none,
-  bib-style: "ieee",
-  body,
-) = {
-  // ===================
-  // Global Settings
-  // ===================
+// =====================================================
+//                   HELPER FUNCTIONS
+// =====================================================
+#let set-global-settings = {
   set par(justify: true)
-  let body-font = "New Computer Modern"
-  let body-size = 11pt
-  let heading-font = "New Computer Modern"
-  let h1-size = 20pt
-  let h2-size = 11pt
-  let h3-size = 11pt
-  let h4-size = 11pt
-  let page-grid = 13.6pt
-
-  let in-frontmatter = state("in-frontmatter", true)    // to control page number format in frontmatter
-  let in-body = state("in-body", true)                  // to control heading formatting in/outside of body
-
-  // customize look of figure
   set figure.caption(separator: [ --- ], position: bottom)
-
-  // math numbering
   // set math.equation(numbering: math-numbering)
+}
 
-  title-page()
-  counter(page).update(0)  
-
-  // --- Global Text and Paragraph Styles ---
+#let set-content-settings(
+  body-font,
+  heading-font,
+  body-size,
+  page-grid
+) = { 
   set text(
     font: body-font,
     size: body-size,
@@ -87,23 +67,17 @@
       ),
       header-ascent: page-grid,
   )
+}
 
-  // ========== FRONTMATTER =================================
-  
+#let set-frontmatter-settings(
+  heading-font
+) = {
   // ---------- Heading Format (Part I) ---------------------
-
   show heading: set text(weight: "bold", font: heading-font)
   show heading.where(level: 1): it => {v(2 * page-grid) + text(size: 2 * page-grid, it)}
+}
 
-  // ---------- Abstract ------------------------------------
-
-  heading(level: 1, numbering: none, outlined: false, "Abstract")
-  text(abstract)
-  pagebreak()
-
-  // ---------- ToC (Outline) -------------------------------
-
-  // top-level TOC entries in bold without filling
+#let set-toc-settings = { 
   show outline.entry.where(level: 1): it => {
     set block(above: page-grid)
     set text(font: heading-font, weight: "semibold", size: body-size)
@@ -127,21 +101,9 @@
       )
     )
   }
+}
 
-  outline(
-    title: "Contents",
-    indent: auto,
-    depth: 3,
-  )
-
-  in-frontmatter.update(false)  // end of frontmatter
-
-  counter(page).update(0)
-
-  // ========== DOCUMENT BODY ===============================
-
-  // ---------- Heading Format (Part II: H1-H4) -------------
-
+#let set-body-headings = { 
   set heading(numbering: "1.1.1")
 
   show heading: it => {
@@ -181,19 +143,84 @@
   show heading.where(level: 2): it => {v(16pt) + text(size: h2-size, it)}
   show heading.where(level: 3): it => {v(16pt) + text(size: h3-size, it)}
   show heading.where(level: 4): it => {v(16pt) + smallcaps(text(size: h4-size, weight: "semibold", it.body))}
+}
 
- // ---------- Body Text ------------------------------------
+#let std-bibliography = bibliography
+#let thesis-template(
+  title-page: none,
+  abstract: none,
+  appendix: none,
+  bibliography: none,
+  bib-style: "ieee",
+  body,
+) = {
+  // ========== Document-wide variables and setting ==========
+  let body-font = "New Computer Modern"
+  let body-size = 11pt
+  let heading-font = "New Computer Modern"
+  let h1-size = 20pt
+  let h2-size = 11pt
+  let h3-size = 11pt
+  let h4-size = 11pt
+  let page-grid = 13.6pt
+  let in-frontmatter = state("in-frontmatter", true)
+  let in-body = state("in-body", true)
+  set-global-settings
+  // =========================================================
 
+
+
+  // ========== Title Page ===================================
+  title-page()
+  // =========================================================
+
+
+
+  // settings applying to all content except title-page
+  set-content-settings(body-font, heading-font, body-size, page-grid)
+  in-body.update(true)
+
+
+
+  // ========== Frontmatter ===================================
+  in-frontmatter.update(true)
+  set-frontmatter-settings(heading-font)
+  counter(page).update(0)
+
+  // ---------- Abstract ---------------------------------
+  heading(level: 1, numbering: none, outlined: false, "Abstract")
+  text(abstract)
+  pagebreak()
+  // -----------------------------------------------------
+
+  // ---------- ToC (Outline) ----------------------------
+  set-toc-settings
+  outline(
+    title: "Contents",
+    indent: auto,
+    depth: 3,
+  )
+  // -----------------------------------------------------
+
+  in-frontmatter.update(false)
+  counter(page).update(0)
+  // =========================================================
+
+
+
+  // ========== Body Text ====================================
+  set-body-headings
   body
-
-  // ========== APPENDIX ====================================
-
   in-body.update(false)
+  // =========================================================
+
+
+
+  // ========== Appendix =====================================
   set heading(numbering: "A.1")
   counter(heading).update(0)
 
-  // ---------- Bibliography --------------------------------
-
+  // ---------- Bibliography -----------------------------
   show std-bibliography: set heading(numbering: "A.1")
   if bibliography != none {
     set std-bibliography(
@@ -202,16 +229,18 @@
     )
     bibliography
   }
+  // -----------------------------------------------------
 
-  // ---------- Appendix (other contents) -------------------
-
+  // ---------- Appendix (other contents) ----------------
   if (appendix != none) {
     appendix
   }
+  // -----------------------------------------------------
 
-  // ========== LEGAL BACKMATTER ============================
-
+  // ---------- Confidentiality Statement ----------------
   set heading(numbering: it => h(-18pt) + "", outlined: false)
+  // -----------------------------------------------------
 
-  // ---------- Confidentiality Statement -------------------
+  // =========================================================
 }
+
