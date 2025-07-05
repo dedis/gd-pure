@@ -42,7 +42,7 @@ The connectives equality, implication, and universal quantification are all type
 
 The arguments of $equiv$ are the two operands to compare, the arguments for $arrow.double.long$ are the sequent and consequent respectively, while the arguments of $and.big$ are the type whose inhabitants are quantified over and the term that represents the body of the quantifier.
 
-Since type variables denote only a single, albeit arbitrary, type, there is technically one instance of each connective for every given type. For example, for any type $sigma$, there is a constant $equiv_sigma "":: sigma => sigma => prop$.
+Since type variables denote only a single, albeit arbitrary, type, there is technically one instance of each connective for every given type. For example, for any type $sigma$, there is a constant $equiv_sigma "":: sigma => sigma => "prop"$.
 
 === Deduction Rules
 
@@ -64,13 +64,13 @@ The implication and universal quantification introduction and elimination rules 
   #pure-forall-rules
 ]
 
-For equality, besides the expected deduction rules corresponding to the equivalence relation properties, there are also deduction rules for equality of lambda abstractions and `prop`, which is defined as equivalence of truth values ($a <=> b$).
+For equality, besides the expected deduction rules corresponding to the equivalence relation properties, there are also deduction rules for equality of lambda abstractions and `prop`, the latter of which is defined as equivalence of truth values ($a <=> b$).
 
 #definition-box("Equality Deduction Rules")[
   #pure-equality-rules
 ]
 
-The $lambda$-conversion rules facilitate equivalence reasoning for lambda abstractions. The rules are $alpha$-conversion, $beta$-conversion and extensionality.
+The $lambda$-conversion rules facilitate equivalence reasoning for lambda abstractions. The rules are $alpha$-conversion, $beta$-conversion and extensionality. The notation $a[y\/x]$ expresses the substitution of $x$ with $y$ in $a$, that is, all occurences of $x$ in $a$ are replaced with $y$.
 
 #definition-box("Lambda Conversion Rules")[
   #pure-lambda-conversion-rules

@@ -30,7 +30,7 @@
       | &lambda x:: tau. t "(lambda abstraction)" \
       | &t arrow.double.long t "(implication)"\ 
       | &t equiv t "(equality)"\ 
-      | &Lambda x:: tau. t "(universal quantification)"
+      | &and.big x:: tau. t "(universal quantification)"
   $
 }
 
@@ -100,7 +100,7 @@
     frac(
       A in Gamma,
       Gamma tack.r A 
-    ) #h(1em) ("Assumption")
+    ) #h(1em) ("Ass")
   $
 
   grid(
@@ -114,7 +114,7 @@
 #let pure-equality-rules = {
   let reflexivity = $
     frac(
-    ,
+    #hide($Gamma$),
       Gamma tack.r a equiv a
     ) #h(1em) (equiv "Refl")
   $
@@ -163,14 +163,14 @@
 
 #let pure-lambda-conversion-rules = {
   let alpha-conversion = deduction-rule(
-    $"y not free in" alpha$,
+    $"y not free in" a$,
     $Gamma tack.r (lambda x.a) equiv (lambda y.a[y\/x])$,
     $alpha"-Conv"$
   )
 
   let beta-conversion = deduction-rule(
-    "",
-    $(lambda x.a) " " b equiv a[b\/x]$,
+    hide($Gamma$),
+    $Gamma tack.r (lambda x.a) " " b equiv a[b\/x]$,
     $beta "-Conv"$
   )
 
