@@ -55,7 +55,8 @@ axiomatization
   succ :: \<open>nat \<Rightarrow> nat\<close>
 where
   succInj: \<open>succ m = succ n \<Longrightarrow> m = n\<close> and
-  succNonZero: \<open>succ n \<noteq> zero\<close> and
+  succNonZero: \<open>succ n \<noteq> zero\<close> (* and
   ind: \<open>\<lbrakk>P zero; \<And>n. P n \<Longrightarrow> P (succ n)\<rbrakk> \<Longrightarrow> P n\<close>
+  *)
 
 end
