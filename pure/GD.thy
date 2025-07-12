@@ -9,6 +9,13 @@ begin
 
 text \<open>The following theory development formalizes the Grounded Deduction Logic.\<close>
 
+(*
+syntax
+  "_turnstile" :: "prop \<Rightarrow> prop \<Rightarrow> prop"  (infixr "\<turnstile>" 1)
+translations
+  "_turnstile a b" \<rightleftharpoons> "a \<Longrightarrow> b"
+*)
+
 section \<open>Axiomatization of truth in GD\<close>
 
 typedecl o
@@ -29,17 +36,17 @@ where
 
   dNegI: \<open>P \<Longrightarrow> \<not>\<not>P\<close> and
   dNegE: \<open>\<not>\<not>P \<Longrightarrow> P\<close> and
-  negE: \<open>\<lbrakk>P; \<not>P\<rbrakk> \<Longrightarrow> Q\<close>
+  exF: \<open>\<lbrakk>P; \<not>P\<rbrakk> \<Longrightarrow> Q\<close>
 
 section \<open>Axiomatization of equality in GD\<close>
 
 typedecl nat
 
 axiomatization
-  eq :: \<open>[nat, nat] \<Rightarrow> o\<close>  (infixl \<open>=\<close> 50)
+  eq :: \<open>['a, 'a] \<Rightarrow> o\<close>  (infixl \<open>=\<close> 50)
 where
   eqRefl: \<open>a = a\<close> and
-  eqSubst: \<open>a = b \<Longrightarrow> Q a \<Longrightarrow> Q b\<close> and
+  eqSubst: \<open>\<lbrakk>a = b; Q a\<rbrakk> \<Longrightarrow> Q b\<close> and
   eqSym: \<open>a = b \<Longrightarrow> b = a\<close>
 
 definition neq (infixl \<open>\<noteq>\<close> 50)
@@ -54,8 +61,10 @@ axiomatization
 where
   sucInj: \<open>S a = S b \<Longrightarrow> a = b\<close>
 
-definition \<open>True \<equiv> 0 = 0\<close>
-definition \<open>False \<equiv> 0 = S(0)\<close>
+definition True
+  where \<open>True \<equiv> 0 = 0\<close>
+definition False
+  where \<open>False \<equiv> S(0) = 0\<close>
 definition bJudg (\<open>_ B\<close>)
   where \<open>p B \<equiv> p \<or> \<not>p\<close>
 definition conj (infixl \<open>\<and>\<close> 35)
@@ -69,7 +78,7 @@ where
   nat0: \<open>0 N\<close> and
   natS: \<open>n N \<Longrightarrow> S n N\<close> and
   natP: \<open>n N \<Longrightarrow> P n N\<close> and
-  eqT: \<open>\<lbrakk>a N; b N\<rbrakk> \<Longrightarrow> a = b B\<close> and
+  eqT: \<open>\<lbrakk>a N; b N\<rbrakk> \<Longrightarrow> (a = b) B\<close> and
   sucNonZero: \<open>a N \<Longrightarrow> S a \<noteq> 0\<close> and
   predSucSym: \<open>a N \<Longrightarrow> P(S(a)) = a\<close> and
   ind: \<open>\<lbrakk>a N; Q 0; \<And>x. x N \<Longrightarrow> Q x \<Longrightarrow> Q (S(x))\<rbrakk> \<Longrightarrow> Q a\<close>
@@ -87,7 +96,10 @@ axiomatization
 where
   condI1: \<open>\<lbrakk>c; a N\<rbrakk> \<Longrightarrow> c ? a : b = a\<close> and
   condI2: \<open>\<lbrakk>\<not>c; b N\<rbrakk> \<Longrightarrow> c ? a : b = b\<close> and
-  condT: \<open>\<lbrakk>c B; a N; b N\<rbrakk> \<Longrightarrow> (c ? a : b) N\<close>
+  condT: \<open>\<lbrakk>c B; a N; b N\<rbrakk> \<Longrightarrow> (c ? a : b) N\<close> and
+  condI1B: \<open>\<lbrakk>c; d B\<rbrakk> \<Longrightarrow> c ? d : e = d\<close> and
+  condI2B: \<open>\<lbrakk>\<not>c; e B\<rbrakk> \<Longrightarrow> c ? d : e = e\<close> and
+  condTB: \<open>\<lbrakk>c B; d B; e B\<rbrakk> \<Longrightarrow> (c ? d : e) B\<close>
 
 section \<open>Definitional Mechanism in GD\<close>
 
@@ -95,6 +107,12 @@ axiomatization
   def :: \<open>'a \<Rightarrow> 'a \<Rightarrow> o\<close> (\<open>_:=_\<close>)
 where
   defU: \<open>\<lbrakk>a := b; Q b\<rbrakk> \<Longrightarrow> Q a\<close>
+
+ML_file \<open>unfold_def.ML\<close>
+
+print_methods
+
+section \<open>Deductions of non-elementary inference rules.\<close>
 
 lemma grounded_contradiction:
   assumes p_bool: \<open>p B\<close>
@@ -111,8 +129,43 @@ proof (rule GD.disjE1[where P="p" and Q="\<not>p"])
     have q: "q" using notp_q[OF not_p] .
     have not_q: "\<not>q" using notp_notq[OF not_p] .
     from q and not_q show "p"
-      by (rule negE)
+      by (rule exF)
   qed
+qed
+
+lemma not_false: "\<not>False"
+proof (unfold False_def)
+  show "\<not>(S(0) = 0)"
+  proof -
+    have "S(0) \<noteq> 0" by (rule sucNonZero) (rule nat0)
+    then show ?thesis by (unfold neq_def)
+  qed
+qed
+
+lemma false_bool: "False B"
+proof (unfold GD.bJudg_def)
+  show "False \<or> \<not>False"
+  proof -
+    have "\<not>False" by (rule not_false)
+    then show ?thesis by (rule disjI2[where Q="\<not>False" and P="False"])
+  qed
+qed
+
+lemma disj_sym:
+  assumes q_or_r: "Q \<or> R"
+  shows "R \<or> Q"
+proof (rule disjE1[where P="Q" and Q="R" and R="R \<or> Q"])
+  show "Q \<or> R" by (rule q_or_r)
+  show "Q \<Longrightarrow> R \<or> Q"
+    proof -
+      assume Q
+      then show "R \<or> Q" by (rule disjI2[where Q="Q" and P="R"])
+    qed
+  show "R \<Longrightarrow> R \<or> Q"
+    proof -
+      assume R
+      then show "R \<or> Q" by (rule disjI1[where P="R" and Q="Q"])
+    qed
 qed
 
 theorem GD_consistent: "\<And>Q. \<not>(Q \<and> \<not>Q)"
@@ -122,16 +175,69 @@ theorem GD_consistent: "\<And>Q. \<not>(Q \<and> \<not>Q)"
  *)
 sorry
 
-locale defs =
-  fixes add :: "nat \<Rightarrow> nat \<Rightarrow> nat"
-  fixes mult :: "nat \<Rightarrow> nat \<Rightarrow> nat"
+section \<open>Definitions of basic arithmetic functions\<close>
+
+(* Use the recursion mechanism to define the standard arithmetic functions to
+ * be available in a global context.
+ * Axiomatizing them simply means that the fact that they are defined with the
+ * given definitions are axioms.
+ * User-defined functions should be in locales,
+ * not in axiomatization blocks.
+ *)
+axiomatization
+  add :: "nat \<Rightarrow> nat \<Rightarrow> nat"     (\<open>_+_\<close>) and
+  sub :: "nat \<Rightarrow> nat \<Rightarrow> nat"     (\<open>_-_\<close>) and
+  mult :: "nat \<Rightarrow> nat \<Rightarrow> nat"    (\<open>_*_\<close>) and
+  less :: "nat \<Rightarrow> nat \<Rightarrow> o"      (\<open>_<_\<close>) and
+  div :: "nat \<Rightarrow> nat \<Rightarrow> nat"
+where
+  def_add: "add := (\<lambda>x y. (y = 0) ? x : S(add x P(y)))" and
+  def_sub: "sub := (\<lambda>x y. (y = 0) ? x : P(sub x P(y)))" and
+  def_mult: "mult := (\<lambda>x y. (y = 0) ? 0 : (x + (mult x P(y))))" and
+  def_less: "less := (\<lambda>x y. (y = 0) ? False : ((x = 0) ? True : (less P(x) P(y))))" and
+  def_div: "div := (\<lambda>x y. (x < y) ? 0 : (div (x - y) y))"
+
+lemma less_0_false: "(x < 0) = False"
+proof (unfold_def def_less)
+  show "((0 = 0) ? False : ((x = 0) ? True : (P(x) < P(0)))) = False"
+    proof (rule condI1B)
+      show "0 = 0" by (rule eqRefl)
+      show "False B" by (rule false_bool)
+    qed
+qed
+
+(*
+ * Non-proof of termination for division. It gets stuck for the base case,
+ * since it doesn't terminate for y = 0.
+ *)
+lemma division_terminates:
+  assumes x_nat: "x N"
+  assumes y_nat: "y N"
+  shows "div x y N"
+proof (rule GD.ind[where a="y"])
+  show hq_cond: "y N" by (rule y_nat)
+  show base_case: "div x 0 N"
+  proof (unfold_def def_div)
+    show "(x < 0) ? 0 : (div (x - 0) 0) N"
+      apply (rule GD.eqSubst[where a="0"])
+      apply (rule eqSym)
+      apply (rule eqSubst[where a="0" and b="div (x-0) 0"])
+      apply (rule eqSym)
+      (* Recurses to the proof obligation that div x 0 is some natural number.
+       * Habeas quid for the win!
+       *)
+      sorry
+  qed
+  show ind_step: "\<And>a. a N \<Longrightarrow> div x a N \<Longrightarrow> (div x S(a)) N"
+    sorry
+qed
+
+(*
+locale liar_def =
   fixes L :: "o"
-  assumes def_add: "add := (\<lambda>x y. (y = 0) ? x : S(add x P(y)))"
-  assumes def_mult: "mult := (\<lambda>x y. (y = 0) ? 0 : (add x (mult x P(y))))"
   assumes def_l: "L := \<not>L"
 begin
 
-(*
 lemma f: "False"
 proof -
   assume l_holds: "L"
@@ -142,6 +248,9 @@ proof -
     apply (rule l_holds)
     done
   show "False"
+    sorry
+qed
+end
 *)
 
 section \<open>Termination Proofs of Addition and Multiplication\<close>
@@ -153,8 +262,7 @@ lemma add_terminates:
 proof (rule ind[where a=y])
   show habeas_quid_cond: "y N" by (rule y_nat)
   show base_case: "add x 0 N"
-    proof (rule GD.defU[where a="add" and b="\<lambda>x y.(y = 0) ? x : S(add x P(y))"])
-      show "add := \<lambda> x y. (y = 0) ? x : S(add x P(y))" by (rule def_add)
+    proof (unfold_def def_add)
       show "(0 = 0) ? x : S(add x P(0)) N"
         apply (rule eqSubst[where a="x"])
         apply (rule eqSym)
@@ -165,8 +273,7 @@ proof (rule ind[where a=y])
         done
     qed
   show ind_step: "\<And>a. a N \<Longrightarrow> add x a N \<Longrightarrow> add x S(a) N"
-    proof (rule GD.defU[where a="add" and b="\<lambda>x y.(y = 0) ? x : S(add x P(y))"])
-      show "add := \<lambda> x y. (y = 0) ? x : S(add x P(y))" by (rule def_add)
+    proof (unfold_def def_add)
       fix a
       assume HQ: "a N" and BC: "add x a N"
       show "(S(a) = 0) ? x : S(add x P(S(a))) N"
@@ -180,7 +287,7 @@ proof (rule ind[where a=y])
           show "x N" by (rule x_nat)
           show "S(add x P(S(a))) N"
             apply (rule GD.natS)
-            apply (rule eqSubst[where a="add x a"])
+            apply (rule eqSubst[where a="x+a"])
             apply (rule eqSubst[where a="a" and b="P(S(a))"])
             apply (rule eqSym)
             apply (rule predSucSym)
@@ -199,8 +306,7 @@ lemma mult_terminates:
 proof (rule ind[where a=y])
   show habeas_quid_cond: "y N" by (rule y_nat)
   show base_case: "mult x 0 N"
-    proof (rule GD.defU[where a="mult" and b="(\<lambda>x y.(y = 0) ? 0 : (add x (mult x P(y))))"])
-      show "mult :=\<lambda>x y.(y = 0) ? 0 : (add x (mult x P(y)))" by (rule def_mult)
+    proof (unfold_def def_mult)
       show "(0 = 0) ? 0 : (add x (mult x P(0))) N"
         apply (rule eqSubst[where a="0"])
         apply (rule eqSym)
@@ -211,8 +317,7 @@ proof (rule ind[where a=y])
         done
     qed
   show ind_step: "\<And>a. a N \<Longrightarrow> mult x a N \<Longrightarrow> mult x S(a) N"
-    proof (rule GD.defU[where a="mult" and b="(\<lambda>x y.(y = 0) ? 0 : (add x (mult x P(y))))"])
-      show "mult :=\<lambda>x y.(y = 0) ? 0 : (add x (mult x P(y)))" by (rule def_mult)
+    proof (unfold_def def_mult)
       fix a
       assume HQ: "a N" and BC: "mult x a N"
       show "(S(a) = 0) ? 0 : (add x (mult x P(S(a)))) N"
@@ -227,7 +332,7 @@ proof (rule ind[where a=y])
           show "add x (mult x P(S(a))) N"
             apply (rule add_terminates)
             apply (rule x_nat)
-            apply (rule eqSubst[where a="mult x a"])
+            apply (rule eqSubst[where a="x*a"])
             apply (rule eqSubst[where a="a" and b="P(S(a))"])
             apply (rule eqSym)
             apply (rule predSucSym)
@@ -239,5 +344,4 @@ proof (rule ind[where a=y])
     qed
 qed
 
-end (* End of definitional locale *)
 end (* End of theory *)
