@@ -96,51 +96,145 @@ section \<open>Dynamic Typing Rules in GD\<close>
 section \<open>Definitional Mechanism in GD\<close>
 
 axiomatization
-  def :: \<open>['a \<Rightarrow> 'a \<Rightarrow> 'a] \<Rightarrow> ['a \<Rightarrow> 'a \<Rightarrow> 'a] \<Rightarrow> o\<close>
+  def :: \<open>'a \<Rightarrow> 'a \<Rightarrow> o\<close> (\<open>_:=_\<close>)
 where
-  defU: \<open>\<lbrakk>def a b; Q b\<rbrakk> \<Longrightarrow> Q a\<close>
+  defU: \<open>\<lbrakk>a := b; Q b\<rbrakk> \<Longrightarrow> Q a\<close>
 
-lemma add_terminates:
-  assumes A1: \<open>def add (\<lambda>x y.((y = 0) ? x : S(add x P(y))))\<close>
-  assumes A2: \<open>x N\<close>
-  assumes A3: \<open>y N\<close>
-  shows       \<open>(add x y) N\<close>
-apply (rule ind[where Q="\<lambda>n. add x n N" and a=y])
-apply (rule A3)
-apply (rule eqSubst[where a="x" and b="add x 0"])
-apply (rule defU[where a="add" and b="(\<lambda>x y.((y = 0) ? x : S(add x P(y))))"])
-apply (rule A1)
-apply (rule eqSym)
-apply (rule condI1)
-apply (rule eqRefl)
-apply (rule A2)
-apply (rule A2)
-apply (rule defU[where a="add" and b="\<lambda>x y.((y = 0) ? x : S(add x P(y)))"])
-apply (rule A1)
-apply (rule GD.condT)
-apply (rule GD.eqT)
-apply (rule GD.natS)
+locale defs =
+  fixes add :: "nat \<Rightarrow> nat \<Rightarrow> nat"
+  fixes mult :: "nat \<Rightarrow> nat \<Rightarrow> nat"
+  fixes L :: "o"
+  assumes def_add: "add := (\<lambda>x y. (y = 0) ? x : S(add x P(y)))"
+  assumes def_mult: "mult := (\<lambda>x y. (y = 0) ? 0 : (add x (mult x P(y))))"
+  assumes def_l: "L := \<not>L"
+begin
+
+(*
+lemma f: "False"
 proof -
-  fix xa
-  assume H: "xa N" and BC: "add x xa N"
-  show "xa N"
-    by (rule H)
-  show "0 N"
-    by (rule GD.nat0)
-  show "x N"
-    by (rule A2)
-  show "S (add x P(S(xa))) N"
-  proof -
-    show "S (add x P(S(xa))) N"
-    apply (rule GD.natS)
-    apply (rule eqSubst[where a="add x xa" and b="add x P(S(xa))"])
-    apply (rule eqSubst[where a="xa" and b="P(S(xa))"])
-    apply (rule eqSym)
-    apply (rule predSucSym)
-    apply (rule H)
-    apply (rule eqRefl)
-    apply (rule BC)
+  assume l_holds: "L"
+  have "\<not>L"
+    apply (rule defU[where a="L" and b="\<not>L"])
+    apply (rule def_liar)
+    apply (rule dNegI)
+    apply (rule l_holds)
     done
+  show "False"
+*)
+
+lemma grounded_contradiction:
+  assumes p_bool: \<open>p B\<close>
+  assumes notp_q: \<open>\<not>p \<Longrightarrow> q\<close>
+  assumes notp_notq: \<open>\<not>p \<Longrightarrow> \<not>q\<close>
+  shows \<open>p\<close>
+proof (rule GD.disjE1[where P="p" and Q="\<not>p"])
+  show "p \<or> \<not>p"
+    using p_bool unfolding GD.bJudg_def .
+  show "p \<Longrightarrow> p" by assumption
+  show "\<not>p \<Longrightarrow> p"
+  proof -
+    assume not_p: "\<not>p"
+    have q: "q" using notp_q[OF not_p] .
+    have not_q: "\<not>q" using notp_notq[OF not_p] .
+    from q and not_q show "p"
+      by (rule negE)
   qed
 qed
-end
+
+section \<open>Termination Proofs of Addition and Multiplication\<close>
+
+lemma add_terminates:
+  assumes x_nat: \<open>x N\<close>
+  assumes y_nat: \<open>y N\<close>
+  shows       \<open>add x y N\<close>
+proof (rule ind[where a=y])
+  show habeas_quid_cond: "y N" by (rule y_nat)
+  show base_case: "add x 0 N"
+    proof (rule GD.defU[where a="add" and b="\<lambda>x y.(y = 0) ? x : S(add x P(y))"])
+      show "add := \<lambda> x y. (y = 0) ? x : S(add x P(y))" by (rule def_add)
+      show "(0 = 0) ? x : S(add x P(0)) N"
+        apply (rule eqSubst[where a="x"])
+        apply (rule eqSym)
+        apply (rule condI1)
+        apply (rule eqRefl)
+        apply (rule x_nat)
+        apply (rule x_nat)
+        done
+    qed
+  show ind_step: "\<And>a. a N \<Longrightarrow> add x a N \<Longrightarrow> add x S(a) N"
+    proof (rule GD.defU[where a="add" and b="\<lambda>x y.(y = 0) ? x : S(add x P(y))"])
+      show "add := \<lambda> x y. (y = 0) ? x : S(add x P(y))" by (rule def_add)
+      fix a
+      assume HQ: "a N" and BC: "add x a N"
+      show "(S(a) = 0) ? x : S(add x P(S(a))) N"
+        proof (rule GD.condT)
+          show "S(a) = 0 B"
+            apply (rule GD.eqT)
+            apply (rule GD.natS)
+            apply (rule HQ)
+            apply (rule GD.nat0)
+            done
+          show "x N" by (rule x_nat)
+          show "S(add x P(S(a))) N"
+            apply (rule GD.natS)
+            apply (rule eqSubst[where a="add x a"])
+            apply (rule eqSubst[where a="a" and b="P(S(a))"])
+            apply (rule eqSym)
+            apply (rule predSucSym)
+            apply (rule HQ)
+            apply (rule eqRefl)
+            apply (rule BC)
+            done
+        qed
+    qed
+qed
+
+lemma mult_terminates:
+  assumes x_nat: \<open>x N\<close>
+  assumes y_nat: \<open>y N\<close>
+  shows       \<open>mult x y N\<close>
+proof (rule ind[where a=y])
+  show habeas_quid_cond: "y N" by (rule y_nat)
+  show base_case: "mult x 0 N"
+    proof (rule GD.defU[where a="mult" and b="(\<lambda>x y.(y = 0) ? 0 : (add x (mult x P(y))))"])
+      show "mult :=\<lambda>x y.(y = 0) ? 0 : (add x (mult x P(y)))" by (rule def_mult)
+      show "(0 = 0) ? 0 : (add x (mult x P(0))) N"
+        apply (rule eqSubst[where a="0"])
+        apply (rule eqSym)
+        apply (rule condI1)
+        apply (rule eqRefl)
+        apply (rule nat0)
+        apply (rule nat0)
+        done
+    qed
+  show ind_step: "\<And>a. a N \<Longrightarrow> mult x a N \<Longrightarrow> mult x S(a) N"
+    proof (rule GD.defU[where a="mult" and b="(\<lambda>x y.(y = 0) ? 0 : (add x (mult x P(y))))"])
+      show "mult :=\<lambda>x y.(y = 0) ? 0 : (add x (mult x P(y)))" by (rule def_mult)
+      fix a
+      assume HQ: "a N" and BC: "mult x a N"
+      show "(S(a) = 0) ? 0 : (add x (mult x P(S(a)))) N"
+        proof (rule GD.condT)
+          show "S(a) = 0 B"
+            apply (rule GD.eqT)
+            apply (rule GD.natS)
+            apply (rule HQ)
+            apply (rule GD.nat0)
+            done
+          show "0 N" by (rule nat0)
+          show "add x (mult x P(S(a))) N"
+            apply (rule add_terminates)
+            apply (rule x_nat)
+            apply (rule eqSubst[where a="mult x a"])
+            apply (rule eqSubst[where a="a" and b="P(S(a))"])
+            apply (rule eqSym)
+            apply (rule predSucSym)
+            apply (rule HQ)
+            apply (rule eqRefl)
+            apply (rule BC)
+            done
+        qed
+    qed
+qed
+
+end (* End of definitional locale *)
+end (* End of theory *)
