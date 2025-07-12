@@ -52,8 +52,7 @@ axiomatization
   suc :: \<open>nat \<Rightarrow> nat\<close>     (\<open>S(_)\<close> [800]) and
   pred :: \<open>nat \<Rightarrow> nat\<close>     (\<open>P(_)\<close> [800])
 where
-  sucInj: \<open>S a = S b \<Longrightarrow> a = b\<close> and
-  sucInj2: \<open>a = b \<Longrightarrow> S a = S b\<close>
+  sucInj: \<open>S a = S b \<Longrightarrow> a = b\<close>
 
 definition \<open>True \<equiv> 0 = 0\<close>
 definition \<open>False \<equiv> 0 = S(0)\<close>
@@ -90,15 +89,38 @@ where
   condI2: \<open>\<lbrakk>\<not>c; b N\<rbrakk> \<Longrightarrow> c ? a : b = b\<close> and
   condT: \<open>\<lbrakk>c B; a N; b N\<rbrakk> \<Longrightarrow> (c ? a : b) N\<close>
 
-section \<open>Dynamic Typing Rules in GD\<close>
-
-
 section \<open>Definitional Mechanism in GD\<close>
 
 axiomatization
   def :: \<open>'a \<Rightarrow> 'a \<Rightarrow> o\<close> (\<open>_:=_\<close>)
 where
   defU: \<open>\<lbrakk>a := b; Q b\<rbrakk> \<Longrightarrow> Q a\<close>
+
+lemma grounded_contradiction:
+  assumes p_bool: \<open>p B\<close>
+  assumes notp_q: \<open>\<not>p \<Longrightarrow> q\<close>
+  assumes notp_notq: \<open>\<not>p \<Longrightarrow> \<not>q\<close>
+  shows \<open>p\<close>
+proof (rule GD.disjE1[where P="p" and Q="\<not>p"])
+  show "p \<or> \<not>p"
+    using p_bool unfolding GD.bJudg_def .
+  show "p \<Longrightarrow> p" by assumption
+  show "\<not>p \<Longrightarrow> p"
+  proof -
+    assume not_p: "\<not>p"
+    have q: "q" using notp_q[OF not_p] .
+    have not_q: "\<not>q" using notp_notq[OF not_p] .
+    from q and not_q show "p"
+      by (rule negE)
+  qed
+qed
+
+theorem GD_consistent: "\<And>Q. \<not>(Q \<and> \<not>Q)"
+(* Can't use grounded contradiction, because that requires proving that
+ * Q (i.e. any proposition) is boolean, that is, either true or false.
+ * Which is certainly not provable.
+ *)
+sorry
 
 locale defs =
   fixes add :: "nat \<Rightarrow> nat \<Rightarrow> nat"
@@ -121,25 +143,6 @@ proof -
     done
   show "False"
 *)
-
-lemma grounded_contradiction:
-  assumes p_bool: \<open>p B\<close>
-  assumes notp_q: \<open>\<not>p \<Longrightarrow> q\<close>
-  assumes notp_notq: \<open>\<not>p \<Longrightarrow> \<not>q\<close>
-  shows \<open>p\<close>
-proof (rule GD.disjE1[where P="p" and Q="\<not>p"])
-  show "p \<or> \<not>p"
-    using p_bool unfolding GD.bJudg_def .
-  show "p \<Longrightarrow> p" by assumption
-  show "\<not>p \<Longrightarrow> p"
-  proof -
-    assume not_p: "\<not>p"
-    have q: "q" using notp_q[OF not_p] .
-    have not_q: "\<not>q" using notp_notq[OF not_p] .
-    from q and not_q show "p"
-      by (rule negE)
-  qed
-qed
 
 section \<open>Termination Proofs of Addition and Multiplication\<close>
 
