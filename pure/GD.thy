@@ -16,20 +16,7 @@ judgment
   Trueprop :: \<open>o \<Rightarrow> prop\<close>  (\<open>_\<close> 5)
 
 axiomatization
-  eq :: \<open>['a, 'a] \<Rightarrow> o\<close>  (infixl \<open>=\<close> 45)
-where
-  eqRefl: \<open>a = a\<close> and
-  eqSubst: \<open>\<lbrakk>a = b; Q a\<rbrakk> \<Longrightarrow> Q b\<close> and
-  eqSym: \<open>a = b \<Longrightarrow> b = a\<close>
-
-lemma eq_trans: "a = b \<Longrightarrow> b = c \<Longrightarrow> a = c"
-apply (rule eqSubst[where a="b" and b="c"])
-apply (assumption)
-apply (assumption)
-done
-
-axiomatization
-  disj :: \<open>[o, o] \<Rightarrow> o\<close>  (infixr \<open>\<or>\<close> 30) and
+  disj :: \<open>o \<Rightarrow> o \<Rightarrow> o\<close>  (infixr \<open>\<or>\<close> 30) and
   not :: \<open>o \<Rightarrow> o\<close> (\<open>\<not> _\<close> [40] 40)
 where
   disjI1: \<open>P \<Longrightarrow> P \<or> Q\<close> and
@@ -38,18 +25,9 @@ where
   disjE1: \<open>\<lbrakk>P \<or> Q; P \<Longrightarrow> R; Q \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R\<close> and
   disjE2: \<open>\<not>(P \<or> Q) \<Longrightarrow> \<not>P\<close> and
   disjE3: \<open>\<not>(P \<or> Q) \<Longrightarrow> \<not>Q\<close> and
-
-  dNegEq: \<open>P = (\<not>\<not>P)\<close> and
+  dNegI: \<open>P \<Longrightarrow> (\<not>\<not>P)\<close> and
+  dNegE: \<open>(\<not>\<not>P) \<Longrightarrow> P\<close> and
   exF: \<open>\<lbrakk>P; \<not>P\<rbrakk> \<Longrightarrow> Q\<close>
-
-definition neq (infixl \<open>\<noteq>\<close> 45)
-  where \<open>a \<noteq> b \<equiv> \<not> (a = b)\<close>
-definition bJudg (\<open>_ B\<close> 30)
-  where \<open>(p B) \<equiv> (p \<or> \<not>p)\<close>
-definition conj (infixl \<open>\<and>\<close> 35)
-  where \<open>p \<and> q \<equiv> \<not>(\<not>p \<or> \<not>q)\<close>
-definition impl (infixl \<open>\<longrightarrow>\<close> 25)
-  where \<open>p \<longrightarrow> q \<equiv> \<not>p \<or> q\<close>
 
 lemma mp:
   assumes H1: "a \<Longrightarrow> b"
@@ -64,7 +42,71 @@ apply (rule H1)
 apply (assumption)
 done
 
-lemma implI:
+section \<open>Axiomatization of naturals in GD\<close>
+
+typedecl num
+
+axiomatization
+  eq :: \<open>num \<Rightarrow> num \<Rightarrow> o\<close>  (infixl \<open>=\<close> 45)
+where
+  eqSubst: \<open>\<lbrakk>a = b; Q a\<rbrakk> \<Longrightarrow> Q b\<close> and
+  eqSym: \<open>a = b \<Longrightarrow> b = a\<close>
+
+lemma eq_trans: "a = b \<Longrightarrow> b = c \<Longrightarrow> a = c"
+apply (rule eqSubst[where a="b" and b="c"])
+apply (assumption)
+apply (assumption)
+done
+
+definition neq :: \<open>num \<Rightarrow> num \<Rightarrow> o\<close> (infixl \<open>\<noteq>\<close> 45)
+  where \<open>a \<noteq> b \<equiv> \<not> (a = b)\<close>
+definition bJudg :: \<open>o \<Rightarrow> o\<close> (\<open>_ B\<close> 20)
+  where \<open>(p B) \<equiv> (p \<or> \<not>p)\<close>
+definition isNat :: \<open>num \<Rightarrow> o\<close> (\<open>_ N\<close> [31] 30)
+where "x N \<equiv> x = x"
+definition conj :: \<open>o \<Rightarrow> o \<Rightarrow> o\<close> (infixl \<open>\<and>\<close> 35)
+  where \<open>p \<and> q \<equiv> \<not>(\<not>p \<or> \<not>q)\<close>
+definition impl :: \<open>o \<Rightarrow> o \<Rightarrow> o\<close> (infixl \<open>\<longrightarrow>\<close> 25)
+  where \<open>p \<longrightarrow> q \<equiv> \<not>p \<or> q\<close>
+
+axiomatization
+  zero :: \<open>num\<close>          (\<open>0\<close>) and
+  suc :: \<open>num \<Rightarrow> num\<close>     (\<open>S(_)\<close> [800]) and
+  pred :: \<open>num \<Rightarrow> num\<close>    (\<open>P(_)\<close> [800])
+where
+  nat0: \<open>0 N\<close> and
+  sucInj: \<open>S a = S b \<Longrightarrow> a = b\<close> and
+  sucCong: \<open>a = b \<Longrightarrow> S a = S b\<close> and
+  predCong: \<open>a = b \<Longrightarrow> P a = P b\<close> and
+  eqBool: \<open>\<lbrakk>a N; b N\<rbrakk> \<Longrightarrow> (a = b) B\<close> and
+  sucNonZero: \<open>a N \<Longrightarrow> S a \<noteq> 0\<close> and
+  predSucSym: \<open>a N \<Longrightarrow> P(S(a)) = a\<close> and
+  pred0: \<open>P(0) = 0\<close>
+
+lemma zeroRefl [gd_simp]: "0 = 0"
+apply (fold isNat_def)
+apply (rule nat0)
+done
+
+lemma natS [gd_simp]:
+  assumes a_nat: "a N"
+  shows "S a N"
+apply (unfold isNat_def)
+apply (rule sucCong)
+apply (fold isNat_def)
+apply (rule a_nat)
+done
+
+lemma natP [gd_simp]:
+  assumes a_nat: "a N"
+  shows "P a N"
+apply (unfold isNat_def)
+apply (rule predCong)
+apply (fold isNat_def)
+apply (rule a_nat)
+done
+
+lemma implI [gd_simp]:
   assumes a_bool: "a B"
   assumes a_deduce_b: "a \<Longrightarrow> b"
   shows "a \<longrightarrow> b"
@@ -128,44 +170,8 @@ proof (rule GD.disjE1[where P="p" and Q="\<not>p"])
   qed
 qed
 
-section \<open>Axiomatization of naturals in GD\<close>
-
-typedecl nat
-
-axiomatization
-  zero :: \<open>nat\<close>          (\<open>0\<close>) and
-  suc :: \<open>nat \<Rightarrow> nat\<close>     (\<open>S(_)\<close> [800]) and
-  pred :: \<open>nat \<Rightarrow> nat\<close>    (\<open>P(_)\<close> [800]) and
-  isNat :: \<open>nat \<Rightarrow> o\<close>     (\<open>_ N\<close> [31] 30)
-where
-  sucEq: \<open>(S a = S b) = (a = b)\<close> and
-  nat0: \<open>0 N\<close> and
-  natS: \<open>n N \<Longrightarrow> S n N\<close> and
-  natP: \<open>n N \<Longrightarrow> P n N\<close> and
-  eqBool: \<open>\<lbrakk>a N; b N\<rbrakk> \<Longrightarrow> (a = b) B\<close> and
-  sucNonZero: \<open>a N \<Longrightarrow> S a \<noteq> 0\<close> and
-  predSucSym: \<open>a N \<Longrightarrow> P(S(a)) = a\<close> and
-  pred0: \<open>P(0) = 0\<close>
-
-lemma sucInj:
-  assumes H: "S a = S b"
-  shows "a = b"
-apply (rule eqSubst[where a="S a = S b"])
-apply (rule sucEq)
-apply (rule H)
-done
-
-lemma sucCong:
-  assumes H: "a = b"
-  shows "S a = S b"
-apply (rule eqSubst[where a="a=b"])
-apply (rule eqSym)
-apply (rule sucEq)
-apply (rule H)
-done
-
 syntax
-  "_gd_num" :: "num_token \<Rightarrow> nat"    ("_")
+  "_gd_num" :: "num_token \<Rightarrow> num"    ("_")
 
 ML_file "peano_numerals.ML"
 
@@ -215,8 +221,8 @@ where
   entailsE: "\<lbrakk>a \<turnstile> b; a\<rbrakk> \<Longrightarrow> b"
 
 axiomatization
-  forall :: "(nat \<Rightarrow> o) \<Rightarrow> o"  (binder "\<forall>" [8] 9) and
-  exists :: "(nat \<Rightarrow> o) \<Rightarrow> o"  (binder "\<exists>" [8] 9)
+  forall :: "(num \<Rightarrow> o) \<Rightarrow> o"  (binder "\<forall>" [8] 9) and
+  exists :: "(num \<Rightarrow> o) \<Rightarrow> o"  (binder "\<exists>" [8] 9)
 where
   forallI: "\<lbrakk>\<And>x. (x N \<Longrightarrow> Q x)\<rbrakk> \<Longrightarrow> \<forall>x. Q x" and
   forallE: "\<lbrakk>\<forall>x. Q x; a N\<rbrakk> \<Longrightarrow> Q a" and
@@ -229,9 +235,9 @@ where
 section \<open>Axiomatization of conditional evaluation in GD\<close>
 
 consts
-  cond :: \<open>o \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a\<close>
+  cond :: \<open>o \<Rightarrow> num \<Rightarrow> num \<Rightarrow> num\<close>
 syntax
-  "_cond" :: \<open>o \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a\<close>  (\<open>_ ? _ : _\<close> [55, 54, 54] 54)
+  "_cond" :: \<open>o \<Rightarrow> num \<Rightarrow> num \<Rightarrow> num\<close>  (\<open>_ ? _ : _\<close> [55, 54, 54] 54)
 translations
   "c ? a : b" \<rightleftharpoons> "CONST cond c a b"
 
@@ -300,14 +306,14 @@ where
   safedefI: \<open>\<lbrakk>(safedef a b) \<Longrightarrow> (\<And>c. a := c \<Longrightarrow> b = c)\<rbrakk> \<Longrightarrow> a := b\<close>
  *)
 
-lemmas [gd_simp] = condI3 condI1 condI2 condT nat0 natS natP sucNonZero predSucSym pred0 neq_def eqRefl dNegEq eqBool sucCong
+lemmas [gd_simp] = condI3 condI1 condI2 condT nat0 natS natP sucNonZero predSucSym pred0 neq_def eqBool sucCong
 ML_file \<open>unfold_def.ML\<close>
 
 section \<open>Deductions of non-elementary inference rules.\<close>
 
 lemma true [gd_simp]: "True"
 apply (unfold GD.True_def)
-apply (rule eqRefl)
+apply (gd_auto)
 done
 
 lemma true_bool [gd_simp]: "True B"
@@ -355,33 +361,17 @@ lemma not_bool [gd_simp]:
   assumes a_bool: "a B"
   shows "(\<not>a) B"
 apply (unfold GD.bJudg_def)
-apply (rule eqSubst[where a="a" and b="\<not>\<not>a"])
-apply (rule dNegEq)
+apply (rule disjE1[where P="\<not>a" and Q="a"])
 apply (rule disj_comm)
 apply (fold GD.bJudg_def)
 apply (rule a_bool)
+apply (unfold GD.bJudg_def)
+apply (rule disjI1)
+apply (assumption)
+apply (rule disjI2)
+apply (rule dNegI)
+apply (assumption)
 done
-
-lemma dNegI: "a \<Longrightarrow> \<not>\<not>a"
-proof -
-  assume a: "a"
-  show "\<not>\<not>a"
-  apply (rule eqSubst[where a="a"])
-  apply (rule dNegEq)
-  apply (rule a)
-  done
-qed
-
-lemma dNegE: "\<not>\<not>a \<Longrightarrow> a"
-proof -
-  assume d_neg_a: "\<not>\<not>a"
-  show "a"
-  apply (rule eqSubst[where a="\<not>\<not>a"])
-  apply (rule eqSym)
-  apply (rule dNegEq)
-  apply (rule d_neg_a)
-  done
-qed
 
 lemma neq_com:
   assumes a_nat: "a N"
@@ -482,12 +472,12 @@ section \<open>Definitions of basic arithmetic functions\<close>
  *)
 
 axiomatization
-  add  :: "nat \<Rightarrow> nat \<Rightarrow> nat"  (infixl "+" 60) and
-  sub  :: "nat \<Rightarrow> nat \<Rightarrow> nat"  (infixl "-" 60) and
-  mult :: "nat \<Rightarrow> nat \<Rightarrow> nat"  (infixl "*" 70) and
-  div  :: "nat \<Rightarrow> nat \<Rightarrow> nat"                  and
-  less :: "nat \<Rightarrow> nat \<Rightarrow> nat"  (infix "<" 50)  and
-  leq  :: "nat \<Rightarrow> nat \<Rightarrow> nat"  (infix "\<le>" 50) and
+  add  :: "num \<Rightarrow> num \<Rightarrow> num"  (infixl "+" 60) and
+  sub  :: "num \<Rightarrow> num \<Rightarrow> num"  (infixl "-" 60) and
+  mult :: "num \<Rightarrow> num \<Rightarrow> num"  (infixl "*" 70) and
+  div  :: "num \<Rightarrow> num \<Rightarrow> num"                  and
+  less :: "num \<Rightarrow> num \<Rightarrow> num"  (infix "<" 50)  and
+  leq  :: "num \<Rightarrow> num \<Rightarrow> num"  (infix "\<le>" 50) and
   omega :: "'a"
 where
   def_add: "add := (\<lambda>x y. (y = 0) ? x : S(x + P(y)))" and
@@ -498,48 +488,48 @@ where
   def_div: "div := (\<lambda>x y. (x < y = 1) ? 0 : S(div (x - y) y))" and
   def_omega: "omega := omega"
 
-definition greater :: "nat \<Rightarrow> nat \<Rightarrow> nat" (infix ">" 50) where
+definition greater :: "num \<Rightarrow> num \<Rightarrow> num" (infix ">" 50) where
   "greater x y \<equiv> 1 - (x \<le> y)"
 
-definition greater_eq :: "nat \<Rightarrow> nat \<Rightarrow> nat" (infix "\<ge>" 50) where
+definition greater_eq :: "num \<Rightarrow> num \<Rightarrow> num" (infix "\<ge>" 50) where
   "greater_eq x y \<equiv> 1 - (x < y)"
 
 (* Returns y if S(y) > sqrt(x), else returns the greatest y s.t. y*y\<le>x. *)
 axiomatization
-  sqrt_h :: "nat \<Rightarrow> nat \<Rightarrow> nat"
+  sqrt_h :: "num \<Rightarrow> num \<Rightarrow> num"
 where
   def_sqrt_h: "sqrt_h := (\<lambda>x y. (S(y) * S(y) > x = 1) ? y : (sqrt_h x S(y)))"
 
-definition floor_sqrt :: "nat \<Rightarrow> nat" where
+definition floor_sqrt :: "num \<Rightarrow> num" where
   "floor_sqrt x \<equiv> sqrt_h x 0"
 
-definition cpair :: "nat \<Rightarrow> nat \<Rightarrow> nat" where
+definition cpair :: "num \<Rightarrow> num \<Rightarrow> num" where
   "cpair x y \<equiv> div (x+y * S(x+y)) (2+y)"
 
 nonterminal cpair_args
 
 syntax
-  "_cpair"      :: "nat \<Rightarrow> cpair_args \<Rightarrow> nat"        ("\<langle>_,_\<rangle>")
-  "_cpair_arg"  :: "nat \<Rightarrow> cpair_args"               ("_")
-  "_cpair_args" :: "nat \<Rightarrow> cpair_args \<Rightarrow> cpair_args" ("_,_")
+  "_cpair"      :: "num \<Rightarrow> cpair_args \<Rightarrow> num"        ("\<langle>_,_\<rangle>")
+  "_cpair_arg"  :: "num \<Rightarrow> cpair_args"               ("_")
+  "_cpair_args" :: "num \<Rightarrow> cpair_args \<Rightarrow> cpair_args" ("_,_")
 translations
   "\<langle>x, y\<rangle>" == "CONST cpair x y"
   "_cpair x (_cpair_args y z)" == "_cpair x (_cpair_arg (_cpair y z))"
 
 (* recover w=x+y from the pair z *)
-definition cpzw :: "nat \<Rightarrow> nat" where
+definition cpzw :: "num \<Rightarrow> num" where
   "cpzw z \<equiv> div (floor_sqrt (8 * z + 1) - 1) 2"
 
 (* recover t from w *)
-definition cpwt :: "nat \<Rightarrow> nat" where
+definition cpwt :: "num \<Rightarrow> num" where
   "cpwt w \<equiv> div (w * S(w)) 2"
 
 (* recover y from a pair z *)
-definition cpy :: "nat \<Rightarrow> nat" where
+definition cpy :: "num \<Rightarrow> num" where
   "cpy z \<equiv> z - (cpwt (cpzw z))"
 
 (* recover x from a pair z *)
-definition cpx :: "nat \<Rightarrow> nat" where
+definition cpx :: "num \<Rightarrow> num" where
   "cpx z \<equiv> cpzw z - cpy z"
 
 lemma less_0_false [gd_simp]: "(x < 0) = 0"
@@ -559,7 +549,7 @@ proof (rule ind[where a=y])
         apply (rule eqSubst[where a="x"])
         apply (rule eqSym)
         apply (rule condI1)
-        apply (rule eqRefl)
+        apply (rule zeroRefl)
         apply (rule x_nat)
         apply (rule x_nat)
         done
@@ -584,7 +574,8 @@ proof (rule ind[where a=y])
             apply (rule eqSym)
             apply (rule predSucSym)
             apply (rule HQ)
-            apply (rule eqRefl)
+            apply (fold isNat_def)
+            apply (rule BC)
             apply (rule BC)
             done
         qed
@@ -603,7 +594,7 @@ proof (rule ind[where a=y])
         apply (rule eqSubst[where a="0"])
         apply (rule eqSym)
         apply (rule condI1)
-        apply (rule eqRefl)
+        apply (rule zeroRefl)
         apply (rule nat0)
         apply (rule nat0)
         done
@@ -629,7 +620,8 @@ proof (rule ind[where a=y])
             apply (rule eqSym)
             apply (rule predSucSym)
             apply (rule HQ)
-            apply (rule eqRefl)
+            apply (fold isNat_def)
+            apply (rule BC)
             apply (rule BC)
             done
         qed
@@ -641,7 +633,7 @@ lemma add_0 [gd_simp]:
   shows "a + 0 = a"
 apply (unfold_def def_add)
 apply (rule condI1)
-apply (rule eqRefl)
+apply (rule zeroRefl)
 apply (rule a_nat)
 done
 
@@ -701,7 +693,6 @@ proof (rule ind[where a="x"])
   show "0 \<le> 0 = 1"
     apply (unfold_def def_leq)
     apply (rule eqSubst[where a="1"])
-    apply (rule eqRefl)
     apply (gd_auto)
     done
   show "\<forall>x.(x \<le> x = 1) \<turnstile> (S(x) \<le> S(x) = 1)"
