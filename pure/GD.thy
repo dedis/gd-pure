@@ -289,9 +289,18 @@ section \<open>Definitional Mechanism in GD\<close>
 axiomatization
   def :: \<open>'a \<Rightarrow> 'a \<Rightarrow> o\<close> (infix \<open>:=\<close> 40)
 where
-  defU: \<open>\<lbrakk>a := b; Q b\<rbrakk> \<Longrightarrow> Q a\<close>
+  defE: \<open>\<lbrakk>a := b; Q b\<rbrakk> \<Longrightarrow> Q a\<close>
 
-lemmas [gd_simp] = condI3 condI1 condI2 condT nat0 natS natP sucNonZero predSucSym pred0 neq_def eqRefl dNegEq eqBool
+(*
+axiomatization
+  safe_def :: \<open>(nat \<Rightarrow> nat \<Rightarrow> nat) \<Rightarrow> (nat \<Rightarrow> nat \<Rightarrow> nat) \<Rightarrow> o\<close>
+where
+  safedefE: \<open>\<lbrakk>safedef a b; Q b\<rbrakk> \<Longrightarrow> Q a\<close> and
+  (* Sadly unprovable, so definitions must be axiomatized. *)
+  safedefI: \<open>\<lbrakk>(safedef a b) \<Longrightarrow> (\<And>c. a := c \<Longrightarrow> b = c)\<rbrakk> \<Longrightarrow> a := b\<close>
+ *)
+
+lemmas [gd_simp] = condI3 condI1 condI2 condT nat0 natS natP sucNonZero predSucSym pred0 neq_def eqRefl dNegEq eqBool sucCong
 ML_file \<open>unfold_def.ML\<close>
 
 section \<open>Deductions of non-elementary inference rules.\<close>
