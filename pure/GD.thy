@@ -917,6 +917,14 @@ apply (gd_auto)
 apply (rule x_nat)
 done
 
+lemma zero_div [gd_simp]:
+  assumes x_nat: "x N"
+  shows "div 0 S(x) = 0"
+apply (unfold_def def_div)
+apply (gd_auto)
+apply (rule x_nat)
+done
+
 lemma div_1 [gd_simp]:
   assumes x_nat: "x N"
   shows "div x 1 = x"
