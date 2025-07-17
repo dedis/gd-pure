@@ -898,7 +898,18 @@ proof (rule ind[where a="y"])
   qed
 qed
 
-lemma min_0 [gd_simp]:
+lemma zero_less_true [gd_simp]:
+  assumes a_nat: "a N"
+  shows "0 < S(a) = 1"
+apply (unfold_def def_less)
+apply (rule condI2Eq)
+apply (fold neq_def)
+apply (gd_auto)
+apply (rule a_nat)
+apply (gd_auto)
+done
+
+lemma sub_0 [gd_simp]:
   assumes x_nat: "x N"
   shows "x - 0 = x"
 apply (unfold_def def_sub)
@@ -913,10 +924,6 @@ proof (rule ind)
   show "x N" by (rule x_nat)
   show "div 0 1 = 0"
     apply (unfold_def def_div)
-    apply (gd_auto)
-    apply (unfold_def def_less)
-    apply (rule condI2Eq)
-    apply (fold neq_def)
     apply (gd_auto)
     done
   show "\<forall>x.(div x 1 = x) \<turnstile> (div S(x) 1 = S(x))"
@@ -987,29 +994,6 @@ proof (rule ind)
       qed
   qed
 qed
-
-lemma zero_less_S [gd_simp]:
-  assumes a_nat: "a N"
-  shows "0 < S(a) = 1"
-apply (unfold_def def_less)
-apply (rule condI2Eq)
-apply (fold neq_def)
-apply (gd_auto)
-apply (rule a_nat)
-apply (gd_auto)
-done
-
-lemma zero_less_true [gd_simp]:
-  assumes x_nat: "x N"
-  shows "0 < S(x) = 1"
-apply (rule eqSubst[where a="1"])
-apply (rule eqSym)
-apply (unfold_def def_less)
-apply (rule eqSubst[where a="1" and b="(0 = 0) ?  1 : (P(0) < P(S x))"])
-apply (rule eqSym)
-apply (gd_auto)
-apply (rule x_nat)
-done
 
 lemma division_terminates:
   assumes x_nat: "x N"
