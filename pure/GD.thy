@@ -138,7 +138,7 @@ axiomatization
   pred :: \<open>nat \<Rightarrow> nat\<close>    (\<open>P(_)\<close> [800]) and
   isNat :: \<open>nat \<Rightarrow> o\<close>     (\<open>_ N\<close> [31] 30)
 where
-  sucInj: \<open>S a = S b \<Longrightarrow> a = b\<close> and
+  sucEq: \<open>(S a = S b) = (a = b)\<close> and
   nat0: \<open>0 N\<close> and
   natS: \<open>n N \<Longrightarrow> S n N\<close> and
   natP: \<open>n N \<Longrightarrow> P n N\<close> and
@@ -146,6 +146,23 @@ where
   sucNonZero: \<open>a N \<Longrightarrow> S a \<noteq> 0\<close> and
   predSucSym: \<open>a N \<Longrightarrow> P(S(a)) = a\<close> and
   pred0: \<open>P(0) = 0\<close>
+
+lemma sucInj:
+  assumes H: "S a = S b"
+  shows "a = b"
+apply (rule eqSubst[where a="S a = S b"])
+apply (rule sucEq)
+apply (rule H)
+done
+
+lemma sucCong:
+  assumes H: "a = b"
+  shows "S a = S b"
+apply (rule eqSubst[where a="a=b"])
+apply (rule eqSym)
+apply (rule sucEq)
+apply (rule H)
+done
 
 syntax
   "_gd_num" :: "num_token \<Rightarrow> nat"    ("_")
