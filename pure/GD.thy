@@ -243,8 +243,8 @@ translations
 
 axiomatization
 where
-  condI1: \<open>\<lbrakk>c; a N\<rbrakk> \<Longrightarrow> (if c then a else b) \<doteq> a\<close> and
-  condI2: \<open>\<lbrakk>\<not>c; b N\<rbrakk> \<Longrightarrow> (if c then a else b) \<doteq> b\<close> and
+  condI1: \<open>\<lbrakk>c\<rbrakk> \<Longrightarrow> (if c then a else b) \<doteq> a\<close> and
+  condI2: \<open>\<lbrakk>\<not>c\<rbrakk> \<Longrightarrow> (if c then a else b) \<doteq> b\<close> and
   condT: \<open>\<lbrakk>c B; c \<Longrightarrow> a N; \<not>c \<Longrightarrow> b N\<rbrakk> \<Longrightarrow> if c then a else b N\<close>
 
 lemma condI1Eq:
@@ -257,7 +257,6 @@ apply (rule eqSym)
 apply (rule a_eq_d)
 apply (rule condI1)
 apply (rule c_holds)
-apply (rule d_nat)
 done
 
 lemma condI2Eq:
@@ -270,7 +269,6 @@ apply (rule eqSym)
 apply (rule a_eq_d)
 apply (rule condI2)
 apply (rule not_c)
-apply (rule d_nat)
 done
 
 lemma condI3:
@@ -282,10 +280,8 @@ apply (fold GD.bJudg_def)
 apply (rule c_bool)
 apply (rule condI1)
 apply (assumption)
-apply (rule a_nat)
 apply (rule condI2)
 apply (assumption)
-apply (rule a_nat)
 done
 
 ML_file "gd_auto.ML"
@@ -551,7 +547,6 @@ proof (rule ind[where a=y])
         apply (rule condI1)
         apply (rule zeroRefl)
         apply (rule x_nat)
-        apply (rule x_nat)
         done
     qed
   show ind_step: "\<forall>a. ((x + a) N) \<turnstile> ((x + S(a)) N)"
@@ -596,7 +591,6 @@ proof (rule ind[where a=y])
         apply (rule condI1)
         apply (rule zeroRefl)
         apply (rule nat0)
-        apply (rule nat0)
         done
     qed
   show ind_step: "\<forall>a. ((x * a) N) \<turnstile> ((x * S(a)) N)"
@@ -629,16 +623,13 @@ proof (rule ind[where a=y])
 qed
 
 lemma add_0 [gd_simp]:
-  assumes a_nat: "a N"
   shows "a + 0 \<doteq> a"
 apply (unfold_def def_add)
 apply (rule condI1)
 apply (rule zeroRefl)
-apply (rule a_nat)
 done
 
 lemma mult_0 [gd_simp]:
-  assumes a_nat: "a N"
   shows "a * 0 \<doteq> 0"
 apply (unfold_def def_mult)
 apply (gd_auto)
@@ -903,11 +894,9 @@ apply (gd_auto)
 done
 
 lemma sub_0 [gd_simp]:
-  assumes x_nat: "x N"
   shows "x - 0 \<doteq> x"
 apply (unfold_def def_sub)
 apply (gd_auto)
-apply (rule x_nat)
 done
 
 lemma zero_div [gd_simp]:
@@ -945,14 +934,12 @@ proof (rule ind)
       apply (rule eqSubst[where a="S(xa)" and b="(S(xa)) - 0"])
       apply (rule eqSym)
       apply (gd_auto)
-      apply (rule xa_nat)
       apply (rule eqSym)
       apply (gd_auto)
       apply (rule xa_nat)
       apply (gd_auto)
       apply (fold neq_def)
       apply (gd_auto)
-      apply (rule xa_nat)
       apply (rule eqSym)
       apply (rule ind_h)
       apply (gd_auto)
@@ -972,7 +959,6 @@ proof (rule ind)
       apply (rule eqSym)
       apply (gd_auto)
       proof -
-        show "xa N" by (rule xa_nat)
         assume H: "\<not> \<not> (if (S(0) \<doteq> 0) then 0 else (if (S(xa) \<doteq> 0) then S(0) else (xa < P(S 0)))) \<doteq> S(0)"
         show "False"
           apply (rule exF[where P="\<not> (if S(0) \<doteq> 0 then 0 else (if S(xa) \<doteq> 0 then S(0) else (xa < P(S 0)))) \<doteq> S(0)"])
