@@ -47,7 +47,7 @@ section \<open>Axiomatization of naturals in GD\<close>
 typedecl num
 
 axiomatization
-  eq :: \<open>num \<Rightarrow> num \<Rightarrow> o\<close>  (infixl \<open>\<doteq>\<close> 45)
+  eqNum :: \<open>num \<Rightarrow> num \<Rightarrow> o\<close>  (infixl \<open>\<doteq>\<close> 45)
 where
   eqSubst: \<open>\<lbrakk>a \<doteq> b; Q a\<rbrakk> \<Longrightarrow> Q b\<close> and
   eqSym: \<open>a \<doteq> b \<Longrightarrow> b \<doteq> a\<close>
