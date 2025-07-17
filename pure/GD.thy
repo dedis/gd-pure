@@ -270,7 +270,7 @@ ML_file "gd_auto.ML"
 section \<open>Definitional Mechanism in GD\<close>
 
 axiomatization
-  def :: \<open>'a \<Rightarrow> 'a \<Rightarrow> o\<close> (\<open>_:=_\<close>)
+  def :: \<open>'a \<Rightarrow> 'a \<Rightarrow> o\<close> (infix \<open>:=\<close> 40)
 where
   defU: \<open>\<lbrakk>a := b; Q b\<rbrakk> \<Longrightarrow> Q a\<close>
 
