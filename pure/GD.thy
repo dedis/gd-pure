@@ -147,6 +147,15 @@ where
   predSucSym: \<open>a N \<Longrightarrow> P(S(a)) = a\<close> and
   pred0: \<open>P(0) = 0\<close>
 
+syntax
+  "_gd_num" :: "num_token \<Rightarrow> nat"    ("_")
+
+ML_file "peano_numerals.ML"
+
+parse_translation \<open>
+  [(@{syntax_const "_gd_num"}, Peano_Syntax.parse_gd_numeral)]
+\<close>
+
 definition True
   where \<open>True \<equiv> 0 = 0\<close>
 definition False
@@ -446,26 +455,6 @@ section \<open>Definitions of basic arithmetic functions\<close>
  * not in axiomatization blocks.
  *)
 
-
-definition one (\<open>1\<close>)
-  where \<open>1 \<equiv> S(0)\<close>
-definition two (\<open>2\<close>)
-  where \<open>2 \<equiv> S(1)\<close>
-definition three (\<open>3\<close>)
-  where \<open>3 \<equiv> S(2)\<close>
-definition four (\<open>4\<close>)
-  where \<open>4 \<equiv> S(3)\<close>
-definition five (\<open>5\<close>)
-  where \<open>5 \<equiv> S(4)\<close>
-definition six (\<open>6\<close>)
-  where \<open>6 \<equiv> S(5)\<close>
-definition seven (\<open>7\<close>)
-  where \<open>7 \<equiv> S(6)\<close>
-definition eight (\<open>8\<close>)
-  where \<open>8 \<equiv> S(7)\<close>
-definition nine (\<open>9\<close>)
-  where \<open>9 \<equiv> S(8)\<close>
-
 axiomatization
   add  :: "nat \<Rightarrow> nat \<Rightarrow> nat"  (infixl "+" 60) and
   sub  :: "nat \<Rightarrow> nat \<Rightarrow> nat"  (infixl "-" 60) and
@@ -686,8 +675,6 @@ proof (rule ind[where a="x"])
     apply (rule eqSubst[where a="1"])
     apply (rule eqRefl)
     apply (gd_auto)
-    apply (unfold one_def)
-    apply (gd_auto)
     done
   show "\<forall>x.(x \<le> x = 1) \<turnstile> (S(x) \<le> S(x) = 1)"
   proof (rule forallI, rule entailsI)
@@ -709,9 +696,6 @@ proof (rule ind[where a="x"])
       apply (fold neq_def)
       apply (gd_auto)
       apply (rule x_nat)
-      apply (unfold one_def)
-      apply (rule natS)
-      apply (rule nat0)
       apply (rule condI2)
       apply (fold neq_def)
       apply (gd_auto)
@@ -728,8 +712,6 @@ proof (rule ind[where a="z"])
   show "z N" by (rule z_nat)
   show "((P(0)) \<le> 0) = 1"
     apply (unfold_def def_leq)
-    apply (gd_auto)
-    apply (unfold one_def)
     apply (gd_auto)
     done
   show "\<forall>x. ((P(x))\<le>x = 1) \<turnstile> (((P(S(x)))\<le>S(x)) = 1)"
@@ -751,14 +733,10 @@ proof (rule ind[where a="z"])
         apply (fold neq_def)
         apply (gd_auto)
         apply (rule x_nat)
-        apply (unfold one_def)
         apply (gd_auto)
-        apply (fold one_def)
         apply (rule ind_hyp)
         apply (gd_auto)
         apply (rule x_nat)
-        apply (unfold one_def)
-        apply (gd_auto)
         done
     qed
 qed
@@ -787,7 +765,6 @@ proof (rule grounded_contradiction[where q="False"])
         apply (rule condI2Eq)
         apply (rule x_nonzero)
         apply (gd_auto)
-        apply (unfold one_def)
         apply (fold neq_def)
         apply (gd_auto)
         done
@@ -868,8 +845,6 @@ proof (rule ind[where a="y"])
             apply (gd_auto)
             apply (rule xa_nat)
             apply (rule z_nat)
-            apply (unfold one_def)
-            apply (gd_auto)
             apply (rule eqSubst[where a="xa" and b="P(S(xa))"])
             apply (rule eqSym)
             apply (gd_auto)
@@ -907,7 +882,6 @@ proof (rule ind)
     apply (gd_auto)
     apply (unfold_def def_less)
     apply (rule condI2Eq)
-    apply (unfold one_def)
     apply (fold neq_def)
     apply (gd_auto)
     done
@@ -921,7 +895,6 @@ proof (rule ind)
       apply (rule eqSubst[where a="xa" and b="div ((S(xa))-1) 1"])
       apply (rule eqSubst[where a="xa" and b="(S(xa))-1"])
       apply (unfold_def def_sub)
-      apply (unfold one_def)
       apply (rule eqSym)
       apply (rule eqSubst[where a="xa" and b="P((S(xa)) - P(S(0)))"])
       apply (rule eqSubst[where a="0" and b="P(S(0))"])
@@ -938,7 +911,6 @@ proof (rule ind)
       apply (fold neq_def)
       apply (gd_auto)
       apply (rule xa_nat)
-      apply (fold one_def)
       apply (rule eqSym)
       apply (rule ind_h)
       apply (gd_auto)
@@ -948,8 +920,6 @@ proof (rule ind)
       apply (gd_auto)
       apply (rule xa_nat)
       apply (rule contradiction)
-      apply (gd_auto)
-      apply (unfold one_def)
       apply (gd_auto)
       apply (rule xa_nat)
       apply (gd_auto)
@@ -992,7 +962,6 @@ apply (rule condI2Eq)
 apply (fold neq_def)
 apply (gd_auto)
 apply (rule a_nat)
-apply (unfold one_def)
 apply (gd_auto)
 done
 
@@ -1004,10 +973,6 @@ apply (rule eqSym)
 apply (unfold_def def_less)
 apply (rule eqSubst[where a="1" and b="(0 = 0) ?  1 : (P(0) < P(S x))"])
 apply (rule eqSym)
-apply (gd_auto)
-apply (unfold one_def)
-apply (gd_auto)
-apply (fold one_def)
 apply (gd_auto)
 apply (rule x_nat)
 done
