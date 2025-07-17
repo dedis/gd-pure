@@ -1065,4 +1065,93 @@ qed
 end
 *)
 
+ML_file "gd_typeencode.ML"
+
+subsection "User-level Equality"
+
+text "We define a user-level equality, which doesn't know about
+  the underlying \<open>num\<close> representation.
+  For the following manually constructed inductive datatype, it cannot
+  be proven for example that \<open>Nil = 0\<close> or \<open>Nil \<doteq> 0\<close>, even though Cons is
+  actually represented by 0. The type_synonym types are opaque."
+
+axiomatization
+  eq :: "'a \<Rightarrow> 'a \<Rightarrow> o" (infix "=" 20)
+where
+  refl: "a = a" and
+  eq_comm: "a = b \<Longrightarrow> b = a" and
+  eq_subst: "\<lbrakk>a = b; Q b\<rbrakk> \<Longrightarrow> Q a"
+
+text "A manual construction of an inductive datatype.
+  Later, we want this to be generated automatically from something
+  like \<open>declaretype List = Nil | Cons of \<open>nat\<close> \<open>List\<close>\<close>."
+
+(*
+type_synonym List = num
+*)
+
+typedecl List
+
+consts
+  Nil :: "List"
+  Cons :: "num \<Rightarrow> List \<Rightarrow> List"
+  list_encode :: "List \<Rightarrow> num"
+  list_decode :: "num \<Rightarrow> List"
+  is_list :: "num \<Rightarrow> num"
+
+axiomatization
+where
+  const_distinct: "\<not> (Nil = (Cons a x))" and
+  list_injective: "(Cons a x) = (Cons b y) \<Longrightarrow> a \<doteq> b \<and> (x = y)" and
+  list_encode:  "list_encode := (\<lambda>x.
+                             if (x = Nil) then \<langle>0,0\<rangle>
+                             else if (x = (Cons n xs)) then \<langle>0,1,n,list_encode xs\<rangle>
+                             else omega)" and
+  list_decode: "list_decode := (\<lambda>x.
+                             if (x \<doteq> \<langle>0,0\<rangle>) then Nil
+                             else if (x \<doteq> \<langle>0,1,n,z'\<rangle>) then Cons n (list_decode z')
+                             else omega)"
+
+(* You CAN prove something like this. List encoding of Nil
+ * is equal to 0 at the num level.
+ * I was simply too lazy to finish the arithmetic derivation.
+ *)
+lemma zero_is_cons: "list_encode Nil \<doteq> 0"
+apply (unfold_def list_encode)
+apply (rule condI1Eq)
+apply (rule refl)
+apply (rule nat0)
+apply (unfold cpair_def)
+apply (unfold_def def_div)
+sorry
+
+lemma list_encode_nil: "list_encode Nil \<doteq> \<langle>0, 0\<rangle>"
+apply (unfold_def list_encode)
+apply (rule condI1)
+apply (rule refl)
+sorry
+lemma list_encode_cons:  "list_encode (Cons n xs) \<doteq> \<langle>0, 1, n, list_encode xs\<rangle>"
+sorry
+lemma list_decode_nil: "(list_decode \<langle>0, 0\<rangle>) = Nil"
+sorry
+lemma list_decode_cons: "list_decode \<langle>0, 1, n, z'\<rangle> = Cons n (list_decode z')"
+sorry
+
+lemma list_induction: "\<lbrakk>Q Nil; \<forall>n xs. n N \<turnstile> Q (list_decode xs) \<turnstile> Q (Cons n (list_decode xs))\<rbrakk> \<Longrightarrow> Q l"
+sorry
+lemma encode_decode_correct: "list_encode x N \<Longrightarrow> list_decode (list_encode x) = x"
+sorry
+lemma decode_encode_correct: "list_decode (list_encode x) = x"
+sorry
+
+(*
+declaretype num =
+  Zero
+  | Suc of "num"
+
+declaretype list =
+  nil
+  | cons of "num" "list"
+*)
+
 end (* End of theory *)
