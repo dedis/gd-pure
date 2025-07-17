@@ -62,7 +62,7 @@ definition neq :: \<open>num \<Rightarrow> num \<Rightarrow> o\<close> (infixl \
   where \<open>a \<noteq> b \<equiv> \<not> (a \<doteq> b)\<close>
 definition bJudg :: \<open>o \<Rightarrow> o\<close> (\<open>_ B\<close> 20)
   where \<open>(p B) \<equiv> (p \<or> \<not>p)\<close>
-definition isNat :: \<open>num \<Rightarrow> o\<close> (\<open>_ N\<close> [31] 30)
+definition isNat :: \<open>num \<Rightarrow> o\<close> (\<open>_ N\<close> [21] 20)
 where "x N \<equiv> x \<doteq> x"
 definition conj :: \<open>o \<Rightarrow> o \<Rightarrow> o\<close> (infixl \<open>\<and>\<close> 35)
   where \<open>p \<and> q \<equiv> \<not>(\<not>p \<or> \<not>q)\<close>
