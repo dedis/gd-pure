@@ -235,24 +235,24 @@ where
 section \<open>Axiomatization of conditional evaluation in GD\<close>
 
 consts
-  cond :: \<open>o \<Rightarrow> num \<Rightarrow> num \<Rightarrow> num\<close>
+  cond :: \<open>o \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a\<close>
 syntax
-  "_cond" :: \<open>o \<Rightarrow> num \<Rightarrow> num \<Rightarrow> num\<close>  (\<open>_ ? _ : _\<close> [55, 54, 54] 54)
+  "_cond" :: \<open>o \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a\<close>  (\<open>if _ then _ else _\<close> [25, 24, 24] 24)
 translations
-  "c ? a : b" \<rightleftharpoons> "CONST cond c a b"
+  "if c then a else b" \<rightleftharpoons> "CONST cond c a b"
 
 axiomatization
 where
-  condI1: \<open>\<lbrakk>c; a N\<rbrakk> \<Longrightarrow> c ? a : b \<doteq> a\<close> and
-  condI2: \<open>\<lbrakk>\<not>c; b N\<rbrakk> \<Longrightarrow> c ? a : b \<doteq> b\<close> and
-  condT: \<open>\<lbrakk>c B; c \<Longrightarrow> a N; \<not>c \<Longrightarrow> b N\<rbrakk> \<Longrightarrow> (c ? a : b) N\<close>
+  condI1: \<open>\<lbrakk>c; a N\<rbrakk> \<Longrightarrow> (if c then a else b) \<doteq> a\<close> and
+  condI2: \<open>\<lbrakk>\<not>c; b N\<rbrakk> \<Longrightarrow> (if c then a else b) \<doteq> b\<close> and
+  condT: \<open>\<lbrakk>c B; c \<Longrightarrow> a N; \<not>c \<Longrightarrow> b N\<rbrakk> \<Longrightarrow> if c then a else b N\<close>
 
 lemma condI1Eq:
   assumes c_holds: "c"
   assumes d_nat: "d N"
   assumes a_eq_d: "a \<doteq> d"
-  shows "(c ? a : b) \<doteq> d"
-apply (rule eqSubst[where a\<doteq>"d" and b\<doteq>"a"])
+  shows "(if c then a else b) \<doteq> d"
+apply (rule eqSubst[where a="d" and b="a"])
 apply (rule eqSym)
 apply (rule a_eq_d)
 apply (rule condI1)
@@ -264,7 +264,7 @@ lemma condI2Eq:
   assumes not_c: "\<not>c"
   assumes d_nat: "d N"
   assumes a_eq_d: "b \<doteq> d"
-  shows "(c ? a : b) \<doteq> d"
+  shows "(if c then a else b) \<doteq> d"
 apply (rule eqSubst[where a="d" and b="b"])
 apply (rule eqSym)
 apply (rule a_eq_d)
@@ -276,7 +276,7 @@ done
 lemma condI3:
   assumes c_bool: "c B"
   assumes a_nat: "a N"
-  shows "(c ? a : a) \<doteq> a"
+  shows "(if c then a else a) \<doteq> a"
 apply (rule disjE1[where P="c" and Q="\<not>c"])
 apply (fold GD.bJudg_def)
 apply (rule c_bool)
@@ -480,12 +480,12 @@ axiomatization
   leq  :: "num \<Rightarrow> num \<Rightarrow> num"  (infix "\<le>" 50) and
   omega :: "'a"
 where
-  def_add: "add := (\<lambda>x y. (y \<doteq> 0) ? x : S(x + P(y)))" and
-  def_sub: "sub := (\<lambda>x y. (y \<doteq> 0) ? x : P(x - P(y)))" and
-  def_mult: "mult := (\<lambda>x y. (y \<doteq> 0) ? 0 : (x + x * P(y)))" and
-  def_leq: "leq := (\<lambda>x y. (x \<doteq> 0) ? 1 : ((y \<doteq> 0) ? 0 : (P(x) \<le> P(y))))" and
-  def_less: "less := (\<lambda>x y. (y \<doteq> 0) ? 0 : ((x \<doteq> 0) ? 1 : (P(x) < P(y))))" and
-  def_div: "div := (\<lambda>x y. (x < y \<doteq> 1) ? 0 : S(div (x - y) y))" and
+  def_add: "add := (\<lambda>x y. if y \<doteq> 0 then x else S(x + P y))" and
+  def_sub: "sub := (\<lambda>x y. if y \<doteq> 0 then x else P(x - P y))" and
+  def_mult: "mult := (\<lambda>x y. if y \<doteq> 0 then 0 else (x + x * P y))" and
+  def_leq: "leq := (\<lambda>x y. if x \<doteq> 0 then 1 else (if y \<doteq> 0 then 0 else (P x \<le> P y)))" and
+  def_less: "less := (\<lambda>x y. if y \<doteq> 0 then 0 else (if x \<doteq> 0 then 1 else (P x < P y)))" and
+  def_div: "div := (\<lambda>x y. if x < y \<doteq> 1 then 0 else S(div (x - y) y))" and
   def_omega: "omega := omega"
 
 definition greater :: "num \<Rightarrow> num \<Rightarrow> num" (infix ">" 50) where
@@ -498,7 +498,7 @@ definition greater_eq :: "num \<Rightarrow> num \<Rightarrow> num" (infix "\<ge>
 axiomatization
   sqrt_h :: "num \<Rightarrow> num \<Rightarrow> num"
 where
-  def_sqrt_h: "sqrt_h := (\<lambda>x y. (S(y) * S(y) > x \<doteq> 1) ? y : (sqrt_h x S(y)))"
+  def_sqrt_h: "sqrt_h := (\<lambda>x y. if (S(y) * S(y) > x \<doteq> 1) then y else (sqrt_h x S(y)))"
 
 definition floor_sqrt :: "num \<Rightarrow> num" where
   "floor_sqrt x \<equiv> sqrt_h x 0"
@@ -545,7 +545,7 @@ proof (rule ind[where a=y])
   show habeas_quid_cond: "y N" by (rule y_nat)
   show base_case: "add x 0 N"
     proof (unfold_def def_add)
-      show "(0 \<doteq> 0) ? x : S(add x P(0)) N"
+      show "if (0 \<doteq> 0) then x else S(add x P(0)) N"
         apply (rule eqSubst[where a="x"])
         apply (rule eqSym)
         apply (rule condI1)
@@ -558,7 +558,7 @@ proof (rule ind[where a=y])
     proof (rule forallI, rule entailsI, unfold_def def_add)
       fix a
       assume HQ: "a N" and BC: "add x a N"
-      show "(S(a) \<doteq> 0) ? x : S(add x P(S(a))) N"
+      show "if (S(a) \<doteq> 0) then x else S(add x P(S(a))) N"
         proof (rule GD.condT)
           show "S(a) \<doteq> 0 B"
             apply (rule GD.eqBool)
@@ -590,7 +590,7 @@ proof (rule ind[where a=y])
   show habeas_quid_cond: "y N" by (rule y_nat)
   show base_case: "mult x 0 N"
     proof (unfold_def def_mult)
-      show "(0 \<doteq> 0) ? 0 : (add x (mult x P(0))) N"
+      show "if (0 \<doteq> 0) then 0 else (add x (mult x P(0))) N"
         apply (rule eqSubst[where a="0"])
         apply (rule eqSym)
         apply (rule condI1)
@@ -603,7 +603,7 @@ proof (rule ind[where a=y])
     proof (rule forallI, rule entailsI, unfold_def def_mult)
       fix a
       assume HQ: "a N" and BC: "mult x a N"
-      show "(S(a) \<doteq> 0) ? 0 : (add x (mult x P(S(a)))) N"
+      show "if (S(a) \<doteq> 0) then 0 else (add x (mult x P(S(a)))) N"
         proof (rule GD.condT)
           show "S(a) \<doteq> 0 B"
             apply (rule GD.eqBool)
@@ -702,7 +702,7 @@ proof (rule ind[where a="x"])
     assume x_refl: "x \<le> x \<doteq> 1"
     show "((S(x)) \<le> S(x)) \<doteq> 1"
       apply (unfold_def def_leq)
-      apply (rule eqSubst[where a="1" and b="(S(x) \<doteq> 0) ? 0 : (P(S x) \<le> P(S x))"])
+      apply (rule eqSubst[where a="1" and b="if (S(x) \<doteq> 0) then 0 else (P(S x) \<le> P(S x))"])
       apply (rule eqSubst[where a="1" and b="P(S x) \<le> P(S x)"])
       apply (rule eqSubst[where a="x" and b="P(S x)"])
       apply (rule eqSym)
@@ -742,7 +742,7 @@ proof (rule ind[where a="z"])
       assume ind_hyp: "((P(x)) \<le> x) \<doteq> 1"
       show "((P(S(x)))\<le>(S(x))) \<doteq> 1"
         apply (unfold_def def_leq)
-        apply (rule eqSubst[where a="1" and b="((S(x)) \<doteq> 0) ? 0 : ((P(P(S(x))))\<le>(P(S(x))))"])
+        apply (rule eqSubst[where a="1" and b="if ((S(x)) \<doteq> 0) then 0 else ((P(P(S(x))))\<le>(P(S(x))))"])
         apply (rule eqSubst[where a="x" and b="P(S(x))"])
         apply (rule eqSym)
         apply (gd_auto)
@@ -973,10 +973,10 @@ proof (rule ind)
       apply (gd_auto)
       proof -
         show "xa N" by (rule xa_nat)
-        assume H: "\<not> \<not> (S(0) \<doteq> 0) ? 0 : (S(xa) \<doteq> 0) ? S(0) : (xa < P(S 0)) \<doteq> S(0)"
+        assume H: "\<not> \<not> (if (S(0) \<doteq> 0) then 0 else (if (S(xa) \<doteq> 0) then S(0) else (xa < P(S 0)))) \<doteq> S(0)"
         show "False"
-          apply (rule exF[where P="\<not> (S(0) \<doteq> 0) ? 0 : (S(xa) \<doteq> 0) ? S(0) : (xa < P(S 0)) \<doteq> S(0)"])
-          apply (rule eqSubst[where a="0" and b="(S(0) \<doteq> 0) ? 0 : (S(xa) \<doteq> 0) ? S(0) : (xa < P(S 0))"])
+          apply (rule exF[where P="\<not> (if S(0) \<doteq> 0 then 0 else (if S(xa) \<doteq> 0 then S(0) else (xa < P(S 0)))) \<doteq> S(0)"])
+          apply (rule eqSubst[where a="0" and b="if S(0) \<doteq> 0 then 0 else ( if S(xa) \<doteq> 0 then S(0) else (xa < P(S 0)))"])
           apply (rule eqSym)
           apply (rule condI2Eq)
           apply (fold neq_def)
