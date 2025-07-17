@@ -487,14 +487,16 @@ axiomatization
   mult :: "nat \<Rightarrow> nat \<Rightarrow> nat"  (infixl "*" 70) and
   div  :: "nat \<Rightarrow> nat \<Rightarrow> nat"                  and
   less :: "nat \<Rightarrow> nat \<Rightarrow> nat"  (infix "<" 50)  and
-  leq  :: "nat \<Rightarrow> nat \<Rightarrow> nat"  (infix "\<le>" 50)
+  leq  :: "nat \<Rightarrow> nat \<Rightarrow> nat"  (infix "\<le>" 50) and
+  omega :: "'a"
 where
   def_add: "add := (\<lambda>x y. (y = 0) ? x : S(x + P(y)))" and
   def_sub: "sub := (\<lambda>x y. (y = 0) ? x : P(x - P(y)))" and
   def_mult: "mult := (\<lambda>x y. (y = 0) ? 0 : (x + x * P(y)))" and
   def_leq: "leq := (\<lambda>x y. (x = 0) ? 1 : ((y = 0) ? 0 : (P(x) \<le> P(y))))" and
   def_less: "less := (\<lambda>x y. (y = 0) ? 0 : ((x = 0) ? 1 : (P(x) < P(y))))" and
-  def_div: "div := (\<lambda>x y. (x < y = 1) ? 0 : S(div (x - y) y))"
+  def_div: "div := (\<lambda>x y. (x < y = 1) ? 0 : S(div (x - y) y))" and
+  def_omega: "omega := omega"
 
 definition greater :: "nat \<Rightarrow> nat \<Rightarrow> nat" (infix ">" 50) where
   "greater x y \<equiv> 1 - (x \<le> y)"
