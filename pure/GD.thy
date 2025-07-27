@@ -47,27 +47,57 @@ section \<open>Axiomatization of naturals in GD\<close>
 typedecl num
 
 axiomatization
-  eqNum :: \<open>num \<Rightarrow> num \<Rightarrow> o\<close>  (infixl \<open>\<doteq>\<close> 45)
+  eq :: \<open>'a \<Rightarrow> 'a \<Rightarrow> o\<close>  (infixl \<open>=\<close> 45)
 where
-  eqSubst: \<open>\<lbrakk>a \<doteq> b; Q a\<rbrakk> \<Longrightarrow> Q b\<close> and
-  eqSym: \<open>a \<doteq> b \<Longrightarrow> b \<doteq> a\<close>
+  eqSubst: \<open>\<lbrakk>a = b; Q a\<rbrakk> \<Longrightarrow> Q b\<close> and
+  eqSym: \<open>a = b \<Longrightarrow> b = a\<close>
 
-lemma eq_trans: "a \<doteq> b \<Longrightarrow> b \<doteq> c \<Longrightarrow> a \<doteq> c"
+lemma eq_trans: "a = b \<Longrightarrow> b = c \<Longrightarrow> a = c"
 apply (rule eqSubst[where a="b" and b="c"])
 apply (assumption)
 apply (assumption)
 done
 
 definition neq :: \<open>num \<Rightarrow> num \<Rightarrow> o\<close> (infixl \<open>\<noteq>\<close> 45)
-  where \<open>a \<noteq> b \<equiv> \<not> (a \<doteq> b)\<close>
+  where \<open>a \<noteq> b \<equiv> \<not> (a = b)\<close>
 definition bJudg :: \<open>o \<Rightarrow> o\<close> (\<open>_ B\<close> [21] 20)
   where \<open>(p B) \<equiv> (p \<or> \<not>p)\<close>
 definition isNat :: \<open>num \<Rightarrow> o\<close> (\<open>_ N\<close> [21] 20)
-where "x N \<equiv> x \<doteq> x"
+where "x N \<equiv> x = x"
 definition conj :: \<open>o \<Rightarrow> o \<Rightarrow> o\<close> (infixl \<open>\<and>\<close> 35)
   where \<open>p \<and> q \<equiv> \<not>(\<not>p \<or> \<not>q)\<close>
 definition impl :: \<open>o \<Rightarrow> o \<Rightarrow> o\<close> (infixl \<open>\<longrightarrow>\<close> 25)
   where \<open>p \<longrightarrow> q \<equiv> \<not>p \<or> q\<close>
+
+lemma conjE1:
+  assumes p_and_q: "p \<and> q"
+  shows "p"
+apply (rule dNegE)
+apply (rule disjE2[where Q="\<not>q"])
+apply (fold conj_def)
+apply (rule p_and_q)
+done
+
+lemma conjE2:
+  assumes p_and_q: "p \<and> q"
+  shows "q"
+apply (rule dNegE)
+apply (rule disjE3[where P="\<not>p"])
+apply (fold conj_def)
+apply (rule p_and_q)
+done
+
+lemma conjI:
+  assumes p: "p"
+  assumes q: "q"
+  shows "p \<and> q"
+apply (unfold conj_def)
+apply (rule disjI3)
+apply (rule dNegI)
+apply (rule p)
+apply (rule dNegI)
+apply (rule q)
+done
 
 axiomatization
   num_zero :: \<open>num\<close>                        and
@@ -75,15 +105,15 @@ axiomatization
   num_pred :: \<open>num \<Rightarrow> num\<close>    (\<open>P(_)\<close> [800])
 where
   nat0: \<open>num_zero N\<close> and
-  sucInj: \<open>S a \<doteq> S b \<Longrightarrow> a \<doteq> b\<close> and
-  sucCong: \<open>a \<doteq> b \<Longrightarrow> S a \<doteq> S b\<close> and
-  predCong: \<open>a \<doteq> b \<Longrightarrow> P a \<doteq> P b\<close> and
-  eqBool: \<open>\<lbrakk>a N; b N\<rbrakk> \<Longrightarrow> (a \<doteq> b) B\<close> and
+  sucInj: \<open>S a = S b \<Longrightarrow> a = b\<close> and
+  sucCong: \<open>a = b \<Longrightarrow> S a = S b\<close> and
+  predCong: \<open>a = b \<Longrightarrow> P a = P b\<close> and
+  eqBool: \<open>\<lbrakk>a N; b N\<rbrakk> \<Longrightarrow> (a = b) B\<close> and
   sucNonZero: \<open>a N \<Longrightarrow> S a \<noteq> num_zero\<close> and
-  predSucSym: \<open>a N \<Longrightarrow> P(S(a)) \<doteq> a\<close> and
-  pred0: \<open>P(num_zero) \<doteq> num_zero\<close>
+  predSucInv: \<open>a N \<Longrightarrow> P(S(a)) = a\<close> and
+  pred0: \<open>P(num_zero) = num_zero\<close>
 
-lemma zeroRefl [gd_simp]: "num_zero \<doteq> num_zero"
+lemma zeroRefl [gd_simp]: "num_zero = num_zero"
 apply (fold isNat_def)
 apply (rule nat0)
 done
@@ -180,9 +210,9 @@ parse_translation \<open>
 \<close>
 
 definition True
-  where \<open>True \<equiv> 0 \<doteq> 0\<close>
+  where \<open>True \<equiv> 0 = 0\<close>
 definition False
-  where \<open>False \<equiv> S(0) \<doteq> 0\<close>
+  where \<open>False \<equiv> S(0) = 0\<close>
 
 lemma contradiction:
   assumes p_bool: "p B"
@@ -243,15 +273,82 @@ translations
 
 axiomatization
 where
-  condI1: \<open>\<lbrakk>c; a N\<rbrakk> \<Longrightarrow> (if c then a else b) \<doteq> a\<close> and
-  condI2: \<open>\<lbrakk>\<not>c; b N\<rbrakk> \<Longrightarrow> (if c then a else b) \<doteq> b\<close> and
-  condT: \<open>\<lbrakk>c B; c \<Longrightarrow> a N; \<not>c \<Longrightarrow> b N\<rbrakk> \<Longrightarrow> if c then a else b N\<close>
+  condI1: \<open>\<lbrakk>c; a N\<rbrakk> \<Longrightarrow> (if c then a else b) = a\<close> and
+  condI2: \<open>\<lbrakk>\<not>c; b N\<rbrakk> \<Longrightarrow> (if c then a else b) = b\<close> and
+  condT: \<open>\<lbrakk>c B; c \<Longrightarrow> a N; \<not>c \<Longrightarrow> b N\<rbrakk> \<Longrightarrow> if c then a else b N\<close> and
+  condI1B: \<open>\<lbrakk>c; d B\<rbrakk> \<Longrightarrow> (if c then d else e) = d\<close> and
+  condI2B: \<open>\<lbrakk>\<not>c; e B\<rbrakk> \<Longrightarrow> (if c then d else e) = e\<close> and
+  condTB: \<open>\<lbrakk>c B; c \<Longrightarrow> d B; \<not>c \<Longrightarrow> e B\<rbrakk> \<Longrightarrow> if c then d else e B\<close>
+
+lemma condI1BEq:
+  assumes c_holds: "c"
+  assumes d_bool: "d B"
+  assumes a_eq_d: "a = d"
+  shows "(if c then a else b) = d"
+apply (rule eqSubst[where a="d" and b="a"])
+apply (rule eqSym)
+apply (rule a_eq_d)
+apply (rule condI1B)
+apply (rule c_holds)
+apply (rule d_bool)
+done
+
+lemma condI2BEq:
+  assumes not_c: "\<not>c"
+  assumes d_bool: "d B"
+  assumes a_eq_d: "b = d"
+  shows "(if c then a else b) = d"
+apply (rule eqSubst[where a="d" and b="b"])
+apply (rule eqSym)
+apply (rule a_eq_d)
+apply (rule condI2B)
+apply (rule not_c)
+apply (rule d_bool)
+done
+
+lemma condI3B:
+  assumes a_bool: "a B"
+  assumes c_bool: "c B"
+  shows "(if c then a else a) = a"
+apply (rule disjE1[where P="c" and Q="\<not>c"])
+apply (fold GD.bJudg_def)
+apply (rule c_bool)
+apply (rule condI1B)
+apply (assumption)
+apply (rule a_bool)
+apply (rule condI2B)
+apply (assumption)
+apply (rule a_bool)
+done
+
+lemma condI3BEq:
+  assumes a_bool: "a B"
+  assumes c_bool: "c B"
+  assumes d_eq_a: "d = a"
+  assumes e_eq_a: "e = a"
+  shows "(if c then d else e) = a"
+apply (rule disjE1[where P="c" and Q="\<not>c"])
+apply (fold GD.bJudg_def)
+apply (rule c_bool)
+apply (rule eqSubst[where a="a" and b="d"])
+apply (rule eqSym)
+apply (rule d_eq_a)
+apply (rule condI1B)
+apply (assumption)
+apply (rule a_bool)
+apply (rule eqSubst[where a="a" and b="e"])
+apply (rule eqSym)
+apply (rule e_eq_a)
+apply (rule condI2B)
+apply (assumption)
+apply (rule a_bool)
+done
 
 lemma condI1Eq:
   assumes c_holds: "c"
   assumes d_nat: "d N"
-  assumes a_eq_d: "a \<doteq> d"
-  shows "(if c then a else b) \<doteq> d"
+  assumes a_eq_d: "a = d"
+  shows "(if c then a else b) = d"
 apply (rule eqSubst[where a="d" and b="a"])
 apply (rule eqSym)
 apply (rule a_eq_d)
@@ -263,8 +360,8 @@ done
 lemma condI2Eq:
   assumes not_c: "\<not>c"
   assumes d_nat: "d N"
-  assumes a_eq_d: "b \<doteq> d"
-  shows "(if c then a else b) \<doteq> d"
+  assumes a_eq_d: "b = d"
+  shows "(if c then a else b) = d"
 apply (rule eqSubst[where a="d" and b="b"])
 apply (rule eqSym)
 apply (rule a_eq_d)
@@ -276,7 +373,7 @@ done
 lemma condI3:
   assumes a_nat: "a N"
   assumes c_bool: "c B"
-  shows "(if c then a else a) \<doteq> a"
+  shows "(if c then a else a) = a"
 apply (rule disjE1[where P="c" and Q="\<not>c"])
 apply (fold GD.bJudg_def)
 apply (rule c_bool)
@@ -291,9 +388,9 @@ done
 lemma condI3Eq:
   assumes a_nat: "a N"
   assumes c_bool: "c B"
-  assumes d_eq_a: "d \<doteq> a"
-  assumes e_eq_a: "e \<doteq> a"
-  shows "(if c then d else e) \<doteq> a"
+  assumes d_eq_a: "d = a"
+  assumes e_eq_a: "e = a"
+  shows "(if c then d else e) = a"
 apply (rule disjE1[where P="c" and Q="\<not>c"])
 apply (fold GD.bJudg_def)
 apply (rule c_bool)
@@ -329,7 +426,7 @@ where
   safedefI: \<open>\<lbrakk>(safedef a b) \<Longrightarrow> (\<And>c. a := c \<Longrightarrow> b = c)\<rbrakk> \<Longrightarrow> a := b\<close>
  *)
 
-lemmas [gd_simp] = condI3 condT nat0 natS natP sucNonZero predSucSym pred0 neq_def eqBool sucCong
+lemmas [gd_simp] = condI3 condT nat0 natS natP sucNonZero predSucInv pred0 neq_def eqBool sucCong
 ML_file \<open>unfold_def.ML\<close>
 
 section \<open>Deductions of non-elementary inference rules.\<close>
@@ -347,7 +444,7 @@ done
 
 lemma not_false [gd_simp]: "\<not>False"
 proof (unfold False_def)
-  show "\<not>(S(0) \<doteq> 0)"
+  show "\<not>(S(0) = 0)"
   proof -
     have "S(0) \<noteq> 0" by (rule sucNonZero) (rule nat0)
     then show ?thesis by (unfold neq_def)
@@ -396,27 +493,27 @@ apply (rule dNegI)
 apply (assumption)
 done
 
-lemma neq_com:
+lemma neq_sym:
   assumes a_nat: "a N"
   assumes b_nat: "b N"
   assumes ab_neq: "a \<noteq> b"
   shows "b \<noteq> a"
-proof (unfold neq_def, rule grounded_contradiction[where q="a\<doteq>b"])
-  show "(\<not>(b\<doteq>a)) B"
+proof (unfold neq_def, rule grounded_contradiction[where q="a=b"])
+  show "(\<not>(b=a)) B"
     apply (gd_auto)
     apply (rule b_nat)
     apply (rule a_nat)
     done
   next
-    assume H: "\<not> \<not> b \<doteq> a"
-    show "a \<doteq> b"
+    assume H: "\<not> \<not> b = a"
+    show "a = b"
     apply (rule eqSym)
     apply (rule dNegE)
     apply (rule H)
     done
   next
-    assume H: "\<not> \<not> b \<doteq> a"
-    show "\<not> a \<doteq> b"
+    assume H: "\<not> \<not> b = a"
+    show "\<not> a = b"
     apply (fold neq_def)
     apply (rule ab_neq)
     done
@@ -438,7 +535,7 @@ lemma sucNotEqual [gd_simp]:
 proof (rule ind[where a="a"])
   show "a N" by (rule a_nat)
   show "0 \<noteq> S(0)"
-    apply (rule neq_com)
+    apply (rule neq_sym)
     apply (gd_auto)
     done
   show "\<forall>x. (x\<noteq>S(x)) \<turnstile> (S(x) \<noteq> S(S(x)))"
@@ -457,7 +554,7 @@ proof (rule ind[where a="a"])
           done
         next
           assume H: "\<not> (S(x) \<noteq> S(S(x)))"
-          have eq_suc: "x \<doteq> S(x)"
+          have eq_suc: "x = S(x)"
             apply (rule sucInj)
             apply (rule dNegE)
             apply (fold neq_def)
@@ -475,14 +572,6 @@ proof (rule ind[where a="a"])
       qed
     qed
 qed
-
-theorem GD_consistent: "\<And>Q. \<not>(Q \<and> \<not>Q)"
-(* This is the meta-level consistency theorem. The object-level universal
- * quantifier can only quantify over naturals, not propositions.
- * I don't think we can hope to prove this. We should state an object-level
- * one that quantifies over the nats and uses nat encodings of GD propositions.
- *)
-sorry
 
 section \<open>Definitions of basic arithmetic functions\<close>
 
@@ -503,59 +592,30 @@ axiomatization
   leq  :: "num \<Rightarrow> num \<Rightarrow> num"  (infix "\<le>" 50) and
   omega :: "'a"
 where
-  def_add: "add := (\<lambda>x y. if y \<doteq> 0 then x else S(x + P y))" and
-  def_sub: "sub := (\<lambda>x y. if y \<doteq> 0 then x else P(x - P y))" and
-  def_mult: "mult := (\<lambda>x y. if y \<doteq> 0 then 0 else (x + x * P y))" and
-  def_leq: "leq := (\<lambda>x y. if x \<doteq> 0 then 1 else (if y \<doteq> 0 then 0 else (P x \<le> P y)))" and
-  def_less: "less := (\<lambda>x y. if y \<doteq> 0 then 0 else (if x \<doteq> 0 then 1 else (P x < P y)))" and
-  def_div: "div := (\<lambda>x y. if x < y \<doteq> 1 then 0 else S(div (x - y) y))" and
+  def_add: "add := (\<lambda>x y. if y = 0 then x else S(x + P y))" and
+  def_sub: "sub := (\<lambda>x y. if y = 0 then x else P(x - P y))" and
+  def_mult: "mult := (\<lambda>x y. if y = 0 then 0 else (x + x * P y))" and
+  def_leq: "leq := (\<lambda>x y. if x = 0 then 1 else (if y = 0 then 0 else (P x \<le> P y)))" and
+  def_less: "less := (\<lambda>x y. if y = 0 then 0 else (if x = 0 then 1 else (P x < P y)))" and
+  def_div: "div := (\<lambda>x y. if x < y = 1 then 0 else S(div (x - y) y))" and
   def_omega: "omega := omega"
 
 definition greater :: "num \<Rightarrow> num \<Rightarrow> num" (infix ">" 50) where
   "greater x y \<equiv> 1 - (x \<le> y)"
 
-definition greater_eq :: "num \<Rightarrow> num \<Rightarrow> num" (infix "\<ge>" 50) where
-  "greater_eq x y \<equiv> 1 - (x < y)"
+definition geq :: "num \<Rightarrow> num \<Rightarrow> num" (infix "\<ge>" 50) where
+  "geq x y \<equiv> 1 - (x < y)"
 
 (* Returns y if S(y) > sqrt(x), else returns the greatest y s.t. y*y\<le>x. *)
 axiomatization
   sqrt_h :: "num \<Rightarrow> num \<Rightarrow> num"
 where
-  def_sqrt_h: "sqrt_h := (\<lambda>x y. if (S(y) * S(y) > x \<doteq> 1) then y else (sqrt_h x S(y)))"
+  def_sqrt_h: "sqrt_h := (\<lambda>x y. if (S(y) * S(y) > x = 1) then y else (sqrt_h x S(y)))"
 
 definition floor_sqrt :: "num \<Rightarrow> num" where
   "floor_sqrt x \<equiv> sqrt_h x 0"
 
-definition cpair :: "num \<Rightarrow> num \<Rightarrow> num" where
-  "cpair x y \<equiv> y + (div ((x+y) * (S(x+y))) 2)"
-
-nonterminal cpair_args
-
-syntax
-  "_cpair"      :: "num \<Rightarrow> cpair_args \<Rightarrow> num"        ("\<langle>_,_\<rangle>")
-  "_cpair_arg"  :: "num \<Rightarrow> cpair_args"               ("_")
-  "_cpair_args" :: "num \<Rightarrow> cpair_args \<Rightarrow> cpair_args" ("_,_")
-translations
-  "\<langle>x, y\<rangle>" == "CONST cpair x y"
-  "_cpair x (_cpair_args y z)" == "_cpair x (_cpair_arg (_cpair y z))"
-
-(* recover w=x+y from the pair z *)
-definition cpzw :: "num \<Rightarrow> num" where
-  "cpzw z \<equiv> div (floor_sqrt (8 * z + 1) - 1) 2"
-
-(* recover t from w *)
-definition cpwt :: "num \<Rightarrow> num" where
-  "cpwt w \<equiv> div (w * S(w)) 2"
-
-(* recover y from a pair z *)
-definition cpy :: "num \<Rightarrow> num" where
-  "cpy z \<equiv> z - (cpwt (cpzw z))"
-
-(* recover x from a pair z *)
-definition cpx :: "num \<Rightarrow> num" where
-  "cpx z \<equiv> cpzw z - cpy z"
-
-lemma less_0_false [gd_simp]: "(x < 0) \<doteq> 0"
+lemma less_0_false [gd_simp]: "(x < 0) = 0"
 apply (unfold_def def_less)
 apply (rule condI1)
 apply (gd_auto)
@@ -569,7 +629,7 @@ proof (rule ind[where a=y])
   show habeas_quid_cond: "y N" by (rule y_nat)
   show base_case: "add x 0 N"
     proof (unfold_def def_add)
-      show "if (0 \<doteq> 0) then x else S(add x P(0)) N"
+      show "if (0 = 0) then x else S(add x P(0)) N"
         apply (rule eqSubst[where a="x"])
         apply (rule eqSym)
         apply (rule condI1)
@@ -582,9 +642,9 @@ proof (rule ind[where a=y])
     proof (rule forallI, rule entailsI, unfold_def def_add)
       fix a
       assume HQ: "a N" and BC: "add x a N"
-      show "if (S(a) \<doteq> 0) then x else S(add x P(S(a))) N"
+      show "if (S(a) = 0) then x else S(add x P(S(a))) N"
         proof (rule GD.condT)
-          show "S(a) \<doteq> 0 B"
+          show "S(a) = 0 B"
             apply (rule GD.eqBool)
             apply (rule GD.natS)
             apply (rule HQ)
@@ -596,7 +656,7 @@ proof (rule ind[where a=y])
             apply (rule eqSubst[where a="x+a"])
             apply (rule eqSubst[where a="a" and b="P(S(a))"])
             apply (rule eqSym)
-            apply (rule predSucSym)
+            apply (rule predSucInv)
             apply (rule HQ)
             apply (fold isNat_def)
             apply (rule BC)
@@ -614,7 +674,7 @@ proof (rule ind[where a=y])
   show habeas_quid_cond: "y N" by (rule y_nat)
   show base_case: "mult x 0 N"
     proof (unfold_def def_mult)
-      show "if (0 \<doteq> 0) then 0 else (add x (mult x P(0))) N"
+      show "if (0 = 0) then 0 else (add x (mult x P(0))) N"
         apply (rule eqSubst[where a="0"])
         apply (rule eqSym)
         apply (rule condI1)
@@ -627,9 +687,9 @@ proof (rule ind[where a=y])
     proof (rule forallI, rule entailsI, unfold_def def_mult)
       fix a
       assume HQ: "a N" and BC: "mult x a N"
-      show "if (S(a) \<doteq> 0) then 0 else (add x (mult x P(S(a)))) N"
+      show "if (S(a) = 0) then 0 else (add x (mult x P(S(a)))) N"
         proof (rule GD.condT)
-          show "S(a) \<doteq> 0 B"
+          show "S(a) = 0 B"
             apply (rule GD.eqBool)
             apply (rule GD.natS)
             apply (rule HQ)
@@ -642,7 +702,7 @@ proof (rule ind[where a=y])
             apply (rule eqSubst[where a="x*a"])
             apply (rule eqSubst[where a="a" and b="P(S(a))"])
             apply (rule eqSym)
-            apply (rule predSucSym)
+            apply (rule predSucInv)
             apply (rule HQ)
             apply (fold isNat_def)
             apply (rule BC)
@@ -654,7 +714,7 @@ qed
 
 lemma add_0 [gd_simp]:
   assumes a_nat: "a N"
-  shows "a + 0 \<doteq> a"
+  shows "a + 0 = a"
 apply (unfold_def def_add)
 apply (rule condI1)
 apply (rule zeroRefl)
@@ -662,7 +722,7 @@ apply (rule a_nat)
 done
 
 lemma mult_0 [gd_simp]:
-  shows "a * 0 \<doteq> 0"
+  shows "a * 0 = 0"
 apply (unfold_def def_mult)
 apply (rule condI1)
 apply (gd_auto)
@@ -670,7 +730,7 @@ done
 
 lemma mult_1 [gd_simp]:
   assumes a_nat: "a N"
-  shows "a N \<Longrightarrow> a * S(0) \<doteq> a"
+  shows "a N \<Longrightarrow> a * S(0) = a"
 apply (unfold_def def_mult)
 apply (rule eqSubst[where a="a" and b="a + (a * P(S(0)))"])
 apply (rule eqSubst[where a="0" and b="a * P(S(0))"])
@@ -688,7 +748,7 @@ done
 
 lemma zero_leq_true [gd_simp]:
   assumes x_nat: "x N"
-  shows "0 \<le> x \<doteq> 1"
+  shows "0 \<le> x = 1"
 apply (unfold_def def_leq)
 apply (rule condI1Eq)
 apply (gd_auto)
@@ -696,24 +756,24 @@ done
 
 lemma leq_refl [gd_simp]:
   assumes x_nat: "x N"
-  shows "(x \<le> x) \<doteq> 1"
+  shows "(x \<le> x) = 1"
 proof (rule ind[where a="x"])
   show "x N" by (rule x_nat)
-  show "0 \<le> 0 \<doteq> 1"
+  show "0 \<le> 0 = 1"
     apply (unfold_def def_leq)
     apply (rule eqSubst[where a="1"])
     apply (gd_auto)
     apply (rule condI1)
     apply (gd_auto)
     done
-  show "\<forall>x.(x \<le> x \<doteq> 1) \<turnstile> (S(x) \<le> S(x) \<doteq> 1)"
+  show "\<forall>x.(x \<le> x = 1) \<turnstile> (S(x) \<le> S(x) = 1)"
   proof (rule forallI, rule entailsI)
     fix x
     assume x_nat: "x N"
-    assume x_refl: "x \<le> x \<doteq> 1"
-    show "((S(x)) \<le> S(x)) \<doteq> 1"
+    assume x_refl: "x \<le> x = 1"
+    show "((S(x)) \<le> S(x)) = 1"
       apply (unfold_def def_leq)
-      apply (rule eqSubst[where a="1" and b="if (S(x) \<doteq> 0) then 0 else (P(S x) \<le> P(S x))"])
+      apply (rule eqSubst[where a="1" and b="if (S(x) = 0) then 0 else (P(S x) \<le> P(S x))"])
       apply (rule eqSubst[where a="1" and b="P(S x) \<le> P(S x)"])
       apply (rule eqSubst[where a="x" and b="P(S x)"])
       apply (rule eqSym)
@@ -733,26 +793,37 @@ proof (rule ind[where a="x"])
   qed
 qed
 
-lemma pred_le [gd_simp]:
+lemma replace_ps:
+  assumes x_nat: "x N"
+  assumes H: "Q x"
+  shows "Q (P S x)"
+apply (rule eqSubst[where a="x" and b="P S x"])
+apply (rule eqSym)
+apply (gd_auto)
+apply (rule x_nat)
+apply (rule H)
+done
+
+lemma pred_leq [gd_simp]:
   assumes z_nat: "z N"
-  shows "P(z) \<le> z \<doteq> 1"
+  shows "P(z) \<le> z = 1"
 proof (rule ind[where a="z"])
   show "z N" by (rule z_nat)
-  show "((P(0)) \<le> 0) \<doteq> 1"
+  show "((P(0)) \<le> 0) = 1"
     apply (unfold_def def_leq)
     apply (rule condI1)
     apply (gd_auto)
     done
-  show "\<forall>x. ((P(x))\<le>x \<doteq> 1) \<turnstile> (((P(S(x)))\<le>S(x)) \<doteq> 1)"
+  show "\<forall>x. ((P(x))\<le>x = 1) \<turnstile> (((P(S(x)))\<le>S(x)) = 1)"
     apply (rule forallI)
     apply (rule entailsI)
     proof -
       fix x
       assume x_nat: "x N"
-      assume ind_hyp: "((P(x)) \<le> x) \<doteq> 1"
-      show "((P(S(x)))\<le>(S(x))) \<doteq> 1"
+      assume ind_hyp: "((P(x)) \<le> x) = 1"
+      show "((P(S(x)))\<le>(S(x))) = 1"
         apply (unfold_def def_leq)
-        apply (rule eqSubst[where a="1" and b="if ((S(x)) \<doteq> 0) then 0 else ((P(P(S(x))))\<le>(P(S(x))))"])
+        apply (rule eqSubst[where a="1" and b="if ((S(x)) = 0) then 0 else ((P(P(S(x))))\<le>(P(S(x))))"])
         apply (rule eqSubst[where a="x" and b="P(S(x))"])
         apply (rule eqSym)
         apply (gd_auto)
@@ -770,23 +841,62 @@ proof (rule ind[where a="z"])
     qed
 qed
 
-lemma le_antisym:
+lemma leq_suc [gd_simp]:
   assumes x_nat: "x N"
-  assumes y_nat: "y N"
-  shows "((x \<le> y) \<doteq> 1) \<turnstile> ((y \<le> x) \<doteq> 1) \<turnstile> (x \<doteq> y)"
-sorry
+  shows "x \<le> S(x) = 1"
+apply (rule ind[where a="x"])
+apply (rule x_nat)
+apply (gd_auto)
+apply (rule forallI)
+apply (rule entailsI)
+apply (unfold_def def_leq)
+apply (rule condI2Eq)
+apply (fold neq_def)
+apply (gd_auto)
+apply (rule condI2Eq)
+apply (fold neq_def)
+apply (gd_auto)
+apply (rule replace_ps)
+apply (gd_auto)
+done
 
-lemma le_0:
+lemma less_suc [gd_simp]:
   assumes x_nat: "x N"
-  assumes H: "x \<le> 0 \<doteq> 1"
-  shows "x \<doteq> 0"
+  shows "x < S(x) = 1"
+apply (rule ind[where a="x"])
+apply (rule x_nat)
+apply (unfold_def def_less)
+apply (rule condI2Eq)
+apply (fold neq_def)
+apply (gd_auto)
+apply (rule condI1)
+apply (gd_auto)
+apply (rule forallI)
+apply (rule entailsI)
+apply (unfold_def def_less)
+apply (rule condI2Eq)
+apply (fold neq_def)
+apply (gd_auto)
+apply (rule condI2Eq)
+apply (fold neq_def)
+apply (gd_auto)
+apply (rule replace_ps)
+apply (gd_auto)
+apply (rule replace_ps)
+apply (gd_auto)
+done
+
+lemma leq_0:
+  assumes x_nat: "x N"
+  assumes H: "x \<le> 0 = 1"
+  shows "x = 0"
 proof (rule grounded_contradiction[where q="False"])
-  show "x \<doteq> 0 B" by (rule eqBool, rule x_nat, rule nat0)
-  show "\<not> x \<doteq> 0 \<Longrightarrow> False"
+  show "x = 0 B" by (rule eqBool, rule x_nat, rule nat0)
+  show "\<not> x = 0 \<Longrightarrow> False"
     proof -
-      assume x_nonzero: "\<not> x \<doteq> 0"
+      assume x_nonzero: "\<not> x = 0"
       show "False"
-        apply (rule exF[where P="x \<le> 0 \<doteq> 1"])
+        apply (rule exF[where P="x \<le> 0 = 1"])
         apply (rule H)
         apply (rule eqSubst[where a="0" and b="x \<le> 0"])
         apply (unfold_def def_leq)
@@ -805,8 +915,8 @@ qed
 lemma leq_monotone_suc [gd_simp]:
   assumes x_nat: "x N"
   assumes y_nat: "y N"
-  assumes x_leq_y: "x \<le> y \<doteq> 1"
-  shows "S x \<le> S y \<doteq> 1"
+  assumes x_leq_y: "x \<le> y = 1"
+  shows "S x \<le> S y = 1"
 apply (unfold_def def_leq)
 apply (rule condI2Eq)
 apply (fold neq_def)
@@ -831,17 +941,17 @@ done
 
 lemma num_cases:
   assumes x_nat: "x N"
-  shows "x \<doteq> 0 \<or> (\<exists>y. x \<doteq> S y)"
+  shows "x = 0 \<or> (\<exists>y. x = S y)"
 proof (rule ind[where a="x"])
   show "x N" by (rule x_nat)
-  show "0 \<doteq> 0 \<or> (\<exists>y. 0 \<doteq> S y)" by (rule disjI1, gd_auto)
-  show "\<forall>x. x\<doteq>0 \<or> (\<exists>y. x \<doteq> S y) \<turnstile> S x \<doteq> 0 \<or> (\<exists>y. S x \<doteq> S y)"
+  show "0 = 0 \<or> (\<exists>y. 0 = S y)" by (rule disjI1, gd_auto)
+  show "\<forall>x. x=0 \<or> (\<exists>y. x = S y) \<turnstile> S x = 0 \<or> (\<exists>y. S x = S y)"
     apply (rule forallI)
     apply (rule entailsI)
     proof -
       fix x
       assume x_nat: "x N"
-      show "S x \<doteq> 0 \<or> (\<exists>y. S x \<doteq> S y)"
+      show "S x = 0 \<or> (\<exists>y. S x = S y)"
         apply (rule disjI2)
         apply (rule existsI[where a="x"])
         apply (rule x_nat)
@@ -854,16 +964,16 @@ qed
 
 lemma num_non_zero [gd_simp]:
   assumes x_nat: "x N"
-  assumes x_nz: "\<not> x \<doteq> 0"
-  shows "\<exists>y. x \<doteq> S(y)"
+  assumes x_nz: "\<not> x = 0"
+  shows "\<exists>y. x = S(y)"
 proof -
-  have "x \<doteq> 0 \<or> (\<exists>y. x \<doteq> S y)"
+  have "x = 0 \<or> (\<exists>y. x = S y)"
     apply (rule num_cases)
     apply (rule x_nat)
     done
   then show ?thesis
     apply (rule disjE1)
-    apply (rule exF[where P="x\<doteq>0"])
+    apply (rule exF[where P="x=0"])
     apply (assumption)
     apply (rule x_nz)
     apply (assumption)
@@ -871,17 +981,17 @@ proof -
 qed
 
 lemma leq_nz_monotone:
-  assumes xa_nz: "\<not> xa \<doteq> 0"
-  assumes xa_le_ya: "xa \<le> ya \<doteq> 1"
+  assumes xa_nz: "\<not> xa = 0"
+  assumes xa_le_ya: "xa \<le> ya = 1"
   assumes ya_nat: "ya N"
   shows "ya \<noteq> 0"
-proof (rule grounded_contradiction[where q="xa \<le> 0 \<doteq> 1"])
+proof (rule grounded_contradiction[where q="xa \<le> 0 = 1"])
   show "ya \<noteq> 0 B" by (rule neq_bool, rule ya_nat, rule nat0)
-  show "\<not> ya \<noteq> 0 \<Longrightarrow> xa \<le> 0 \<doteq> 1"
+  show "\<not> ya \<noteq> 0 \<Longrightarrow> xa \<le> 0 = 1"
     proof -
       assume H: "\<not> ya \<noteq> 0"
-      have ya_nz: "ya \<doteq> 0" by (rule dNegE, fold neq_def, rule H)
-      show "xa \<le> 0 \<doteq> 1"
+      have ya_nz: "ya = 0" by (rule dNegE, fold neq_def, rule H)
+      show "xa \<le> 0 = 1"
         apply (rule eqSubst[where a="ya" and b="0"])
         apply (rule ya_nz)
         apply (rule eqSubst[where a="1" and b="S ya"])
@@ -891,7 +1001,7 @@ proof (rule grounded_contradiction[where q="xa \<le> 0 \<doteq> 1"])
         apply (rule xa_le_ya)
         done
     qed
-  show "\<not> xa \<le> 0 \<doteq> 1"
+  show "\<not> xa \<le> 0 = 1"
     apply (rule eqSubst[where a="0" and b="xa \<le> 0"])
     apply (rule eqSym)
     apply (unfold_def def_leq)
@@ -906,8 +1016,8 @@ proof (rule grounded_contradiction[where q="xa \<le> 0 \<doteq> 1"])
 qed
 
 lemma leq_0_if_nz [gd_simp]:
-  assumes H: "\<not> x \<doteq> 0"
-  shows "x \<le> 0 \<doteq> 0"
+  assumes H: "\<not> x = 0"
+  shows "x \<le> 0 = 0"
 apply (unfold_def def_leq)
 apply (rule condI2Eq)
 apply (rule H)
@@ -937,9 +1047,9 @@ proof -
           apply (rule x'_nat)
           apply (gd_auto)
           proof -
-            assume H: "\<not> 0 \<doteq> 0"
+            assume H: "\<not> 0 = 0"
             show "P x' \<le> P 0 N"
-              apply (rule exF[where P="0\<doteq>0"])
+              apply (rule exF[where P="0=0"])
               apply (rule zeroRefl)
               apply (rule H)
               done
@@ -983,11 +1093,11 @@ qed
 lemma leq_suc_eq:
   assumes x_nat: "x N"
   assumes y_nat: "y N"
-  shows "x \<le> y \<doteq> S x \<le> S y"
+  shows "x \<le> y = S x \<le> S y"
 proof (rule ind[where a="y"])
   show "y N" by (rule y_nat)
-  show "x \<le> 0 \<doteq> S x \<le> S 0"
-    apply (rule disjE1[where P="x \<doteq> 0" and Q="\<not> x \<doteq> 0"])
+  show "x \<le> 0 = S x \<le> S 0"
+    apply (rule disjE1[where P="x = 0" and Q="\<not> x = 0"])
     apply (fold bJudg_def)
     apply (rule eqBool)
     apply (rule x_nat)
@@ -1022,24 +1132,22 @@ proof (rule ind[where a="y"])
     apply (rule eqSubst[where a="0" and b="P S 0"])
     apply (rule eqSym)
     apply (gd_auto)
-    apply (rule leq_0_if_nz)
     apply (fold neq_def)
-    apply (assumption)
-    apply (rule leq_0_if_nz)
+    apply (gd_auto)
     apply (fold neq_def)
-    apply (assumption)
+    apply (gd_auto)
     done
-  show "\<forall>xa. x \<le> xa \<doteq> S(x) \<le> S(xa) \<turnstile> x \<le> S(xa) \<doteq> S(x) \<le> S(S(xa))"
+  show "\<forall>xa. x \<le> xa = S(x) \<le> S(xa) \<turnstile> x \<le> S(xa) = S(x) \<le> S(S(xa))"
     apply (rule forallI)
     apply (rule entailsI)
     proof -
       fix xa
       assume xa_nat: "xa N"
-      assume H: "x \<le> xa \<doteq> S x \<le> S xa"
-      show "x \<le> S xa \<doteq> S x \<le> S S xa"
-        apply (rule defE[where Q="\<lambda>c. (x \<le> S xa) \<doteq> (c (S x) (S S xa))" and a="leq" and b="(\<lambda>x y. if x \<doteq> 0 then 1 else (if y \<doteq> 0 then 0 else (P x \<le> P y)))"])
+      assume H: "x \<le> xa = S x \<le> S xa"
+      show "x \<le> S xa = S x \<le> S S xa"
+        apply (rule defE[where Q="\<lambda>c. (x \<le> S xa) = (c (S x) (S S xa))" and a="leq" and b="(\<lambda>x y. if x = 0 then 1 else (if y = 0 then 0 else (P x \<le> P y)))"])
         apply (rule def_leq)
-        apply (rule eqSubst[where a="if S S xa \<doteq> num_zero then num_zero else P S x \<le> P S S xa"])
+        apply (rule eqSubst[where a="if S S xa = num_zero then num_zero else P S x \<le> P S S xa"])
         apply (rule eqSym)
         apply (rule condI2Eq)
         apply (fold neq_def)
@@ -1053,7 +1161,7 @@ proof (rule ind[where a="y"])
         apply (rule leq_terminates)
         apply (rule eqSubst[where a="x" and b="P S x"])
         apply (rule eqSym)
-        apply (rule predSucSym)
+        apply (rule predSucInv)
         apply (rule x_nat)
         apply (rule x_nat)
         apply (gd_auto)
@@ -1070,7 +1178,7 @@ proof (rule ind[where a="y"])
         apply (rule x_nat)
         apply (gd_auto)
         apply (rule xa_nat)
-        apply (rule eqSubst[where a="P S x \<le> P S S xa" and b="(if S S xa \<doteq> num_zero then num_zero else P S x \<le> P S S xa)"])
+        apply (rule eqSubst[where a="P S x \<le> P S S xa" and b="(if S S xa = num_zero then num_zero else P S x \<le> P S S xa)"])
         apply (rule eqSym)
         apply (rule condI2Eq)
         apply (fold neq_def)
@@ -1089,7 +1197,7 @@ proof (rule ind[where a="y"])
         apply (rule xa_nat)
         apply (rule eqSubst[where a="x" and b="P S x"])
         apply (rule eqSym)
-        apply (rule predSucSym)
+        apply (rule predSucInv)
         apply (rule x_nat)
         apply (rule eqSubst[where a="S xa" and b="P S S xa"])
         apply (rule eqSym)
@@ -1106,23 +1214,23 @@ qed
 
 lemma suc_pred_inv [gd_simp]:
   assumes x_nat: "x N"
-  assumes x_nz: "\<not> x \<doteq> 0"
-  shows "S P x \<doteq> x"
+  assumes x_nz: "\<not> x = 0"
+  shows "S P x = x"
 proof -
-  have "\<exists>u. x \<doteq> S(u)" by (gd_auto, rule x_nat, rule x_nz)
+  have "\<exists>u. x = S(u)" by (gd_auto, rule x_nat, rule x_nz)
   then show ?thesis
     apply (rule existsE)
     proof -
       fix a
       assume a_nat: "a N"
-      assume H: "x \<doteq> S a"
-      show "S P x \<doteq> x"
+      assume H: "x = S a"
+      show "S P x = x"
         apply (rule eqSubst[where a="S a"])
         apply (rule eqSym)
         apply (rule H)
         apply (rule eqSubst[where a="a" and b="P S a"])
         apply (rule eqSym)
-        apply (rule predSucSym)
+        apply (rule predSucInv)
         apply (rule a_nat)
         apply (fold isNat_def)
         apply (rule natS)
@@ -1133,10 +1241,10 @@ qed
 
 lemma cases_nat:
   assumes x_nat: "x N"
-  assumes x_z: "x \<doteq> 0 \<Longrightarrow> Q 0"
-  assumes x_nz: "\<not> x \<doteq> 0 \<Longrightarrow> Q x"
+  assumes x_z: "x = 0 \<Longrightarrow> Q 0"
+  assumes x_nz: "\<not> x = 0 \<Longrightarrow> Q x"
   shows "Q x"
-apply (rule disjE1[where P="x \<doteq> 0" and Q="\<not> x \<doteq> 0"])
+apply (rule disjE1[where P="x = 0" and Q="\<not> x = 0"])
 apply (fold GD.bJudg_def)
 apply (gd_auto)
 apply (rule x_nat)
@@ -1152,21 +1260,21 @@ done
 lemma leq_monotone_pred:
   assumes x_nat: "x N"
   assumes y_nat: "y N"
-  assumes H: "x \<le> y \<doteq> 1"
-  shows "P x \<le> P y \<doteq> 1"
+  assumes H: "x \<le> y = 1"
+  shows "P x \<le> P y = 1"
 proof (rule cases_nat[where x="x"])
   show "x N" by (rule x_nat)
-  show "x \<doteq> 0 \<Longrightarrow> P 0 \<le> P y \<doteq> 1"
+  show "x = 0 \<Longrightarrow> P 0 \<le> P y = 1"
     apply (rule eqSubst[where a="0" and b="P 0"])
     apply (rule eqSym)
     apply (gd_auto)
     apply (rule y_nat)
     done
-  show "\<not> x \<doteq> 0 \<Longrightarrow> P x \<le> P y \<doteq> 1"
+  show "\<not> x = 0 \<Longrightarrow> P x \<le> P y = 1"
   proof (rule cases_nat[where x="y"])
     show "y N" by (rule y_nat)
-    show "\<not> x \<doteq> 0 \<Longrightarrow> y \<doteq> 0 \<Longrightarrow> P x \<le> P 0 \<doteq> 1"
-      apply (rule exF[where P="x \<le> y \<doteq> 1"])
+    show "\<not> x = 0 \<Longrightarrow> y = 0 \<Longrightarrow> P x \<le> P 0 = 1"
+      apply (rule exF[where P="x \<le> y = 1"])
       apply (rule H)
       apply (rule eqSubst[where a="0" and b="x \<le> y"])
       apply (rule eqSym)
@@ -1177,18 +1285,18 @@ proof (rule cases_nat[where x="x"])
       apply (fold neq_def)
       apply (gd_auto)
       done
-    show "\<not> x \<doteq> 0 \<Longrightarrow> \<not> y \<doteq> 0 \<Longrightarrow> P x \<le> P y \<doteq> 1"
+    show "\<not> x = 0 \<Longrightarrow> \<not> y = 0 \<Longrightarrow> P x \<le> P y = 1"
     proof -
-      assume x_nz: "\<not> x \<doteq> 0"
-      assume y_nz: "\<not> y \<doteq> 0"
-      have H1: "P x \<le> P y \<doteq> S P x \<le> S P y"
+      assume x_nz: "\<not> x = 0"
+      assume y_nz: "\<not> y = 0"
+      have H1: "P x \<le> P y = S P x \<le> S P y"
         apply (rule leq_suc_eq)
         apply (gd_auto)
         apply (rule x_nat)
         apply (gd_auto)
         apply (rule y_nat)
         done
-      have H2: "P x \<le> P y \<doteq> x \<le> y"
+      have H2: "P x \<le> P y = x \<le> y"
         apply (rule eqSubst[where a="S P x" and b="x"])
         apply (gd_auto)
         apply (rule x_nat)
@@ -1199,12 +1307,12 @@ proof (rule cases_nat[where x="x"])
         apply (rule y_nz)
         apply (rule eqSubst[where a="P x" and b="P S P x"])
         apply (rule eqSym)
-        apply (rule predSucSym)
+        apply (rule predSucInv)
         apply (gd_auto)
         apply (rule x_nat)
         apply (rule eqSubst[where a="P y" and b="P S P y"])
         apply (rule eqSym)
-        apply (rule predSucSym)
+        apply (rule predSucInv)
         apply (gd_auto)
         apply (rule y_nat)
         apply (rule H1)
@@ -1222,23 +1330,23 @@ lemma leq_trans:
   assumes x_nat: "x N"
   assumes y_nat: "y N"
   assumes z_nat: "z N"
-  assumes x_leq_y: "x \<le> y \<doteq> 1"
-  assumes y_leq_z: "y \<le> z \<doteq> 1"
-  shows "x \<le> z \<doteq> 1"
+  assumes x_leq_y: "x \<le> y = 1"
+  assumes y_leq_z: "y \<le> z = 1"
+  shows "x \<le> z = 1"
 proof -
-  have quantized: "\<forall>x y. (x \<le> y \<doteq> 1) \<turnstile> (y \<le> z \<doteq> 1) \<turnstile> (x \<le> z \<doteq> 1)"
+  have quantized: "\<forall>x y. (x \<le> y = 1) \<turnstile> (y \<le> z = 1) \<turnstile> (x \<le> z = 1)"
   proof (rule ind[where a="z"])
   show "z N" by (rule z_nat)
-  show "\<forall>x y. x \<le> y \<doteq> 1 \<turnstile>
-    y \<le> 0 \<doteq> 1 \<turnstile> x \<le> 0 \<doteq> 1"
+  show "\<forall>x y. x \<le> y = 1 \<turnstile>
+    y \<le> 0 = 1 \<turnstile> x \<le> 0 = 1"
     proof (rule forallI, rule forallI, rule entailsI, rule entailsI)
       fix xa ya
       assume xa_nat: "xa N"
       assume ya_nat: "ya N"
-      assume H: "ya \<le> 0 \<doteq> 1"
-      assume H1: "xa \<le> ya \<doteq> 1"
-      have ya_zero: "ya \<doteq> 0" by (rule le_0, rule ya_nat, rule H)
-      show "xa \<le> 0 \<doteq> 1"
+      assume H: "ya \<le> 0 = 1"
+      assume H1: "xa \<le> ya = 1"
+      have ya_zero: "ya = 0" by (rule leq_0, rule ya_nat, rule H)
+      show "xa \<le> 0 = 1"
         apply (rule eqSubst[where a="ya" and b="0"])
         apply (rule eqSubst[where a="1" and b="S(ya)"])
         apply (gd_auto)
@@ -1252,18 +1360,18 @@ proof -
         apply (rule H1)
         done
     qed
-  show "\<forall>x. (\<forall>xa y. xa \<le> y \<doteq> 1 \<turnstile> y \<le> x \<doteq> 1 \<turnstile> xa \<le> x \<doteq> 1) \<turnstile>
-     (\<forall>xa y. xa \<le> y \<doteq> 1 \<turnstile> y \<le> S x \<doteq> 1 \<turnstile> xa \<le> S x \<doteq> 1)"
+  show "\<forall>x. (\<forall>xa y. xa \<le> y = 1 \<turnstile> y \<le> x = 1 \<turnstile> xa \<le> x = 1) \<turnstile>
+     (\<forall>xa y. xa \<le> y = 1 \<turnstile> y \<le> S x = 1 \<turnstile> xa \<le> S x = 1)"
     apply (rule forallI)
     apply (rule entailsI)
     proof -
       fix x
       assume x_nat: "x N"
-      show "\<forall>xa y. xa \<le> y \<doteq> 1 \<turnstile> y \<le> x \<doteq> 1 \<turnstile> xa \<le> x \<doteq> 1 \<Longrightarrow>
-            \<forall>xa y. xa \<le> y \<doteq> 1 \<turnstile> y \<le> S x \<doteq> 1 \<turnstile> xa \<le> S x \<doteq> 1"
+      show "\<forall>xa y. xa \<le> y = 1 \<turnstile> y \<le> x = 1 \<turnstile> xa \<le> x = 1 \<Longrightarrow>
+            \<forall>xa y. xa \<le> y = 1 \<turnstile> y \<le> S x = 1 \<turnstile> xa \<le> S x = 1"
         proof -
-          assume hyp: "\<forall>xa y. xa \<le> y \<doteq> 1 \<turnstile> y \<le> x \<doteq> 1 \<turnstile> xa \<le> x \<doteq> 1"
-          show "\<forall>xa y. xa \<le> y \<doteq> 1 \<turnstile> y \<le> S x \<doteq> 1 \<turnstile> xa \<le> S x \<doteq> 1"
+          assume hyp: "\<forall>xa y. xa \<le> y = 1 \<turnstile> y \<le> x = 1 \<turnstile> xa \<le> x = 1"
+          show "\<forall>xa y. xa \<le> y = 1 \<turnstile> y \<le> S x = 1 \<turnstile> xa \<le> S x = 1"
             apply (rule forallI)
             apply (rule forallI)
             apply (rule entailsI)
@@ -1272,9 +1380,9 @@ proof -
               fix xa ya
               assume xa_nat: "xa N"
               assume ya_nat: "ya N"
-              assume xa_leq_ya: "xa \<le> ya \<doteq> 1"
-              assume ya_leq_sx: "ya \<le> S x \<doteq> 1"
-              show "xa \<le> S x \<doteq> 1"
+              assume xa_leq_ya: "xa \<le> ya = 1"
+              assume ya_leq_sx: "ya \<le> S x = 1"
+              show "xa \<le> S x = 1"
                 apply (unfold_def def_leq)
                 apply (rule condI3Eq)
                 apply (gd_auto)
@@ -1289,7 +1397,7 @@ proof -
                 apply (rule eqSym)
                 apply (gd_auto)
                 apply (rule x_nat)
-                apply (rule disjE1[where P="xa\<doteq>0" and Q="\<not>(xa\<doteq>0)"])
+                apply (rule disjE1[where P="xa=0" and Q="\<not>(xa=0)"])
                 apply (fold GD.bJudg_def)
                 apply (rule eqBool)
                 apply (rule xa_nat)
@@ -1302,34 +1410,34 @@ proof -
                 apply (gd_auto)
                 apply (rule x_nat)
                 proof -
-                  assume xa_nz: "\<not> xa \<doteq> 0"
-                  have ya_nz: "\<not> ya \<doteq> 0"
+                  assume xa_nz: "\<not> xa = 0"
+                  have ya_nz: "\<not> ya = 0"
                     apply (fold neq_def)
                     apply (rule leq_nz_monotone[where xa="xa"])
                     apply (rule xa_nz)
                     apply (rule xa_leq_ya)
                     apply (rule ya_nat)
                     done
-                  have H: "P(ya) \<le> P(S x) \<doteq> 1"
+                  have H: "P(ya) \<le> P(S x) = 1"
                     apply (rule GD.leq_monotone_pred)
                     apply (rule ya_nat)
                     apply (gd_auto)
                     apply (rule x_nat)
                     apply (rule ya_leq_sx)
                     done
-                  have H2: "P(ya) \<le> x \<doteq> 1"
+                  have H2: "P(ya) \<le> x = 1"
                     apply (rule eqSubst[where a="P S x" and b="x"])
                     apply (gd_auto)
                     apply (rule x_nat)
                     apply (rule H)
                     done
-                  have H3: "P(xa) \<le> P(ya) \<doteq> 1"
+                  have H3: "P(xa) \<le> P(ya) = 1"
                     apply (rule leq_monotone_pred)
                     apply (rule xa_nat)
                     apply (rule ya_nat)
                     apply (rule xa_leq_ya)
                     done
-                  have H4: "P xa \<le> P ya \<doteq> 1 \<turnstile> P ya \<le> x \<doteq> 1 \<turnstile> P xa \<le> x \<doteq> 1"
+                  have H4: "P xa \<le> P ya = 1 \<turnstile> P ya \<le> x = 1 \<turnstile> P xa \<le> x = 1"
                     apply (rule forallE[where a="P ya"])
                     apply (rule forallE[where a="P xa"])
                     apply (rule hyp)
@@ -1338,11 +1446,11 @@ proof -
                     apply (gd_auto)
                     apply (rule ya_nat)
                     done
-                  then have H5: "P ya \<le> x \<doteq> 1 \<turnstile> P xa \<le> x \<doteq> 1"
+                  then have H5: "P ya \<le> x = 1 \<turnstile> P xa \<le> x = 1"
                     apply (rule entailsE)
                     apply (rule H3)
                     done
-                  then show "P xa \<le> x \<doteq> 1"
+                  then show "P xa \<le> x = 1"
                     apply (rule entailsE)
                     apply (rule H2)
                     done
@@ -1351,15 +1459,15 @@ proof -
         qed
      qed
   qed
-  then have "\<forall>y. (x \<le> y \<doteq> 1) \<turnstile> (y \<le> z \<doteq> 1) \<turnstile> (x \<le> z \<doteq> 1)"
+  then have "\<forall>y. (x \<le> y = 1) \<turnstile> (y \<le> z = 1) \<turnstile> (x \<le> z = 1)"
     apply (rule forallE)
     apply (rule x_nat)
     done
-  then have "(x \<le> y \<doteq> 1) \<turnstile> (y \<le> z \<doteq> 1) \<turnstile> (x \<le> z \<doteq> 1)"
+  then have "(x \<le> y = 1) \<turnstile> (y \<le> z = 1) \<turnstile> (x \<le> z = 1)"
     apply (rule forallE)
     apply (rule y_nat)
     done
-  then have "(y \<le> z \<doteq> 1) \<turnstile> (x \<le> z \<doteq> 1)"
+  then have "(y \<le> z = 1) \<turnstile> (x \<le> z = 1)"
     apply (rule entailsE)
     apply (rule x_leq_y)
     done
@@ -1429,7 +1537,7 @@ qed
 
 lemma zero_less_true [gd_simp]:
   assumes a_nat: "a N"
-  shows "0 < S(a) \<doteq> 1"
+  shows "0 < S(a) = 1"
 apply (unfold_def def_less)
 apply (rule condI2Eq)
 apply (fold neq_def)
@@ -1442,7 +1550,7 @@ done
 
 lemma sub_0 [gd_simp]:
   assumes x_nat: "x N"
-  shows "x - 0 \<doteq> x"
+  shows "x - 0 = x"
 apply (unfold_def def_sub)
 apply (gd_auto)
 apply (rule condI1)
@@ -1452,7 +1560,7 @@ done
 
 lemma zero_div [gd_simp]:
   assumes x_nat: "x N"
-  shows "div 0 S(x) \<doteq> 0"
+  shows "div 0 S(x) = 0"
 apply (unfold_def def_div)
 apply (gd_auto)
 apply (rule condI1)
@@ -1463,21 +1571,21 @@ done
 
 lemma div_1 [gd_simp]:
   assumes x_nat: "x N"
-  shows "div x 1 \<doteq> x"
+  shows "div x 1 = x"
 proof (rule ind)
   show "x N" by (rule x_nat)
-  show "div 0 1 \<doteq> 0"
+  show "div 0 1 = 0"
     apply (unfold_def def_div)
     apply (gd_auto)
     apply (rule condI1)
     apply (gd_auto)
     done
-  show "\<forall>x.(div x 1 \<doteq> x) \<turnstile> (div S(x) 1 \<doteq> S(x))"
+  show "\<forall>x.(div x 1 = x) \<turnstile> (div S(x) 1 = S(x))"
   proof (rule forallI, rule entailsI)
     fix xa
     assume xa_nat: "xa N"
-    assume ind_h: "div xa 1 \<doteq> xa"
-    show "div S(xa) 1 \<doteq> S(xa)"
+    assume ind_h: "div xa 1 = xa"
+    show "div S(xa) 1 = S(xa)"
       apply (unfold_def def_div)
       apply (rule eqSubst[where a="xa" and b="div ((S(xa))-1) 1"])
       apply (rule eqSubst[where a="xa" and b="(S(xa))-1"])
@@ -1524,11 +1632,11 @@ proof (rule ind)
   qed
 qed
 
-lemma x_leq_0_then_x_0:
+lemma leq_0_then_0:
   assumes x_nat: "x N"
-  assumes x_leq_0: "x \<le> 0 \<doteq> 1"
-  shows "x \<doteq> 0"
-apply (rule grounded_contradiction[where q="x \<le> 0 \<doteq> 1"])
+  assumes x_leq_0: "x \<le> 0 = 1"
+  shows "x = 0"
+apply (rule grounded_contradiction[where q="x \<le> 0 = 1"])
 apply (rule eqBool)
 apply (rule x_nat)
 apply (rule nat0)
@@ -1546,21 +1654,36 @@ apply (fold neq_def)
 apply (gd_auto)
 done
 
+lemma neq_monotone_suc:
+  assumes x_nat: "x N"
+  assumes y_nat: "y N"
+  assumes x_neq_y: "\<not> x = y"
+  shows "\<not> S x = S y"
+apply (rule grounded_contradiction[where q="x = y"])
+apply (gd_auto)
+apply (rule x_nat)
+apply (rule y_nat)
+apply (rule sucInj)
+apply (rule dNegE)
+apply (assumption)
+apply (rule x_neq_y)
+done
+
 lemma neq_monotone_pred:
   assumes x_nat: "x N"
   assumes y_nat: "y N"
-  assumes x_nz: "\<not> x \<doteq> 0"
-  assumes y_nz: "\<not> y \<doteq> 0"
-  assumes x_neq_y: "\<not> x \<doteq> y"
-  shows "\<not> P x \<doteq> P y"
-proof (rule GD.grounded_contradiction[where q="x \<doteq> y"])
-  show "\<not> P x \<doteq> P y B" by (gd_auto, rule x_nat, rule y_nat)
-  show "\<not>\<not> P x \<doteq> P y \<Longrightarrow> x \<doteq> y"
+  assumes x_nz: "\<not> x = 0"
+  assumes y_nz: "\<not> y = 0"
+  assumes x_neq_y: "\<not> x = y"
+  shows "\<not> P x = P y"
+proof (rule GD.grounded_contradiction[where q="x = y"])
+  show "\<not> P x = P y B" by (gd_auto, rule x_nat, rule y_nat)
+  show "\<not>\<not> P x = P y \<Longrightarrow> x = y"
     proof -
-      assume H: "\<not> \<not> P x \<doteq> P y"
-      then have H2: "P x \<doteq> P y"
+      assume H: "\<not> \<not> P x = P y"
+      then have H2: "P x = P y"
         by (rule dNegE)
-      then have H3: "S P x \<doteq> S P y"
+      then have H3: "S P x = S P y"
         by (rule sucCong)
       show ?thesis
         apply (rule eqSubst[where a="S P x" and b="x"])
@@ -1574,38 +1697,38 @@ proof (rule GD.grounded_contradiction[where q="x \<doteq> y"])
         apply (rule H3)
         done
     qed
-  show "\<not>\<not> P x \<doteq> P y \<Longrightarrow> \<not> x \<doteq> y" by (rule x_neq_y)
+  show "\<not>\<not> P x = P y \<Longrightarrow> \<not> x = y" by (rule x_neq_y)
 qed
 
 lemma less_is_leq_neq:
   assumes x_nat: "x N"
   assumes y_nat: "y N"
-  assumes x_leq_y: "x \<le> y \<doteq> 1"
-  assumes x_neq_y: "\<not> x \<doteq> y"
-  shows "x < y \<doteq> 1"
+  assumes x_leq_y: "x \<le> y = 1"
+  assumes x_neq_y: "\<not> x = y"
+  shows "x < y = 1"
 proof -
-  have "\<forall>x. x \<le> y \<doteq> 1 \<turnstile> \<not> x \<doteq> y \<turnstile> x < y \<doteq> 1"
+  have "\<forall>x. x \<le> y = 1 \<turnstile> \<not> x = y \<turnstile> x < y = 1"
   proof (rule ind[where a="y"])
     show "y N" by (rule y_nat)
-    show "\<forall>x. x \<le> 0 \<doteq> 1 \<turnstile> \<not> x \<doteq> 0 \<turnstile> x < 0 \<doteq> 1"
+    show "\<forall>x. x \<le> 0 = 1 \<turnstile> \<not> x = 0 \<turnstile> x < 0 = 1"
       apply (rule forallI)
       apply (rule entailsI)
       apply (rule entailsI)
       proof -
         fix x
         assume x_nat: "x N"
-        assume x_leq_0: "x \<le> 0 \<doteq> 1"
-        assume x_nz: "\<not> x \<doteq> 0"
-        show "x < 0 \<doteq> 1"
-          apply (rule exF[where P="x \<doteq> 0"])
-          apply (rule x_leq_0_then_x_0)
+        assume x_leq_0: "x \<le> 0 = 1"
+        assume x_nz: "\<not> x = 0"
+        show "x < 0 = 1"
+          apply (rule exF[where P="x = 0"])
+          apply (rule leq_0_then_0)
           apply (rule x_nat)
           apply (rule x_leq_0)
           apply (rule x_nz)
           done
       qed
-    show "\<forall>x. (\<forall>xa. xa \<le> x \<doteq> 1 \<turnstile> \<not> xa \<doteq> x \<turnstile> xa < x \<doteq> 1) \<turnstile>
-     (\<forall>xa. xa \<le> S x \<doteq> 1 \<turnstile> \<not> xa \<doteq> S x \<turnstile> xa < S x \<doteq> 1)"
+    show "\<forall>x. (\<forall>xa. xa \<le> x = 1 \<turnstile> \<not> xa = x \<turnstile> xa < x = 1) \<turnstile>
+     (\<forall>xa. xa \<le> S x = 1 \<turnstile> \<not> xa = S x \<turnstile> xa < S x = 1)"
       apply (rule forallI)
       apply (rule entailsI)
       apply (rule forallI)
@@ -1615,14 +1738,14 @@ proof -
         fix x xa
         assume x_nat: "x N"
         assume xa_nat: "xa N"
-        assume hyp: "\<forall>xa. xa \<le> x \<doteq> 1 \<turnstile> \<not> xa \<doteq> x \<turnstile> xa < x \<doteq> 1"
-        assume xa_leq_sx: "xa \<le> S x \<doteq> 1"
-        assume xa_neq_sx: "\<not> xa \<doteq> S x"
-        have H: "P xa \<le> P S x \<doteq> 1"
+        assume hyp: "\<forall>xa. xa \<le> x = 1 \<turnstile> \<not> xa = x \<turnstile> xa < x = 1"
+        assume xa_leq_sx: "xa \<le> S x = 1"
+        assume xa_neq_sx: "\<not> xa = S x"
+        have H: "P xa \<le> P S x = 1"
           by (rule leq_monotone_pred, rule xa_nat, rule natS, rule x_nat, rule xa_leq_sx)
-        have p_xa_leq_x: "P xa \<le> x \<doteq> 1"
+        have p_xa_leq_x: "P xa \<le> x = 1"
           by (rule eqSubst[where a="P S x" and b="x"], gd_auto, rule x_nat, rule H)
-        show "xa < S x \<doteq> 1 "
+        show "xa < S x = 1 "
           apply (unfold_def def_less)
           apply (rule condI2Eq)
           apply (fold neq_def)
@@ -1642,8 +1765,8 @@ proof -
           apply (gd_auto)
           apply (rule x_nat)
           proof -
-            assume xa_nz: "\<not> xa \<doteq> 0"
-            have H2: "\<not> P xa \<doteq> P S x"
+            assume xa_nz: "\<not> xa = 0"
+            have H2: "\<not> P xa = P S x"
               apply (rule neq_monotone_pred)
               apply (rule xa_nat)
               apply (rule natS)
@@ -1655,38 +1778,38 @@ proof -
               apply (unfold neq_def)
               apply (rule xa_neq_sx)
               done
-            have pxa_neq_x: "\<not> P xa \<doteq> x"
+            have pxa_neq_x: "\<not> P xa = x"
               apply (rule eqSubst[where a="P S x" and b="x"])
-              apply (rule predSucSym)
+              apply (rule predSucInv)
               apply (rule x_nat)
               apply (rule H2)
               done
-            have "P xa \<le> x \<doteq> 1 \<turnstile> \<not> P xa \<doteq> x \<turnstile> P xa < x \<doteq> 1"
+            have "P xa \<le> x = 1 \<turnstile> \<not> P xa = x \<turnstile> P xa < x = 1"
               apply (rule forallE[where a="P xa"])
               apply (rule hyp)
               apply (rule natP)
               apply (rule xa_nat)
               done
-            then have "\<not> P xa \<doteq> x \<turnstile> P xa < x \<doteq> 1"
+            then have "\<not> P xa = x \<turnstile> P xa < x = 1"
               apply (rule entailsE)
               apply (rule p_xa_leq_x)
               done
-            then show "P xa < x \<doteq> 1"
+            then show "P xa < x = 1"
               apply (rule entailsE)
               apply (rule pxa_neq_x)
               done
         qed
       qed
   qed
-  then have "x \<le> y \<doteq> 1 \<turnstile> \<not> x \<doteq> y \<turnstile> x < y \<doteq> 1"
+  then have "x \<le> y = 1 \<turnstile> \<not> x = y \<turnstile> x < y = 1"
     apply (rule forallE)
     apply (rule x_nat)
     done
-  then have "\<not> x \<doteq> y \<turnstile> x < y \<doteq> 1"
+  then have "\<not> x = y \<turnstile> x < y = 1"
     apply (rule entailsE)
     apply (rule x_leq_y)
     done
-  then show "x < y \<doteq> 1"
+  then show "x < y = 1"
     apply (rule entailsE)
     apply (rule x_neq_y)
     done
@@ -1694,12 +1817,12 @@ qed
 
 lemma x_less_1_is_0:
   assumes x_nat: "x N"
-  assumes H: "x < 1 \<doteq> 1"
-  shows "x \<doteq> 0"
-proof (rule grounded_contradiction[where q="x < 1 \<doteq> 0"])
-  show "x \<doteq> 0 B"
+  assumes H: "x < 1 = 1"
+  shows "x = 0"
+proof (rule grounded_contradiction[where q="x < 1 = 0"])
+  show "x = 0 B"
     by (rule eqBool, rule x_nat, gd_auto)
-  show "\<not> x \<doteq> 0 \<Longrightarrow> x < 1 \<doteq> 0"
+  show "\<not> x = 0 \<Longrightarrow> x < 1 = 0"
     apply (unfold_def def_less)
     apply (rule condI2Eq)
     apply (fold neq_def)
@@ -1711,7 +1834,7 @@ proof (rule grounded_contradiction[where q="x < 1 \<doteq> 0"])
     apply (rule eqSym)
     apply (gd_auto)
     done
-  show "\<not> x \<doteq> 0 \<Longrightarrow> \<not> x < 1 \<doteq> 0"
+  show "\<not> x = 0 \<Longrightarrow> \<not> x < 1 = 0"
       apply (rule eqSubst[where a="1" and b="x < 1"])
       apply (rule eqSym)
       apply (rule H)
@@ -1723,8 +1846,8 @@ qed
 lemma le_monotone_suc:
   assumes x_nat: "x N"
   assumes y_nat: "y N"
-  assumes x_le_y: "x < y \<doteq> 1"
-  shows "S x < S y \<doteq> 1"
+  assumes x_le_y: "x < y = 1"
+  shows "S x < S y = 1"
 apply (unfold_def def_less)
 apply (rule condI2Eq)
 apply (fold neq_def)
@@ -1749,11 +1872,11 @@ done
 
 lemma le_monotone_pred:
   assumes x_nat: "x N"
-  assumes x_nz: "\<not> x \<doteq> 0"
+  assumes x_nz: "\<not> x = 0"
   assumes y_nat: "y N"
-  assumes x_le_y: "x < y \<doteq> 1"
-  shows "P x < P y \<doteq> 1"
-apply (rule grounded_contradiction[where q="x < y \<doteq> 1"])
+  assumes x_le_y: "x < y = 1"
+  shows "P x < P y = 1"
+apply (rule grounded_contradiction[where q="x < y = 1"])
 apply (gd_auto)
 apply (rule x_nat)
 apply (rule y_nat)
@@ -1761,15 +1884,15 @@ apply (rule x_le_y)
 apply (unfold_def def_less)
 apply (rule cases_nat[where x="y"])
 apply (rule y_nat)
-apply (rule eqSubst[where a="0" and b="(if 0 \<doteq> 0 then 0 else
-  if x \<doteq> 0 then 1 else (P x < P 0))"])
+apply (rule eqSubst[where a="0" and b="(if 0 = 0 then 0 else
+  if x = 0 then 1 else (P x < P 0))"])
 apply (rule eqSym)
 apply (rule condI1)
 apply (gd_auto)
 apply (fold neq_def)
 apply (gd_auto)
-apply (rule eqSubst[where a="P x < P y" and b="(if y \<doteq> 0 then 0 else if
-  x \<doteq> 0 then 1 else P x < P y)"])
+apply (rule eqSubst[where a="P x < P y" and b="(if y = 0 then 0 else if
+  x = 0 then 1 else P x < P y)"])
 apply (rule eqSym)
 apply (rule condI2Eq)
 apply (unfold neq_def)
@@ -1798,20 +1921,20 @@ done
 lemma le_suc_implies_leq:
   assumes x_nat: "x N"
   assumes y_nat: "y N"
-  assumes x_le_sy: "x < S y \<doteq> 1"
-  shows "x \<le> y \<doteq> 1"
+  assumes x_le_sy: "x < S y = 1"
+  shows "x \<le> y = 1"
 proof -
-  have "\<forall>x. x < S y \<doteq> 1 \<turnstile> x \<le> y \<doteq> 1"
+  have "\<forall>x. x < S y = 1 \<turnstile> x \<le> y = 1"
   proof (rule ind[where a="y"])
     show "y N" by (rule y_nat)
-    show "\<forall>x. x < 1 \<doteq> 1 \<turnstile> x \<le> 0 \<doteq> 1"
+    show "\<forall>x. x < 1 = 1 \<turnstile> x \<le> 0 = 1"
       apply (rule forallI)
       apply (rule entailsI)
       proof -
         fix x
         assume x_nat: "x N"
-        assume x_le_sy: "x < 1 \<doteq> 1"
-        show "x \<le> 0 \<doteq> 1"
+        assume x_le_sy: "x < 1 = 1"
+        show "x \<le> 0 = 1"
           apply (unfold_def def_leq)
           apply (rule condI1)
           apply (rule GD.x_less_1_is_0)
@@ -1820,8 +1943,8 @@ proof -
           apply (gd_auto)
           done
       qed
-    show "\<forall>x. (\<forall>xa. xa < S x \<doteq> 1 \<turnstile> xa \<le> x \<doteq> 1) \<turnstile>
-     (\<forall>xa. xa < S S x \<doteq> 1 \<turnstile> xa \<le> S x \<doteq> 1)"
+    show "\<forall>x. (\<forall>xa. xa < S x = 1 \<turnstile> xa \<le> x = 1) \<turnstile>
+     (\<forall>xa. xa < S S x = 1 \<turnstile> xa \<le> S x = 1)"
       apply (rule forallI)
       apply (rule entailsI)
       apply (rule forallI)
@@ -1830,15 +1953,15 @@ proof -
         fix x xa
         assume x_nat: "x N"
         assume xa_nat: "xa N"
-        assume hyp: "\<forall>xa. xa < S x \<doteq> 1 \<turnstile> xa \<le> x \<doteq> 1"
-        have hyp_inst: "P xa < S x \<doteq> 1 \<turnstile> P xa \<le> x \<doteq> 1"
+        assume hyp: "\<forall>xa. xa < S x = 1 \<turnstile> xa \<le> x = 1"
+        have hyp_inst: "P xa < S x = 1 \<turnstile> P xa \<le> x = 1"
           apply (rule forallE[where a="P xa"])
           apply (rule hyp)
           apply (gd_auto)
           apply (rule xa_nat)
           done
-        assume xa_le_ssx: "xa < S S x \<doteq> 1"
-        show "xa \<le> S x \<doteq> 1"
+        assume xa_le_ssx: "xa < S S x = 1"
+        show "xa \<le> S x = 1"
           apply (unfold_def def_leq)
           apply (rule cases_nat[where x="xa"])
           apply (rule xa_nat)
@@ -1856,7 +1979,7 @@ proof -
           apply (rule eqSym)
           apply (gd_auto)
           apply (rule x_nat)
-          apply (rule entailsE[where a="P xa < S x \<doteq> 1"])
+          apply (rule entailsE[where a="P xa < S x = 1"])
           apply (rule hyp_inst)
           apply (rule eqSubst[where a="P S S x" and b = "S x"])
           apply (gd_auto)
@@ -1870,7 +1993,7 @@ proof -
           done
       qed
   qed
-  then have "x < S y \<doteq> 1 \<turnstile> x \<le> y \<doteq> 1"
+  then have "x < S y = 1 \<turnstile> x \<le> y = 1"
     apply (rule forallE)
     apply (rule x_nat)
     done
@@ -1883,15 +2006,15 @@ qed
 lemma leq_suc_not_leq_implies_eq:
   assumes x_nat: "x N"
   assumes y_nat: "y N"
-  assumes x_ge_y: "\<not> x \<le> y \<doteq> 1"
-  assumes x_le_sy: "x \<le> S y \<doteq> 1"
-  shows "x \<doteq> S y"
+  assumes x_ge_y: "\<not> x \<le> y = 1"
+  assumes x_le_sy: "x \<le> S y = 1"
+  shows "x = S y"
 proof (rule contradiction)
-  show "x \<doteq> S(y) B" by (rule eqBool, rule x_nat, rule natS, rule y_nat)
-  show "\<not> x \<doteq> S(y) \<Longrightarrow> False"
+  show "x = S(y) B" by (rule eqBool, rule x_nat, rule natS, rule y_nat)
+  show "\<not> x = S(y) \<Longrightarrow> False"
     proof -
-      assume x_neq_sy: "\<not> x \<doteq> S y"
-      have H: "x < S y \<doteq> 1"
+      assume x_neq_sy: "\<not> x = S y"
+      have H: "x < S y = 1"
         apply (rule less_is_leq_neq)
         apply (rule x_nat)
         apply (rule natS)
@@ -1899,9 +2022,9 @@ proof (rule contradiction)
         apply (rule x_le_sy)
         apply (rule x_neq_sy)
         done
-      have H4: "x \<le> y \<doteq> 1" by (rule le_suc_implies_leq, rule x_nat, rule y_nat, rule H)
+      have H4: "x \<le> y = 1" by (rule le_suc_implies_leq, rule x_nat, rule y_nat, rule H)
       show "False"
-        apply (rule exF[where P="x \<le> y \<doteq> 1"])
+        apply (rule exF[where P="x \<le> y = 1"])
         apply (rule H4)
         apply (rule x_ge_y)
         done
@@ -1911,21 +2034,21 @@ qed
 lemma strong_induction:
   assumes a_nat: "a N"
   assumes bc: "Q 0"
-  assumes step: "\<forall>x.((\<forall>y. y\<le>x \<doteq> 1 \<turnstile> Q y) \<turnstile> (Q S(x)))"
+  assumes step: "\<forall>x.((\<forall>y. y\<le>x = 1 \<turnstile> Q y) \<turnstile> (Q S(x)))"
   shows "Q a"
 proof -
-  have q: "\<forall>x. (x \<le> a \<doteq> 1) \<turnstile> Q x"
+  have q: "\<forall>x. (x \<le> a = 1) \<turnstile> Q x"
     proof (rule ind[where a="a"])
       show "a N" by (rule a_nat)
-      show "\<forall>x. x \<le> 0 \<doteq> 1 \<turnstile> Q x"
+      show "\<forall>x. x \<le> 0 = 1 \<turnstile> Q x"
         apply (rule forallI)
         apply (rule entailsI)
         proof -
           fix x
           assume x_nat: "x N"
-          assume x_le_0: "x \<le> 0 \<doteq> 1"
-          have x_zero: "x \<doteq> 0"
-            apply (rule GD.x_leq_0_then_x_0)
+          assume x_le_0: "x \<le> 0 = 1"
+          have x_zero: "x = 0"
+            apply (rule leq_0_then_0)
             apply (rule x_nat)
             apply (rule x_le_0)
             done
@@ -1936,7 +2059,7 @@ proof -
             apply (rule bc)
             done
         qed
-      show "\<forall>x. (\<forall>xa. xa \<le> x \<doteq> 1 \<turnstile> Q xa) \<turnstile> (\<forall>xa. xa \<le> S x \<doteq> 1 \<turnstile> Q xa)"
+      show "\<forall>x. (\<forall>xa. xa \<le> x = 1 \<turnstile> Q xa) \<turnstile> (\<forall>xa. xa \<le> S x = 1 \<turnstile> Q xa)"
         apply (rule forallI)
         apply (rule entailsI)
         apply (rule forallI)
@@ -1945,34 +2068,34 @@ proof -
           fix x xa
           assume x_nat: "x N"
           assume xa_nat: "xa N"
-          assume hyp: "\<forall>x'. x' \<le> x \<doteq> 1 \<turnstile> Q x'"
-          assume xa_leq_sx: "xa \<le> S x \<doteq> 1"
-          have H: "xa \<le> x \<doteq> 1 \<turnstile> Q xa"
+          assume hyp: "\<forall>x'. x' \<le> x = 1 \<turnstile> Q x'"
+          assume xa_leq_sx: "xa \<le> S x = 1"
+          have H: "xa \<le> x = 1 \<turnstile> Q xa"
             apply (rule forallE[where a="xa"])
             apply (rule hyp)
             apply (rule xa_nat)
             done
           show "Q xa"
-            apply (rule disjE1[where P="xa \<le> x \<doteq> 1" and Q="\<not> xa \<le> x \<doteq> 1"])
+            apply (rule disjE1[where P="xa \<le> x = 1" and Q="\<not> xa \<le> x = 1"])
             apply (fold GD.bJudg_def)
             apply (rule eqBool)
             apply (rule leq_terminates)
             apply (rule xa_nat)
             apply (rule x_nat)
             apply (gd_auto)
-            apply (rule entailsE[where a="xa \<le> x \<doteq> 1"])
+            apply (rule entailsE[where a="xa \<le> x = 1"])
             apply (rule H)
             apply (assumption)
             proof -
-              assume xa_not_leq_x: "\<not> xa \<le> x \<doteq> 1"
-              have xa_eq_sx: "xa \<doteq> S x"
+              assume xa_not_leq_x: "\<not> xa \<le> x = 1"
+              have xa_eq_sx: "xa = S x"
                 apply (rule leq_suc_not_leq_implies_eq)
                 apply (rule xa_nat)
                 apply (rule x_nat)
                 apply (rule xa_not_leq_x)
                 apply (rule xa_leq_sx)
                 done
-              have "(\<forall>y. y\<le>x \<doteq> 1 \<turnstile> Q y) \<turnstile> (Q S(x))"
+              have "(\<forall>y. y\<le>x = 1 \<turnstile> Q y) \<turnstile> (Q S(x))"
                 apply (rule forallE[where a="x"])
                 apply (rule step)
                 apply (rule x_nat)
@@ -1990,7 +2113,7 @@ proof -
             qed
         qed
     qed
-    then have "a \<le> a \<doteq> 1 \<turnstile> Q a"
+    then have "a \<le> a = 1 \<turnstile> Q a"
       apply (rule forallE)
       apply (rule a_nat)
       done
@@ -2020,9 +2143,9 @@ proof (rule ind[where a=y])
     proof (rule forallI, rule entailsI, unfold_def def_sub)
       fix a
       assume HQ: "a N" and BC: "x - a N"
-      show "if (S(a) \<doteq> 0) then x else P(x - P(S(a))) N"
+      show "if (S(a) = 0) then x else P(x - P(S(a))) N"
         proof (rule GD.condT)
-          show "S(a) \<doteq> 0 B"
+          show "S(a) = 0 B"
             apply (rule GD.eqBool)
             apply (rule GD.natS)
             apply (rule HQ)
@@ -2034,7 +2157,7 @@ proof (rule ind[where a=y])
             apply (rule eqSubst[where a="x-a"])
             apply (rule eqSubst[where a="a" and b="P(S(a))"])
             apply (rule eqSym)
-            apply (rule predSucSym)
+            apply (rule predSucInv)
             apply (rule HQ)
             apply (fold isNat_def)
             apply (rule BC)
@@ -2047,17 +2170,17 @@ qed
 lemma sub_nz_leq_pred:
   assumes x_nat: "x N"
   assumes y_nat: "y N"
-  shows "(S x) - (S y) \<le> x \<doteq> 1"
+  shows "(S x) - (S y) \<le> x = 1"
 proof -
-  have "\<forall>x. (S x) - (S y) \<le> x \<doteq> 1"
+  have "\<forall>x. (S x) - (S y) \<le> x = 1"
   proof (rule ind[where a="y"])
     show "y N" by (rule y_nat)
-    show "\<forall>x. S x - 1 \<le> x \<doteq> 1"
+    show "\<forall>x. S x - 1 \<le> x = 1"
       apply (rule forallI)
       proof -
         fix x
         assume x_nat: "x N"
-        show "S x - 1 \<le> x \<doteq> 1"
+        show "S x - 1 \<le> x = 1"
           apply (rule eqSubst[where a="x" and b="S x - 1"])
           apply (rule eqSym)
           apply (unfold_def def_sub)
@@ -2078,19 +2201,19 @@ proof -
           apply (rule x_nat)
           done
       qed
-    show "\<forall>x. (\<forall>xa. S xa - S x \<le> xa \<doteq> 1) \<turnstile> (\<forall>xa. S xa - S S x \<le> xa \<doteq> 1)"
+    show "\<forall>x. (\<forall>xa. S xa - S x \<le> xa = 1) \<turnstile> (\<forall>xa. S xa - S S x \<le> xa = 1)"
       apply (rule forallI)
       apply (rule entailsI)
       apply (rule forallI)
       proof -
         fix x xa
         assume x_nat: "x N" and xa_nat: "xa N"
-        assume hyp: "\<forall>xa. S xa - S x \<le> xa \<doteq> 1"
-        then have H: "S xa - S x \<le> xa \<doteq> 1"
+        assume hyp: "\<forall>xa. S xa - S x \<le> xa = 1"
+        then have H: "S xa - S x \<le> xa = 1"
           apply (rule forallE)
           apply (rule xa_nat)
           done
-        have H2: "P(S xa - S x) \<le> xa \<doteq> 1"
+        have H2: "P(S xa - S x) \<le> xa = 1"
           apply (rule leq_trans[where y="S xa - S x"])
           apply (gd_auto)
           apply (rule xa_nat)
@@ -2104,9 +2227,9 @@ proof -
           apply (rule x_nat)
           apply (rule H)
           done
-        show "S xa - S S x \<le> xa \<doteq> 1"
+        show "S xa - S S x \<le> xa = 1"
           apply (unfold_def def_sub)
-          apply (rule eqSubst[where a="P(S xa - S x)" and b="(if S S x \<doteq> num_zero then S xa else P(S xa - P S S x))"])
+          apply (rule eqSubst[where a="P(S xa - S x)" and b="(if S S x = num_zero then S xa else P(S xa - P S S x))"])
           apply (rule eqSym)
           apply (rule condI2Eq)
           apply (fold neq_def)
@@ -2148,14 +2271,14 @@ proof (rule strong_induction[where a="x"])
     apply (rule y_nat)
     apply (gd_auto)
     done
-  show "\<forall>x. (\<forall>ya. ya \<le> x \<doteq> 1 \<turnstile> div ya (S y) N) \<turnstile> div (S x) (S y) N "
+  show "\<forall>x. (\<forall>ya. ya \<le> x = 1 \<turnstile> div ya (S y) N) \<turnstile> div (S x) (S y) N "
     apply (rule forallI)
     apply (rule entailsI)
     proof -
       fix x
       assume x_nat: "x N"
-      assume hyp: "\<forall>ya. ya \<le> x \<doteq> 1 \<turnstile> div ya (S y) N"
-      then have "S x - S y \<le> x \<doteq> 1 \<turnstile> div (S x - S y) (S y) N"
+      assume hyp: "\<forall>ya. ya \<le> x = 1 \<turnstile> div ya (S y) N"
+      then have "S x - S y \<le> x = 1 \<turnstile> div (S x - S y) (S y) N"
         apply (rule forallE)
         apply (rule sub_terminates)
         apply (gd_auto)
@@ -2181,6 +2304,117 @@ proof (rule strong_induction[where a="x"])
     qed
 qed
 
+lemma suc_sq_gr:
+  assumes x_nat: "x N"
+  assumes y_nat: "y N"
+  shows "S y * S x > x = 1"
+proof -
+  have "\<forall>y. S y * S x > x = 1"
+    proof (rule ind[where a="x"])
+      show "x N" by (rule x_nat)
+      show "\<forall>y. S y * 1 > 0 = 1"
+        apply (rule forallI)
+        proof -
+          fix y
+          assume y_nat: "y N"
+          show "S y * 1 > 0 = 1"
+            apply (rule eqSubst[where a="S y" and b="S y * 1"])
+            apply (unfold_def def_mult)
+            apply (rule eqSym)
+            apply (rule condI2Eq)
+            apply (fold neq_def)
+            apply (gd_auto)
+            apply (rule y_nat)
+            apply (rule eqSubst[where a="0" and b="S y * P S 0"])
+            apply (rule eqSubst[where a="0" and b="P S 0"])
+            apply (rule eqSym)
+            apply (gd_auto)
+            apply (rule eqSym)
+            apply (gd_auto)
+            apply (rule y_nat)
+            apply (unfold greater_def)
+            apply (rule eqSubst[where a="0" and b="S y\<le>0"])
+            apply (rule eqSym)
+            apply (gd_auto)
+            apply (fold neq_def)
+            apply (gd_auto)
+            apply (rule y_nat)
+            apply (gd_auto)
+            done
+        qed
+      show "\<forall>x. (\<forall>y. S y * S x > x = 1) \<turnstile> (\<forall>y. S y * S S x > S x = 1)"
+        apply (rule forallI)
+        apply (rule entailsI)
+        apply (rule forallI)
+        proof -
+          fix x y
+          assume x_nat: "x N" and y_nat: "y N" and hyp: "\<forall>y. S y * S x > x = 1"
+          show "S y * S S x > S x = 1"
+            sorry
+        qed
+    qed
+    then show "S y * S x > x = 1"
+      sorry
+qed
+
+lemma sqrt_h_bounded:
+  assumes x_nat: "x N"
+  shows"\<exists>y. sqrt_h x y = y"
+apply (rule existsI[where a="x"])
+apply (rule x_nat)
+apply (unfold_def def_sqrt_h)
+apply (rule condI1Eq)
+apply (rule suc_sq_gr)
+apply (rule x_nat)
+apply (rule x_nat)
+apply (rule x_nat)
+apply (fold isNat_def)
+apply (rule x_nat)
+done
+
+lemma sqrt_h_terminates [gd_simp]:
+  assumes x_nat: "x N"
+  assumes y_nat: "y N"
+  shows "sqrt_h x y N"
+apply (rule existsE[where Q="\<lambda>a. sqrt_h x a = a"])
+apply (rule sqrt_h_bounded)
+apply (rule x_nat)
+proof -
+  fix a
+  assume a_nat: "a N"
+  assume "sqrt_h x a = a"
+  let ?d = "a - y"
+  have "?d = ?d \<turnstile> sqrt_h x y N"
+    apply (rule ind[where a="a-y"])
+    apply (gd_auto)
+    apply (rule a_nat)
+    apply (rule y_nat)
+    sorry
+  then show ?thesis
+    sorry
+qed
+
+lemma floor_sqrt_terminates [gd_simp]:
+  assumes x_nat: "x N"
+  shows "floor_sqrt x N"
+apply (unfold floor_sqrt_def)
+apply (gd_auto)
+apply (rule x_nat)
+done
+
+definition cpair :: "num \<Rightarrow> num \<Rightarrow> num" where
+  "cpair x y \<equiv> y + (div ((x+y) * (S(x+y))) 2)"
+
+nonterminal cpair_args
+
+syntax
+  "_cpair"      :: "num \<Rightarrow> cpair_args \<Rightarrow> num"        ("\<langle>_,_\<rangle>")
+  "_cpair_arg"  :: "num \<Rightarrow> cpair_args"               ("_")
+  "_cpair_args" :: "num \<Rightarrow> cpair_args \<Rightarrow> cpair_args" ("_,_")
+translations
+  "\<langle>x, y\<rangle>" == "CONST cpair x y"
+  "_cpair x (_cpair_args y z)" == "_cpair x (_cpair_arg (_cpair y z))"
+
 lemma cpair_terminates [gd_simp]:
   assumes x_nat: "x N"
   assumes y_nat: "y N"
@@ -2194,22 +2428,1296 @@ apply (rule x_nat)
 apply (rule y_nat)
 done
 
+lemma cpair_0_0_0 [gd_simp]: "0 = \<langle>0, 0\<rangle>"
+apply (unfold cpair_def)
+apply (rule eqSubst[where a="0" and b="div ((0 + 0) * S(0 + 0)) 2"])
+apply (rule eqSym)
+apply (rule eqSubst[where a="0" and b="(0 + 0) * S(0 + 0)"])
+apply (rule eqSym)
+apply (rule eqSubst[where a="0" and b="(0 + 0)"])
+apply (rule eqSym)
+apply (gd_auto)
+apply (rule eqSym)
+apply (gd_auto)
+done
+
+
+(* recover w=x+y from the pair z *)
+definition cpzw :: "num \<Rightarrow> num" where
+  "cpzw z \<equiv> div (floor_sqrt (8 * z + 1) - 1) 2"
+
+(* recover t from w *)
+definition cpwt :: "num \<Rightarrow> num" where
+  "cpwt w \<equiv> div (w * S(w)) 2"
+
+(* recover y from a pair z *)
+definition cpy :: "num \<Rightarrow> num" where
+  "cpy z \<equiv> z - (cpwt (cpzw z))"
+
+(* recover x from a pair z *)
+definition cpx :: "num \<Rightarrow> num" where
+  "cpx z \<equiv> cpzw z - cpy z"
+
+lemma cpzw_terminates [gd_simp]:
+  assumes x_nat: "x N"
+  shows "cpzw x N"
+apply (unfold cpzw_def)
+apply (gd_auto)
+apply (rule x_nat)
+done
+
+lemma cpwt_terminates [gd_simp]:
+  assumes x_nat: "x N"
+  shows "cpwt x N"
+apply (unfold cpwt_def)
+apply (gd_auto)
+apply (rule x_nat)
+apply (rule x_nat)
+done
+
+lemma cpy_terminates [gd_simp]:
+  assumes x_nat: "x N"
+  shows "cpy x N"
+apply (unfold cpy_def)
+apply (gd_auto)
+apply (rule x_nat)
+apply (rule x_nat)
+done
+
+lemma cpx_terminates [gd_simp]:
+  assumes x_nat: "x N"
+  shows "cpx x N"
+apply (unfold cpx_def)
+apply (gd_auto)
+apply (rule x_nat)
+apply (rule x_nat)
+done
+
+lemma cpy_proj: "cpy \<langle>a, b\<rangle> = b"
+apply (unfold cpy_def)
+apply (unfold cpwt_def)
+apply (unfold cpzw_def)
+apply (unfold cpair_def)
+sorry
+lemma cpx_proj: "cpx \<langle>a, b\<rangle> = a"
+sorry
+
+lemma cpair_inj:
+  assumes a_nat: "a N"
+  assumes b_nat: "b N"
+  assumes eq: "\<langle>a, b\<rangle> = \<langle>c, d\<rangle>"
+  shows "a = c \<and> b = d"
+proof -
+  have H: "cpx \<langle>a, b\<rangle> = cpx \<langle>c, d\<rangle>"
+    apply (rule eqSubst[OF eq])
+    apply (fold isNat_def)
+    apply (gd_auto)
+    apply (rule a_nat)
+    apply (rule b_nat)
+    done
+  have a_eq_c: "a = c"
+    apply (rule eqSubst[where a="cpx \<langle>a, b\<rangle>" and b="a"])
+    apply (rule cpx_proj)
+    apply (rule eqSubst[where a="cpx \<langle>c, d\<rangle>" and b="c"])
+    apply (rule cpx_proj)
+    apply (rule H)
+    done
+  have H2: "cpy \<langle>a, b\<rangle> = cpy \<langle>c, d\<rangle>"
+    apply (rule eqSubst[OF eq])
+    apply (fold isNat_def)
+    apply (gd_auto)
+    apply (rule a_nat)
+    apply (rule b_nat)
+    done
+  have b_eq_d: "b = d"
+    apply (rule eqSubst[where a="cpy \<langle>a, b\<rangle>" and b="b"])
+    apply (rule cpy_proj)
+    apply (rule eqSubst[where a="cpy \<langle>c, d\<rangle>" and b="d"])
+    apply (rule cpy_proj)
+    apply (rule H2)
+    done
+  show ?thesis
+    apply (rule conjI)
+    apply (rule a_eq_c)
+    apply (rule b_eq_d)
+    done
+qed
+
+lemma cpair_inj_l:
+  assumes a_nat: "a N"
+  assumes b_nat: "b N"
+  assumes eq: "\<langle>a, b\<rangle> = \<langle>c, d\<rangle>"
+  shows "a = c"
+apply (rule conjE1[where q="b=d"])
+apply (rule cpair_inj)
+apply (rule a_nat)
+apply (rule b_nat)
+apply (rule eq)
+done
+
+lemma cpair_inj_r:
+  assumes a_nat: "a N"
+  assumes b_nat: "b N"
+  assumes eq: "\<langle>a, b\<rangle> = \<langle>c, d\<rangle>"
+  shows "b = d"
+apply (rule conjE2[where p="a=c"])
+apply (rule cpair_inj)
+apply (rule a_nat)
+apply (rule b_nat)
+apply (rule eq)
+done
+
+lemma if_leq_not_greater:
+  assumes a_le_b: "a \<le> b = 1"
+  shows "a > b = 0"
+apply (unfold greater_def)
+apply (rule eqSubst[where a="1" and b="a \<le> b"])
+apply (rule eqSym)
+apply (rule a_le_b)
+apply (unfold_def def_sub)
+apply (rule condI2Eq)
+apply (fold neq_def)
+apply (gd_auto)
+apply (rule eqSubst[where a="0" and b="P S 0"])
+apply (rule eqSym)
+apply (gd_auto)
+apply (rule eqSubst[where a="1" and b="1 - 0"])
+apply (rule eqSym)
+apply (gd_auto)
+done
+
+lemma if_less_not_geq:
+  assumes a_less_b: "a < b = 1"
+  shows "a \<ge> b = 0"
+apply (unfold geq_def)
+apply (rule eqSubst[where a="1" and b="a < b"])
+apply (rule eqSym)
+apply (rule a_less_b)
+apply (unfold_def def_sub)
+apply (rule condI2Eq)
+apply (fold neq_def)
+apply (gd_auto)
+apply (rule eqSubst[where a="0" and b="P S 0"])
+apply (rule eqSym)
+apply (gd_auto)
+apply (rule eqSubst[where a="1" and b="1 - 0"])
+apply (rule eqSym)
+apply (gd_auto)
+done
+
+lemma leq_monotone [gd_simp]:
+  assumes x_nat: "x N"
+  assumes y_nat: "y N"
+  shows "x \<le> y + x = 1"
+proof (rule ind[where a="x"])
+  show "x N" by (rule x_nat)
+  show "0 \<le> y + 0 = 1" by (gd_auto, rule y_nat)
+  show "\<forall>x. x \<le> y + x = 1 \<turnstile> S x \<le> y + S x = 1"
+    apply (rule forallI)
+    apply (rule entailsI)
+    proof -
+      fix xa
+      assume xa_nat: "xa N" and hyp: "xa \<le> y + xa = 1"
+      show "S xa \<le> y + S xa = 1"
+        apply (unfold_def def_leq)
+        apply (rule condI2Eq)
+        apply (fold neq_def)
+        apply (gd_auto)
+        apply (rule xa_nat)
+        apply (gd_auto)
+        apply (rule condI2Eq)
+        apply (fold neq_def)
+        apply (rule eqSubst[where a="S(y + xa)" and b="y + S xa"])
+        apply (rule eqSym)
+        apply (rule defE[where a="add" and b="\<lambda>x y. if y = 0 then x else S(x + P(y))" and Q="\<lambda>f. f y (S xa) = S(y + xa)"])
+        apply (rule def_add)
+        apply (rule condI2Eq)
+        apply (fold neq_def)
+        apply (gd_auto)
+        apply (rule xa_nat)
+        apply (gd_auto)
+        apply (rule y_nat)
+        apply (rule xa_nat)
+        apply (rule eqSubst[where a="xa" and b="P S xa"])
+        apply (rule eqSym)
+        apply (rule predSucInv)
+        apply (rule xa_nat)
+        apply (fold isNat_def)
+        apply (gd_auto)
+        apply (rule y_nat)
+        apply (rule xa_nat)
+        apply (gd_auto)
+        apply (rule y_nat)
+        apply (rule xa_nat)
+        apply (gd_auto)
+        apply (rule eqSubst[where a="xa" and b="P S xa"])
+        apply (rule eqSym)
+        apply (rule predSucInv)
+        apply (rule xa_nat)
+        apply (rule eqSubst[where a="S (y + xa)" and b="y + S xa"])
+        apply (rule eqSym)
+        apply (rule defE[where a="add" and b="\<lambda>x y. if y = 0 then x else S(x + P(y))" and Q="\<lambda>f. f y (S xa) = S(y + xa)"])
+        apply (rule def_add)
+        apply (rule condI2Eq)
+        apply (fold neq_def)
+        apply (gd_auto)
+        apply (rule xa_nat)
+        apply (gd_auto)
+        apply (rule y_nat)
+        apply (rule xa_nat)
+        apply (rule eqSubst[where a="xa" and b="P S xa"])
+        apply (rule eqSym)
+        apply (rule predSucInv)
+        apply (rule xa_nat)
+        apply (fold isNat_def)
+        apply (gd_auto)
+        apply (rule y_nat)
+        apply (rule xa_nat)
+        apply (rule eqSubst[where a="y + xa" and b="P S (y + xa)"])
+        apply (rule eqSym)
+        apply (gd_auto)
+        apply (rule y_nat)
+        apply (rule xa_nat)
+        apply (rule hyp)
+        done
+    qed
+qed
+
+lemma add_suc_comm:
+  assumes x_nat: "x N"
+  assumes y_nat: "y N"
+  shows "y + S(x) = S(y) + x"
+apply (rule ind[where a="x"])
+apply (rule x_nat)
+apply (rule eqSubst[where a="S y" and b="S y + 0"])
+apply (rule eqSym)
+apply (gd_auto)
+apply (rule y_nat)
+apply (unfold_def def_add)
+apply (rule condI2Eq)
+apply (fold neq_def)
+apply (gd_auto)
+apply (rule y_nat)
+apply (rule eqSubst[where a="0" and b="P S 0"])
+apply (rule eqSym)
+apply (gd_auto)
+apply (rule y_nat)
+apply (rule forallI)
+apply (rule entailsI)
+proof -
+  fix xa
+  assume xa_nat: "xa N"
+  assume hyp: "y + S xa = S y + xa"
+  show "y + S S xa = S y + S xa"
+    apply (rule eqSubst[where a="S(y + S(xa))" and b="y + S S xa"])
+    apply (rule defE[where a="add" and b="\<lambda>x y. if y = 0 then x else S(x + P(y))" and Q="\<lambda>f. S(y + (S xa)) = f y (S S xa)"])
+    apply (rule def_add)
+    apply (rule eqSym)
+    apply (rule condI2Eq)
+    apply (fold neq_def)
+    apply (gd_auto)
+    apply (rule xa_nat)
+    apply (gd_auto)
+    apply (rule y_nat)
+    apply (rule xa_nat)
+    apply (rule eqSubst[where a="S xa" and b="P S S xa"])
+    apply (rule eqSym)
+    apply (gd_auto)
+    apply (rule xa_nat)
+    apply (fold isNat_def)
+    apply (gd_auto)
+    apply (rule y_nat)
+    apply (rule xa_nat)
+    apply (rule eqSubst[where a="S y + xa" and b="y + S xa"])
+    apply (rule eqSym)
+    apply (rule hyp)
+    apply (rule defE[where a="add" and b="\<lambda>x y. if y = 0 then x else S(x + P(y))" and Q="\<lambda>f. S(S y + xa) = f (S y) (S xa)"])
+    apply (rule def_add)
+    apply (rule eqSym)
+    apply (rule condI2Eq)
+    apply (fold neq_def)
+    apply (gd_auto)
+    apply (rule xa_nat)
+    apply (gd_auto)
+    apply (rule y_nat)
+    apply (rule xa_nat)
+    apply (rule eqSubst[where a="xa" and b="P S xa"])
+    apply (rule eqSym)
+    apply (gd_auto)
+    apply (rule xa_nat)
+    apply (fold isNat_def)
+    apply (gd_auto)
+    apply (rule y_nat)
+    apply (rule xa_nat)
+    done
+qed
+
+lemma zero_plus [gd_simp]:
+  assumes x_nat: "x N"
+  shows "0 + x  = x"
+apply (rule ind[where a="x"])
+apply (rule x_nat)
+apply (gd_auto)
+apply (rule forallI)
+apply (rule entailsI)
+proof -
+  fix xa
+  assume xa_nat: "xa N"
+  assume hyp: "0 + xa = xa"
+  show "0 + S xa = S xa"
+    apply (unfold_def def_add)
+    apply (rule condI2Eq)
+    apply (fold neq_def)
+    apply (gd_auto)
+    apply (rule xa_nat)
+    apply (gd_auto)
+    apply (rule xa_nat)
+    apply (rule eqSubst[where a="xa" and b="P S xa"])
+    apply (rule eqSym)
+    apply (gd_auto)
+    apply (rule xa_nat)
+    apply (rule eqSubst[where a="xa" and b="0+xa"])
+    apply (rule eqSym)
+    apply (rule hyp)
+    apply (fold isNat_def)
+    apply (gd_auto)
+    apply (rule xa_nat)
+    done
+qed
+
+lemma add_comm [gd_simp]:
+  assumes x_nat: "x N"
+  assumes y_nat: "y N"
+  shows "x + y = y + x"
+apply (rule ind[where a="y"])
+apply (rule y_nat)
+apply (rule eqSubst[where a="x" and b="x + 0"])
+apply (rule eqSym)
+apply (gd_auto)
+apply (rule x_nat)
+apply (rule eqSym)
+apply (rule zero_plus)
+apply (rule x_nat)
+apply (rule forallI)
+apply (rule entailsI)
+proof -
+  fix xa
+  assume xa_nat: "xa N"
+  assume hyp: "x + xa = xa + x"
+  show "x + S xa = S xa + x"
+    apply (rule defE[where a="add" and b="\<lambda>x y. if y = 0 then x else S(x + P(y))" and Q="\<lambda>f. f x (S xa) = S xa + x"])
+    apply (rule def_add)
+    apply (rule condI2Eq)
+    apply (fold neq_def)
+    apply (gd_auto)
+    apply (rule xa_nat)
+    apply (gd_auto)
+    apply (rule xa_nat)
+    apply (rule x_nat)
+    apply (rule eqSubst[where a="xa" and b="P S xa"])
+    apply (rule eqSym)
+    apply (gd_auto)
+    apply (rule xa_nat)
+    apply (rule eqSubst[where a="xa + x" and b="x + xa"])
+    apply (rule eqSym)
+    apply (rule hyp)
+    apply (rule eqSubst[where a="xa + S x" and b="S xa + x"])
+    apply (rule add_suc_comm)
+    apply (rule x_nat)
+    apply (rule xa_nat)
+    apply (rule defE[where a="add" and b="\<lambda>x y. if y = 0 then x else S(x + P(y))" and Q="\<lambda>f. S(xa + x) = f xa (S x)"])
+    apply (rule def_add)
+    apply (rule eqSym)
+    apply (rule condI2Eq)
+    apply (fold neq_def)
+    apply (gd_auto)
+    apply (rule x_nat)
+    apply (gd_auto)
+    apply (rule xa_nat)
+    apply (rule x_nat)
+    apply (rule eqSubst[where a="x" and b="P S x"])
+    apply (rule eqSym)
+    apply (gd_auto)
+    apply (rule x_nat)
+    apply (fold isNat_def)
+    apply gd_auto
+    apply (rule xa_nat)
+    apply (rule x_nat)
+    done
+qed
+
+lemma add_leq_monotone:
+  assumes x_nat: "x N"
+  assumes y_nat: "y N"
+  assumes z_nat: "z N"
+  assumes x_le_y: "x \<le> y = 1"
+  shows "x \<le> y + z = 1"
+apply (rule leq_trans[where y="y"])
+apply (rule x_nat)
+apply (rule y_nat)
+apply (gd_auto)
+apply (rule y_nat)
+apply (rule z_nat)
+apply (rule x_le_y)
+apply (rule eqSubst[where a="z + y" and b="y + z"])
+apply (gd_auto)
+apply (rule z_nat)
+apply (rule y_nat)
+apply (rule leq_monotone)
+apply (rule y_nat)
+apply (rule z_nat)
+done
+
+lemma cpair_mono_r:
+  assumes x_nat: "x N"
+  assumes y_nat: "y N"
+  shows "y \<le> \<langle>x, y\<rangle> = 1"
+apply (unfold cpair_def)
+apply (rule add_leq_monotone)
+apply (rule y_nat)
+apply (rule y_nat)
+apply (gd_auto)
+apply (rule x_nat)
+apply (rule y_nat)
+apply (rule x_nat)
+apply (rule y_nat)
+apply (gd_auto)
+apply (rule y_nat)
+done
+
+lemma neq_monotone_add:
+  assumes x_nat: "x N"
+  assumes y_nat: "y N"
+  assumes x_nz: "\<not> x = 0"
+  shows "\<not> y = x + y"
+proof -
+  have H1: "\<And>xa. xa N \<Longrightarrow> \<not> (y = S(xa) + y)"
+    proof -
+      fix xa
+      assume xa_nat: "xa N"
+      show "\<not> (y = S(xa) + y)"
+        apply (rule ind[where a="y"])
+        apply (rule y_nat)
+        apply (fold neq_def)
+        apply (rule neq_sym)
+        apply (gd_auto)
+        apply (rule xa_nat)
+        apply (rule nat0)
+        apply (rule eqSubst[where a="S xa" and b="S xa + 0"])
+        apply (rule eqSym)
+        apply (gd_auto)
+        apply (rule xa_nat)
+        apply (gd_auto)
+        apply (rule xa_nat)
+        apply (rule forallI)
+        apply (rule entailsI)
+        apply (unfold neq_def)
+        proof -
+          fix z
+          assume z_nat: "z N" and hyp: "\<not> z = S xa + z"
+          show "\<not> S z = S xa + S z"
+            apply (rule eqSubst[where a="S(S xa + z)" and b="S xa + S z"])
+            apply (rule defE[where a="add" and b="\<lambda>x y. if y = 0 then x else S(x + P(y))" and Q="\<lambda>f. S(S xa + z) = f (S xa) (S z)"])
+            apply (rule def_add)
+            apply (rule eqSym)
+            apply (rule condI2Eq)
+            apply (fold neq_def)
+            apply (gd_auto)
+            apply (rule z_nat)
+            apply (gd_auto)
+            apply (rule xa_nat)
+            apply (rule z_nat)
+            apply (rule replace_ps)
+            apply (rule z_nat)
+            apply (fold isNat_def)
+            apply (gd_auto)
+            apply (rule xa_nat)
+            apply (rule z_nat)
+            apply (unfold neq_def)
+            apply (rule neq_monotone_suc)
+            apply (rule z_nat)
+            apply (gd_auto)
+            apply (rule xa_nat)
+            apply (rule z_nat)
+            apply (rule hyp)
+            done
+        qed
+    qed
+  have "\<exists>p. x = S(p)" by (gd_auto, rule x_nat, rule x_nz)
+  then show ?thesis
+    apply (rule existsE)
+    proof -
+      fix a
+      assume a_nat: "a N" and a_pred: "x = S a"
+      show ?thesis
+        apply (rule eqSubst[where a="S a" and b="x"])
+        apply (rule eqSym)
+        apply (rule a_pred)
+        apply (rule H1)
+        apply (rule a_nat)
+        done
+    qed
+qed
+
+lemma swap_add:
+  assumes x_nat: "x N"
+  assumes y_nat: "y N"
+  assumes H: "Q (y + x)"
+  shows "Q (x + y)"
+apply (rule eqSubst[where a="y+x" and b="x+y"])
+apply (gd_auto)
+apply (rule y_nat)
+apply (rule x_nat)
+apply (rule H)
+done
+
+lemma nz_monotone_leq:
+  assumes x_nat: "x N"
+  assumes y_nat: "y N"
+  assumes H: "S(x) \<le> y = 1"
+  shows "\<not> y = 0"
+apply (rule grounded_contradiction[where q="S(x) = 0"])
+apply (gd_auto)
+apply (rule y_nat)
+apply (rule leq_0_then_0)
+apply (rule natS)
+apply (rule x_nat)
+apply (rule eqSubst[where a="y" and b="0" and Q="\<lambda>c. S x \<le> c = 1"])
+apply (rule dNegE)
+apply (assumption)
+apply (rule H)
+apply (fold neq_def)
+apply (gd_auto)
+apply (rule x_nat)
+done
+
+lemma sub_pred_suc:
+  assumes x_nat: "x N"
+  assumes y_nat: "y N"
+  assumes z_nat: "z N"
+  assumes H: "x - S(y) = S(z)"
+  shows "x - y = S(S(z))"
+proof -
+  have unf: "x - S(y) = P(x - y)"
+    apply (rule defE[where a="sub" and b="(\<lambda>x y. if y = 0 then x else P(x - P y))" and Q="\<lambda>f. f x (S y) = P(x - y)"])
+    apply (rule def_sub)
+    apply (rule condI2Eq)
+    apply (fold neq_def)
+    apply (gd_auto)
+    apply (rule y_nat)
+    apply (gd_auto)
+    apply (rule x_nat)
+    apply (rule y_nat)
+    apply (rule replace_ps)
+    apply (rule y_nat)
+    apply (fold isNat_def)
+    apply (gd_auto)
+    apply (rule x_nat)
+    apply (rule y_nat)
+    done
+  have x_neq_y: "\<not> x - y = 0"
+    apply (rule nz_monotone_leq[where x="z"])
+    apply (rule z_nat)
+    apply (gd_auto)
+    apply (rule x_nat)
+    apply (rule y_nat)
+    apply (rule eqSubst[where a="P(x-y)" and b="S(z)"])
+    apply (rule eqSubst[where a="x - S(y)" and b="P(x - y)"])
+    apply (rule unf)
+    apply (rule H)
+    apply (gd_auto)
+    apply (rule x_nat)
+    apply (rule y_nat)
+    done
+  have "P(x - y) = S(z)"
+    apply (rule eqSubst[where a="x - S(y)" and b="P(x - y)"])
+    apply (rule unf)
+    apply (rule H)
+    done
+  then have H1: "S(P(x - y)) = S(S(z))"
+    by (rule sucCong)
+  show "x - y = S(S(z))"
+    apply (rule eqSubst[where b="x - y" and a="S P (x - y)"])
+    apply (rule suc_pred_inv)
+    apply (gd_auto)
+    apply (rule x_nat)
+    apply (rule y_nat)
+    apply (rule x_neq_y)
+    apply (rule H1)
+    done
+qed
+
+lemma sub_suc_pred:
+  assumes x_nat: "x N"
+  assumes y_nat: "y N"
+  assumes z_nat: "z N"
+  assumes H: "x - y = S(z)"
+  shows "x - S(y) = z"
+proof -
+  have "x - y = S(z) \<turnstile> x - S(y) = z"
+    apply (rule ind[where a="y"])
+    apply (rule y_nat)
+    apply (rule entailsI)
+    apply (rule eqSubst[where a="S(z)" and b="x"])
+    apply (rule eqSym)
+    apply (rule eqSubst[where a="x - 0" and b="x"])
+    apply (gd_auto)
+    apply (rule x_nat)
+    apply (assumption)
+    apply (unfold_def def_sub)
+    apply (rule condI2Eq)
+    apply (fold neq_def)
+    apply (gd_auto)
+    apply (rule z_nat)
+    apply (rule replace_ps)
+    apply (rule nat0)
+    apply (rule eqSubst[where a="S z" and b="S z - 0"])
+    apply (rule eqSym)
+    apply (gd_auto)
+    apply (rule z_nat)
+    apply (rule replace_ps)
+    apply (rule z_nat)
+    apply (fold isNat_def)
+    apply (rule z_nat)
+    apply (rule forallI)
+    apply (rule entailsI)
+    apply (rule entailsI)
+    proof -
+      fix xa
+      assume xa_nat: "xa N"
+      assume hyp: "x - xa = S z \<turnstile> x - S xa = z"
+      assume h: "x - S xa = S z"
+      show "x - S(S xa) = z"
+        apply (unfold_def def_sub)
+        apply (rule condI2Eq)
+        apply (fold neq_def)
+        apply (gd_auto)
+        apply (rule xa_nat)
+        apply (rule z_nat)
+        apply (rule replace_ps)
+        apply (gd_auto)
+        apply (rule xa_nat)
+        apply (rule eqSubst[where a="S z" and b="x - S xa"])
+        apply (rule eqSym)
+        apply (rule h)
+        apply (rule replace_ps)
+        apply (rule z_nat)
+        apply (fold isNat_def)
+        apply (gd_auto)
+        apply (rule z_nat)
+        done
+    qed
+  then show ?thesis
+    apply (rule entailsE)
+    apply (rule H)
+    done
+qed
+
+lemma sub_monotone_lhs:
+  assumes x_nat: "x N"
+  assumes y_nat: "y N"
+  assumes z_nat: "z N"
+  assumes H: "S(x) - y = S(z)"
+  shows "x - y = z"
+proof -
+  have "\<forall>z. S(x) - y = S(z) \<turnstile> x - y = z"
+    apply (rule ind[where a="y"])
+    apply (rule y_nat)
+    apply (rule forallI)
+    apply (rule entailsI)
+    apply (rule eqSubst[where a="x" and b="x-0"])
+    apply (rule eqSym)
+    apply (gd_auto)
+    apply (rule x_nat)
+    apply (rule sucInj)
+    apply (rule eqSubst[where a="S x - 0" and b="S x"])
+    apply (gd_auto)
+    apply (rule x_nat)
+    apply (assumption)
+    apply (rule forallI)
+    apply (rule entailsI)
+    apply (rule forallI)
+    apply (rule entailsI)
+    proof -
+      fix xa za
+      assume xa_nat: "xa N" and za_nat: "za N"
+      assume hyp: "\<forall>z. S x - xa = S z \<turnstile> x - xa = z"
+      assume H1: "S x - S xa = S za"
+      show "x - S xa = za"
+        apply (rule sub_suc_pred)
+        apply (rule x_nat)
+        apply (rule xa_nat)
+        apply (rule za_nat)
+        apply (rule entailsE[where a="S x - xa = S(S za)"])
+        apply (rule forallE)
+        apply (rule hyp)
+        apply (gd_auto)
+        apply (rule za_nat)
+        apply (rule sub_pred_suc)
+        apply (rule natS)
+        apply (rule x_nat)
+        apply (rule xa_nat)
+        apply (rule za_nat)
+        apply (rule H1)
+        done
+    qed
+  then have "S(x) - y = S(z) \<turnstile> x - y = z"
+    apply (rule forallE)
+    apply (rule z_nat)
+    done
+  then show ?thesis
+    apply (rule entailsE)
+    apply (rule H)
+    done
+qed
+
+lemma sub_eq_0_imp_leq:
+  assumes a_nat: "a N"
+  assumes b_nat: "b N"
+  assumes H: "a - b = 0"
+  shows "a \<le> b = 1"
+proof -
+  have "\<forall>a. a - b = 0 \<turnstile> a \<le> b = 1"
+  proof (rule ind[where a="b"])
+    show "b N" by (rule b_nat)
+    show "\<forall>a. a - 0 = 0 \<turnstile> a \<le> 0 = 1"
+      proof (rule forallI, rule entailsI)
+        fix aa
+        assume aa_nat: "aa N" and hyp: "aa - 0 = 0"
+        have a_zero: "aa = 0"
+          apply (rule eqSubst[where a="aa-0" and b="aa"])
+          apply (gd_auto)
+          apply (rule aa_nat)
+          apply (rule hyp)
+          done
+        show "aa \<le> 0 = 1"
+          apply (rule eqSubst[where a="0" and b="aa"])
+          apply (rule eqSym)
+          apply (rule a_zero)
+          apply (gd_auto)
+          done
+      qed
+    show "\<forall>x. (\<forall>a. a - x = 0 \<turnstile> a \<le> x = 1) \<turnstile>
+     (\<forall>a. a - S x = 0 \<turnstile> a \<le> S x = 1)"
+      proof (rule forallI, rule entailsI, rule forallI, rule entailsI)
+        fix xa aa
+        assume xa_nat: "xa N" and aa_nat: "aa N"
+        assume hyp: "\<forall>a. a - xa = 0 \<turnstile> a \<le> xa = 1"
+        assume H1: "aa - S xa = 0"
+        show "aa \<le> S xa = 1"
+          apply (rule cases_nat[where x="aa-xa"])
+          apply (gd_auto)
+          apply (rule aa_nat)
+          apply (rule xa_nat)
+          apply (rule leq_trans[where y="xa"])
+          apply (rule aa_nat)
+          apply (rule xa_nat)
+          apply (rule natS)
+          apply (rule xa_nat)
+          apply (rule entailsE[where a="aa - xa = 0"])
+          apply (rule forallE[where a="aa"])
+          apply (rule hyp)
+          apply (rule aa_nat)
+          apply (assumption)
+          apply (gd_auto)
+          apply (rule xa_nat)
+          apply (rule cases_nat[where x="aa"])
+          apply (rule aa_nat)
+          apply (gd_auto)
+          apply (rule xa_nat)
+          apply (rule existsE[where Q="\<lambda>c. aa = S(c)"])
+          apply (gd_auto)
+          apply (rule aa_nat)
+          apply (assumption)
+          proof -
+            fix a
+            assume aa_sub_xa_nz: "\<not> aa - xa = 0" and aa_nz: "\<not> aa = 0" and a_nat: "a N" and aa_eq_sa: "aa = S a"
+            show "aa \<le> S xa = 1"
+              apply (rule eqSubst[where a="S a" and b="aa"])
+              apply (rule eqSym)
+              apply (rule aa_eq_sa)
+              apply (gd_auto)
+              apply (rule a_nat)
+              apply (rule xa_nat)
+              apply (rule entailsE[where a="a - xa = 0"])
+              apply (rule forallE[where a="a"])
+              apply (rule hyp)
+              apply (rule a_nat)
+              apply (rule sub_monotone_lhs)
+              apply (rule a_nat)
+              apply (rule xa_nat)
+              apply (rule nat0)
+              apply (rule eqSubst[where a="aa" and b="S a"])
+              apply (rule aa_eq_sa)
+              apply (rule eqSubst[where a="S P (aa - xa)" and b="aa - xa"])
+              apply (gd_auto)
+              apply (rule aa_nat)
+              apply (rule xa_nat)
+              apply (rule aa_sub_xa_nz)
+              apply (gd_auto)
+              apply (rule eqSubst[where a="aa - S(xa)" and b="P(aa - xa)"])
+              apply (rule defE[where a="sub" and b="(\<lambda>x y. if y = 0 then x else P(x - P y))" and Q="\<lambda>f. f aa S(xa) = P(aa - xa)"])
+              apply (rule def_sub)
+              apply (rule condI2Eq)
+              apply (fold neq_def)
+              apply (gd_auto)
+              apply (rule xa_nat)
+              apply (gd_auto)
+              apply (rule aa_nat)
+              apply (rule xa_nat)
+              apply (rule replace_ps)
+              apply (rule xa_nat)
+              apply (fold isNat_def)
+              apply (gd_auto)
+              apply (rule aa_nat)
+              apply (rule xa_nat)
+              apply (rule H1)
+              done
+         qed
+      qed
+  qed
+  then have "a - b = 0 \<turnstile> a \<le> b = 1"
+    apply (rule forallE)
+    apply (rule a_nat)
+    done
+  then show ?thesis
+    apply (rule entailsE)
+    apply (rule H)
+    done
+qed
+
+lemma less_monotone_pred:
+  assumes x_nat: "x N"
+  assumes y_nat: "y N"
+  assumes H: "S(x) < S(y) = 1"
+  shows "x < y = 1"
+apply (rule grounded_contradiction[where q="x < y = 1"])
+apply (gd_auto)
+apply (rule x_nat)
+apply (rule y_nat)
+proof -
+  have H1: "S(x) < S(y) = x < y"
+    apply (rule defE[where a="less" and b="(\<lambda>x y. if y = 0 then 0 else (if x = 0 then 1 else (P x < P y)))" and Q="\<lambda>f. f (S x) (S y) = x < y"])
+    apply (rule def_less)
+    apply (rule condI2Eq)
+    apply (fold neq_def)
+    apply (gd_auto)
+    apply (rule y_nat)
+    apply (gd_auto)
+    apply (rule x_nat)
+    apply (rule y_nat)
+    apply (rule condI2Eq)
+    apply (fold neq_def)
+    apply (gd_auto)
+    apply (rule x_nat)
+    apply (gd_auto)
+    apply (rule x_nat)
+    apply (rule y_nat)
+    apply (rule replace_ps)
+    apply (rule y_nat)
+    apply (rule replace_ps)
+    apply (rule x_nat)
+    apply (fold isNat_def)
+    apply (gd_auto)
+    apply (rule x_nat)
+    apply (rule y_nat)
+    done
+  show ?thesis
+    apply (rule eqSubst[where a="S(x) < S(y)" and b="1"])
+    apply (rule H)
+    apply (rule eqSym)
+    apply (rule H1)
+    done
+qed
+
+lemma less_trans:
+  assumes x_nat: "x N"
+  assumes y_nat: "y N"
+  assumes z_nat: "z N"
+  assumes x_le_y: "x < y = 1"
+  assumes y_le_z: "y < z = 1"
+  shows "x < z = 1"
+proof -
+  have quantized: "\<forall>x y. (x < y = 1) \<turnstile> (y < z = 1) \<turnstile> (x < z = 1)"
+    proof (rule ind[where a="z"])
+    show "z N" by (rule z_nat)
+    show "\<forall>x y. x < y = 1 \<turnstile>
+      y < 0 = 1 \<turnstile> x < 0 = 1"
+      proof (rule forallI, rule forallI, rule entailsI, rule entailsI)
+        fix xa ya
+        assume xa_nat: "xa N"
+        assume ya_nat: "ya N"
+        assume H: "ya < 0 = 1"
+        assume H1: "xa < ya = 1"
+        show "xa < 0 = 1"
+          apply (rule exF[where P="ya < 0 = 1"])
+          apply (rule H)
+          apply (rule eqSubst[where a="0" and b="ya < 0"])
+          apply (rule eqSym)
+          apply (gd_auto)
+          apply (fold neq_def)
+          apply (gd_auto)
+          done
+      qed
+    show "\<forall>x. (\<forall>xa y. xa < y = 1 \<turnstile> y < x = 1 \<turnstile> xa < x = 1) \<turnstile>
+      (\<forall>xa y. xa < y = 1 \<turnstile> y < S x = 1 \<turnstile> xa < S x = 1)"
+      apply (rule forallI)
+      apply (rule entailsI)
+      proof -
+        fix x
+        assume x_nat: "x N"
+        show "\<forall>xa y. xa < y = 1 \<turnstile> y < x = 1 \<turnstile> xa < x = 1 \<Longrightarrow>
+              \<forall>xa y. xa < y = 1 \<turnstile> y < S x = 1 \<turnstile> xa < S x = 1"
+          proof -
+            assume hyp: "\<forall>xa y. xa < y = 1 \<turnstile> y < x = 1 \<turnstile> xa < x = 1"
+            show "\<forall>xa y. xa < y = 1 \<turnstile> y < S x = 1 \<turnstile> xa < S x = 1"
+              apply (rule forallI)
+              apply (rule forallI)
+              apply (rule entailsI)
+              apply (rule entailsI)
+              proof -
+                fix xa ya
+                assume xa_nat: "xa N"
+                assume ya_nat: "ya N"
+                assume xa_le_ya: "xa < ya = 1"
+                assume ya_le_sx: "ya < S x = 1"
+                show "xa < S x = 1"
+                  apply (rule cases_nat[where x="xa"])
+                  apply (rule xa_nat)
+                  apply (gd_auto)
+                  apply (rule x_nat)
+                  apply (unfold_def def_less)
+                  apply (rule condI2Eq)
+                  apply (fold neq_def)
+                  apply (gd_auto)
+                  apply (rule x_nat)
+                  apply (gd_auto)
+                  apply (rule condI3Eq)
+                  apply (gd_auto)
+                  apply (rule xa_nat)
+                  apply (gd_auto)
+                  apply (rule replace_ps)
+                  apply (rule x_nat)
+                  apply (unfold neq_def)
+                  proof -
+                    assume xa_nz: "\<not> xa = 0"
+                    have ya_nz: "\<not> ya = 0"
+                      apply (rule grounded_contradiction[where q="xa < ya = 1"])
+                      apply (gd_auto)
+                      apply (rule ya_nat)
+                      apply (rule xa_le_ya)
+                      apply (rule eqSubst[where a="0" and b="xa < ya"])
+                      apply (rule eqSym)
+                      apply (rule eqSubst[where a="0" and b="ya"])
+                      apply (rule eqSym)
+                      apply (rule dNegE)
+                      apply (assumption)
+                      apply (gd_auto)
+                      apply (fold neq_def)
+                      apply (gd_auto)
+                      done
+                    have H: "P(ya) < P(S x) = 1"
+                      apply (rule less_monotone_pred)
+                      apply (gd_auto)
+                      apply (rule ya_nat)
+                      apply (gd_auto)
+                      apply (rule x_nat)
+                      apply (rule eqSubst[where a="ya" and b="S P ya"])
+                      apply (rule eqSym)
+                      apply (gd_auto)
+                      apply (rule ya_nat)
+                      apply (rule ya_nz)
+                      apply (rule replace_ps)
+                      apply (rule x_nat)
+                      apply (rule ya_le_sx)
+                      done
+                    have H2: "P(ya) < x = 1"
+                      apply (rule eqSubst[where a="P S x" and b="x"])
+                      apply (gd_auto)
+                      apply (rule x_nat)
+                      apply (rule H)
+                      done
+                    have H3: "P(xa) < P(ya) = 1"
+                      apply (rule less_monotone_pred)
+                      apply (gd_auto)
+                      apply (rule xa_nat)
+                      apply (gd_auto)
+                      apply (rule ya_nat)
+                      apply (rule eqSubst[where a="xa" and b="S P xa"])
+                      apply (rule eqSym)
+                      apply (gd_auto)
+                      apply (rule xa_nat)
+                      apply (rule xa_nz)
+                      apply (rule eqSubst[where a="ya" and b="S P ya"])
+                      apply (rule eqSym)
+                      apply (gd_auto)
+                      apply (rule ya_nat)
+                      apply (rule ya_nz)
+                      apply (rule xa_le_ya)
+                      done
+                    have H4: "P xa < P ya = 1 \<turnstile> P ya < x = 1 \<turnstile> P xa < x = 1"
+                      apply (rule forallE[where a="P ya"])
+                      apply (rule forallE[where a="P xa"])
+                      apply (rule hyp)
+                      apply (gd_auto)
+                      apply (rule xa_nat)
+                      apply (gd_auto)
+                      apply (rule ya_nat)
+                      done
+                    then have H5: "P ya < x = 1 \<turnstile> P xa < x = 1"
+                      apply (rule entailsE)
+                      apply (rule H3)
+                      done
+                    then show "P xa < x = 1"
+                      apply (rule entailsE)
+                      apply (rule H2)
+                      done
+                  qed
+            qed
+          qed
+      qed
+    qed
+    then have "\<forall>y. (x < y = 1) \<turnstile> (y < z = 1) \<turnstile> (x < z = 1)"
+      apply (rule forallE)
+      apply (rule x_nat)
+      done
+    then have "(x < y = 1) \<turnstile> (y < z = 1) \<turnstile> (x < z = 1)"
+      apply (rule forallE)
+      apply (rule y_nat)
+      done
+    then have "(y < z = 1) \<turnstile> (x < z = 1)"
+      apply (rule entailsE)
+      apply (rule x_le_y)
+      done
+    then show ?thesis
+      apply (rule entailsE)
+      apply (rule y_le_z)
+      done
+qed
+
+lemma sub_less:
+  assumes x_nat: "x N"
+  assumes y_nat: "y N"
+  shows "S(x) - S(y) < S(x) = 1"
+apply (rule ind[where a="y"])
+apply (rule y_nat)
+apply (rule eqSubst[where a="P(S(x) - 0)" and b="S(x) - 1"])
+apply (rule eqSym)
+apply (rule defE[where a="sub" and b="(\<lambda>x y. if y = 0 then x else P(x - P y))" and Q="\<lambda>f. f (S x) 1 = P((S x) - 0) "])
+apply (rule def_sub)
+apply (rule condI2Eq)
+apply (fold neq_def)
+apply (gd_auto)
+apply (rule x_nat)
+apply (rule replace_ps)
+apply (gd_auto)
+apply (fold isNat_def)
+apply (gd_auto)
+apply (rule x_nat)
+apply (rule eqSubst[where a="S x " and b="S x - 0"])
+apply (rule eqSym)
+apply (gd_auto)
+apply (rule x_nat)
+apply (rule replace_ps)
+apply (rule x_nat)
+apply (gd_auto)
+apply (rule x_nat)
+apply (rule forallI)
+apply (rule entailsI)
+proof -
+  fix xa
+  assume xa_nat: "xa N" and hyp: "S x - S xa < S x = 1"
+  show "S x - S S xa < S x = 1"
+    apply (rule eqSubst[where b="S x - S S xa" and a="P(S(x) - S(xa))"])
+    apply (rule eqSym)
+    apply (rule defE[where a="sub" and b="(\<lambda>x y. if y = 0 then x else P(x - P y))" and Q="\<lambda>f. f (S x) (S S xa) = P(S x - S xa)"])
+    apply (rule def_sub)
+    apply (rule condI2Eq)
+    apply (fold neq_def)
+    apply (gd_auto)
+    apply (rule xa_nat)
+    apply (gd_auto)
+    apply (rule x_nat)
+    apply (rule xa_nat)
+    apply (rule replace_ps)
+    apply (gd_auto)
+    apply (rule xa_nat)
+    apply (fold isNat_def)
+    apply (gd_auto)
+    apply (rule x_nat)
+    apply (rule xa_nat)
+    apply (rule cases_nat[where x="S(x) - S(xa)"])
+    apply (gd_auto)
+    apply (rule x_nat)
+    apply (rule xa_nat)
+    apply (rule eqSubst[where a="0" and b="P(0)"])
+    apply (rule eqSym)
+    apply (gd_auto)
+    apply (rule x_nat)
+    apply (rule less_monotone_pred)
+    apply (gd_auto)
+    apply (rule x_nat)
+    apply (rule xa_nat)
+    apply (gd_auto)
+    apply (rule x_nat)
+    apply (rule eqSubst[where a="S x - S xa" and b="S P (S x - S xa)"])
+    apply (rule eqSym)
+    apply (gd_auto)
+    apply (rule x_nat)
+    apply (rule xa_nat)
+    apply (assumption)
+    apply (rule less_trans[where y="S x"])
+    apply (gd_auto)
+    apply (rule x_nat)
+    apply (rule xa_nat)
+    apply (gd_auto)
+    apply (rule x_nat)
+    apply (gd_auto)
+    apply (rule x_nat)
+    apply (rule hyp)
+    apply (gd_auto)
+    apply (rule x_nat)
+    done
+qed
+
+lemma less_not_refl:
+  assumes x_nat: "x N"
+  shows "x < x = 0"
+apply (rule ind[where a="x"])
+apply (rule x_nat)
+apply (unfold_def def_less)
+apply (rule condI1)
+apply (gd_auto)
+apply (rule forallI)
+apply (rule entailsI)
+apply (unfold_def def_less)
+apply (rule condI2Eq)
+apply (fold neq_def)
+apply (gd_auto)
+apply (rule condI2Eq)
+apply (fold neq_def)
+apply (gd_auto)
+apply (rule replace_ps)
+apply (gd_auto)
+done
+
+lemma sub_eq_self_imp_zero:
+  assumes x_nat: "x N"
+  assumes y_nat: "y N"
+  assumes H: "S(y) - x = S(y)"
+  shows "x = 0"
+proof (rule grounded_contradiction[where q="S(y) < S(y) = 1"])
+  show "x = 0 B" by (gd_auto, rule x_nat)
+  assume x_nz: "\<not> x = 0"
+  have H1: "S(y) - x < S(y) = 1"
+    apply (rule existsE[where Q="\<lambda>c. x = S(c)"])
+    apply (gd_auto)
+    apply (rule x_nat)
+    apply (rule x_nz)
+    proof -
+      fix a
+      assume a_nat: "a N" and x_p: "x = S a"
+      show "S y - x < S y = 1 "
+        apply (rule eqSubst[where a="S a" and b="x"])
+        apply (rule eqSym)
+        apply (rule x_p)
+        apply (rule sub_less)
+        apply (rule y_nat)
+        apply (rule a_nat)
+        done
+    qed
+  show "S(y) < S(y) = 1"
+    apply (rule eqSubst[where a="S(y) - x" and b="S(y)" and Q="\<lambda>c. c < S(y) = 1"])
+    apply (rule H)
+    apply (rule H1)
+    done
+  show "\<not> S(y) < S(y) = 1"
+    apply (rule eqSubst[where a="0" and b= "S y < S y"])
+    apply (rule eqSym)
+    apply (rule less_not_refl)
+    apply (rule natS)
+    apply (rule y_nat)
+    apply (fold neq_def)
+    apply (gd_auto)
+    done
+qed
+
+lemma div_nz:
+  assumes x_nat: "x N"
+  assumes y_nat: "y N"
+  assumes x_geq_y: "x \<ge> S(y) = 1"
+  shows "\<not> div x S(y) = 0"
+apply (rule eqSubst[where a="S(div (x - S y) S(y))" and b="div x S(y)"])
+apply (rule eqSym)
+apply (rule defE[where a="div" and b="(\<lambda>x y. if x < y = 1 then 0 else S(div (x - y) y))" and Q="\<lambda>f. f x (S y) = S(div (x - S y) (S y))"])
+apply (rule def_div)
+apply (rule condI2)
+apply (rule eqSubst[where a="0" and b="x < S y"])
+apply (rule eqSym)
+apply (rule sub_eq_self_imp_zero[where y="0"])
+apply (gd_auto)
+apply (rule x_nat)
+apply (rule y_nat)
+apply (gd_auto)
+apply (fold geq_def)
+apply (rule x_geq_y)
+apply (fold neq_def)
+apply (rule neq_sym)
+apply (gd_auto)
+apply (rule x_nat)
+apply (rule y_nat)
+apply (rule y_nat)
+apply (gd_auto)
+apply (rule x_nat)
+apply (rule y_nat)
+apply (rule y_nat)
+done
+
+lemma
+  assumes a_nz: "\<not> a = 0"
+  shows "a * b \<ge> b = 1"
+sorry
+
+lemma cpair_strict_mono_r:
+  assumes x_nat: "x N"
+  assumes y_nat: "y N"
+  assumes y_nz: "\<not> y = 0"
+  shows "y < \<langle>x, y\<rangle> = 1"
+apply (rule less_is_leq_neq)
+apply (rule y_nat)
+apply (gd_auto)
+apply (rule x_nat)
+apply (rule y_nat)
+apply (rule cpair_mono_r)
+apply (rule x_nat)
+apply (rule y_nat)
+apply (unfold cpair_def)
+apply (rule swap_add)
+apply (rule y_nat)
+apply (gd_auto)
+apply (rule x_nat)
+apply (rule y_nat)
+apply (rule x_nat)
+apply (rule y_nat)
+apply (rule neq_monotone_add)
+apply (gd_auto)
+apply (rule x_nat)
+apply (rule y_nat)
+apply (rule x_nat)
+apply (rule y_nat)
+apply (rule y_nat)
+apply (rule div_nz)
+apply (gd_auto)
+apply (rule x_nat)
+apply (rule y_nat)
+apply (rule x_nat)
+apply (rule y_nat)
+apply (gd_auto)
+sorry
+
 ML_file "gd_typeencode.ML"
 
 subsection "User-level Equality"
-
-text "We define a user-level equality, which doesn't know about
-  the underlying \<open>num\<close> representation.
-  For the following manually constructed inductive datatype, it cannot
-  be proven for example that \<open>Nil = 0\<close> or \<open>Nil \<doteq> 0\<close>, even though Cons is
-  actually represented by 0. The type_synonym types are opaque."
-
-axiomatization
-  eq :: "'a \<Rightarrow> 'a \<Rightarrow> o" (infix "=" 20)
-where
-  refl: "a = a" and
-  eq_comm: "a = b \<Longrightarrow> b = a" and
-  eq_subst: "\<lbrakk>a = b; Q b\<rbrakk> \<Longrightarrow> Q a"
 
 text "A manual construction of an inductive datatype.
   Later, we want this to be generated automatically from something
@@ -2246,47 +3754,40 @@ consts
 axiomatization
 where
   const_distinct: "\<not> ((Cons a x) = Nil)" and
-  list_injective: "(Cons a x) = (Cons b y) \<Longrightarrow> a \<doteq> b \<and> (x = y)" and
+  list_injective: "(Cons a x) = (Cons b y) \<Longrightarrow> a = b \<and> (x = y)" and
   list_encode:  "list_encode := (\<lambda>x.
                              if (x = Nil) then \<langle>0,0\<rangle>
                              else if (x = (Cons n xs)) then \<langle>0,1,n,list_encode xs\<rangle>
                              else omega)" and
   list_decode: "list_decode := (\<lambda>x.
-                             if (x \<doteq> \<langle>0,0\<rangle>) then Nil
-                             else if (x \<doteq> \<langle>0,1,n,z'\<rangle>) then Cons n (list_decode z')
+                             if (x = \<langle>0,0\<rangle>) then Nil
+                             else if (x = \<langle>0,1,n,z'\<rangle>) then Cons n (list_decode z')
                              else omega)"
 
-lemma zero_is_cons: "list_encode Nil \<doteq> 0"
+lemma zero_is_cons: "list_encode Nil = 0"
 apply (unfold_def list_encode)
 apply (rule condI1Eq)
 apply (rule refl)
 apply (rule nat0)
 apply (unfold cpair_def)
 apply (unfold_def def_div)
-sorry
 
-lemma list_encode_nil: "list_encode Nil \<doteq> \<langle>0, 0\<rangle>"
+lemma list_encode_nil: "list_encode Nil = \<langle>0, 0\<rangle>"
 apply (unfold_def list_encode)
 apply (rule condI1)
 apply (rule refl)
 done
 
-lemma list_encode_cons:  "list_encode (Cons n xs) \<doteq> \<langle>0, 1, n, list_encode xs\<rangle>"
+lemma list_encode_cons:  "list_encode (Cons n xs) = \<langle>0, 1, n, list_encode xs\<rangle>"
 apply (unfold_def list_encode)
 apply (rule condI2Eq)
 apply (rule const_distinct)
-sorry
 lemma list_decode_nil: "(list_decode \<langle>0, 0\<rangle>) = Nil"
-sorry
 lemma list_decode_cons: "list_decode \<langle>0, 1, n, z'\<rangle> = Cons n (list_decode z')"
-sorry
 
 lemma list_induction: "\<lbrakk>Q Nil; \<forall>n xs. n N \<turnstile> Q (list_decode xs) \<turnstile> Q (Cons n (list_decode xs))\<rbrakk> \<Longrightarrow> Q l"
-sorry
 lemma encode_decode_correct: "list_encode x N \<Longrightarrow> list_decode (list_encode x) = x"
-sorry
 lemma decode_encode_correct: "list_decode (list_encode x) = x"
-sorry
 
 *)
 
@@ -2308,28 +3809,124 @@ consts
 axiomatization
 where
   is_list_def: "is_list := (\<lambda>x.
-                              if x \<doteq> Nil then True
-                              else if ((x \<doteq> Cons n xs) \<and> (is_list xs)) then True
+                              if x = Nil then True
+                              else if ((x = Cons n xs) \<and> (is_list xs)) then True
                               else False
                               )"
 
+lemma is_list_terminates [gd_simp]:
+  assumes x_nat: "x N"
+  shows "is_list x B"
+sorry
+
+lemma nil_nat [gd_simp]: "Nil N"
+apply (unfold Nil_def)
+apply (unfold list_type_tag_def)
+apply (gd_auto)
+done
+
+lemma cons_nat [gd_simp]: "n N \<Longrightarrow> xs N \<Longrightarrow> Cons n xs N"
+apply (unfold Cons_def)
+apply (unfold list_type_tag_def)
+apply (gd_auto)
+done
+
 lemma "is_list Nil"
+apply (rule eqSubst[where a="True"])
+apply (unfold_def is_list_def)
+apply (rule eqSym)
+apply (rule condI1B)
+apply (fold isNat_def)
+apply (gd_auto)
+done
+
+lemma [gd_simp]:
+  assumes n_nat: "n N"
+  assumes xs_nat: "xs N"
+  shows "\<not> Cons n xs = Nil"
+apply (unfold Nil_def)
+apply (unfold Cons_def)
+apply (rule grounded_contradiction[where q="\<langle>1,n,xs\<rangle> = 0"])
+apply (gd_auto)
+apply (unfold list_type_tag_def)
+apply (rule nat0)
+apply (rule n_nat)
+apply (rule xs_nat)
+apply (rule nat0)
+apply (rule cpair_inj_r[where a="0" and c="0"])
+apply (gd_auto)
+apply (rule n_nat)
+apply (rule xs_nat)
+apply (rule dNegE)
+apply (assumption)
+apply (rule grounded_contradiction[where q="1=0"])
+apply (gd_auto)
+apply (rule n_nat)
+apply (rule xs_nat)
+apply (rule cpair_inj_l[where b="\<langle>n,xs\<rangle>" and d="0"])
+apply (gd_auto)
+apply (rule n_nat)
+apply (rule xs_nat)
+apply (rule eqSubst[where a="0" and b="\<langle>0,0\<rangle>"])
+apply (gd_auto)
+apply (rule dNegE)
+apply (gd_auto)
+apply (fold neq_def)
+apply (gd_auto)
+done
+
+lemma list_nat:
+  assumes x_list: "is_list x"
+  shows "x N"
 sorry
-lemma "is_list xs \<Longrightarrow> is_list (Cons n xs)"
+
+lemma cons_is_list:
+  assumes n_nat: "n N"
+  assumes xs_list: "is_list xs"
+  shows "is_list (Cons n xs)"
+apply (rule eqSubst[where a="True"])
+apply (unfold_def is_list_def)
+apply (rule eqSym)
+apply (rule condI2BEq)
+apply (gd_auto)
+apply (rule n_nat)
+apply (rule list_nat)
+apply (rule xs_list)
+apply (gd_auto)
+proof -
+  show "(if Cons n xs = Cons n xs \<and> is_list xs then True else False) = True"
+    apply (rule condI1B)
+    apply (rule conjI)
+    apply (fold isNat_def)
+    apply (rule cons_nat)
+    apply (rule n_nat)
+    apply (rule list_nat)
+    apply (rule xs_list)
+    apply (rule xs_list)
+    apply (rule true_bool)
+    done
+  show "True" by (rule true)
+qed
+
+lemma "is_list x \<Longrightarrow> (x = Nil) \<or> (\<exists>n xs. x = Cons n xs)"
 sorry
-lemma "is_list xs \<Longrightarrow> xs N"
-sorry
-lemma "is_list x \<Longrightarrow> (x \<doteq> Nil) \<or> (\<exists>n. \<exists> xs. x \<doteq> Cons n xs)"
-sorry
-lemma "Cons n xs \<doteq> Cons m ys \<Longrightarrow> n \<doteq> m \<and> xs \<doteq> ys"
-sorry
-lemma "Cons n xs \<noteq> Nil"
+lemma "Cons n xs = Cons m ys \<Longrightarrow> n = m \<and> xs = ys"
 sorry
 lemma list_induction:
-  assumes "is_list a"
-  assumes "Q Nil"
-  assumes "\<forall>x xs. x N \<turnstile> is_list xs \<turnstile> Q xs \<turnstile> Q (Cons x xs)"
+  assumes a_list: "is_list a"
+  assumes q_nil: "Q Nil"
+  assumes step: "\<forall>x xs. x N \<turnstile> is_list xs \<turnstile> Q xs \<turnstile> Q (Cons x xs)"
   shows "Q a"
+proof -
+  have "is_list a \<longrightarrow> Q a"
+    apply (rule strong_induction)
+    apply (rule list_nat)
+    apply (rule a_list)
+  sorry
+  then show ?thesis
+    sorry
+qed
+lemma "xs \<le> Cons n xs = 1"
 sorry
 
 lemma "is_list (Cons 4 (Cons 2 (Nil)))"
