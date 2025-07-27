@@ -3,7 +3,7 @@ struct
 
   val structural_rules = [
     @{thm disjI3}, @{thm eqSym}, @{thm nat0}, @{thm natS}, @{thm natP},
-    @{thm eqSubst}, @{thm sucInj}, @{thm sucNonZero}, @{thm predSucSym},
+    @{thm eqSubst}, @{thm sucInj}, @{thm sucNonZero}, @{thm predSucInv},
     @{thm dNegI}, @{thm nat0}
   ]
 
