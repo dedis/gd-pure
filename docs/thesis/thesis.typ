@@ -30,6 +30,9 @@
 
 #include "chapters/introduction.typ"
 #include "chapters/background.typ"
+#include "chapters/gd_formalization.typ"
+#include "chapters/gd_tooling.typ"
+#include "chapters/inductive_types.typ"
  
 // == Tabellen
 

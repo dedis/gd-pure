@@ -34,6 +34,28 @@
   $
 }
 
+#let pure-prime-types = {
+  $ tau ::= &alpha "(type variable)" \
+        | &tau => tau "(function type)"\
+        | &"prop" "(type of propositions)"\
+        | &"o" "(type of object propositions)"
+  $
+}
+
+#let pure-prime-terms = { 
+  $ t ::= &x "(variable)" \
+      | &c "(constant)" \
+      | &t " " t "(application)" \
+      | &lambda x:: tau. t "(lambda abstraction)" \
+      | &t arrow.double.long t "(implication)"\ 
+      | &t equiv t "(equality)"\ 
+      | &and.big x:: tau. t "(universal quantification)"\
+      | &"True" "(o-typed true constant)"\
+      | &t or t "(o-typed logical or connective)"\
+      | &"Trueprop" t "(conversion function o to Prop)"
+  $
+}
+
 #let pure-type-constructors = {
   $
   equiv ""&:: alpha => alpha => "prop"\
@@ -196,3 +218,31 @@
     $equiv E$
   )
 }
+
+#let or-intro-rules = {
+  let or-i1 = deduction-rule(
+    $Gamma tack.r "Trueprop" P$,
+    $Gamma tack.r "Trueprop" P or Q$,
+    $"disjI1"$
+  )
+
+  let or-i2 = deduction-rule(
+    $Gamma tack.r "Trueprop" Q$,
+    $Gamma tack.r "Trueprop" P or Q$,
+    $"disjI2"$
+  )
+
+  grid(
+    columns: (1.3fr, 1fr),
+    row-gutter: 3em,
+    column-gutter: 5em,
+    or-i1,
+    or-i2
+  )
+}
+
+#let true-axiom = deduction-rule(
+  $$,
+  $Gamma tack.r "Trueprop True"$,
+  $"true"$
+)
