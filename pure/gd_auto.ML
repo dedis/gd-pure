@@ -8,7 +8,7 @@ struct
   ]
 
   fun get_rewrites ctxt =
-    Named_Theorems.get ctxt @{named_theorems gd_simp}
+    Named_Theorems.get ctxt @{named_theorems gd_auto}
 
   fun auto_rewrite_tac rewrites ctxt =
     REPEAT_ALL_NEW (resolve_tac ctxt rewrites)
