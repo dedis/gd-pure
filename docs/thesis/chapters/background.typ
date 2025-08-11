@@ -13,10 +13,13 @@
 = Background
 
 == Isabelle/Pure
+Isabelle provides a barebones logical framework called _Pure_. It contains a minimal meta-logic, which is a typed lambda calculus with few additional connectives, some keywords to add types and constants to said calculus, and a structured proof language called Isar.
 
-Any object logics in Isabelle, for example the popular Isabelle/HOL fragment, are formalized atop a logic framework called Pure. Pure is designed to be as generic as possible to allow implementing a wide range of object logics atop it. It provides infrastructure to define types and axioms to facilitate the formalization of object logics.
+Any object logic in Isabelle, for example the highly mature Isabelle/HOL fragment, are formalized atop Pure.
 
-Unfortunately, there is no single document that lays out the syntax, axioms, and derivation rules of Pure in their entirety. The following is an attempt at providing such a characterization, combining information from two Isabelle papers @isabelle00 @isabelle89 and the Isabelle reference manual @isabelle_ref.
+Isabelle is implemented in Standard ML (SML), and implementing an object logic directly in Pure almost always requires writing SML for things like proof automation, providing keywords or definitional mechanisms for users, or various other tooling such as code extraction.
+
+Unfortunately, there is no single document that lays out the syntax, axioms, and derivation rules of the Pure calculus in their entirety. The following is an attempt at providing such a characterization, combining information from two Isabelle papers @isabelle00 @isabelle89 and the Isabelle reference manual @isabelle_ref.
 
 === Syntax of Pure
 
@@ -108,18 +111,18 @@ where
   disjI2: ‹Q ⟹ P ∨ Q› and
 ```
 
-The axiomatized rules here simply state that $"True"$ holds and that from either $P$ or $Q$, $P or Q$ can be derived. Here, $P$ and $Q$ are implicitly universally quantified, ranging over all terms of type $"Prop"$. That is, $P$ and $Q$ can be substituted for any term.
-Now, the type $o$ has knows inhabitants and structure. However, Isabelle (or rather, Pure) cannot reason about it, because it can only reason about terms of type $"Prop"$. To resolve this, a judgment must translate from the object-level proposition type $o$ to the meta-level type $"Prop"$.
+The axiomatized rules here simply state that $"True"$ holds and that from either $P$ or $Q$, $P or Q$ can be derived. Here, $P$ and $Q$ are implicitly universally quantified, ranging over all terms of type `prop`. That is, $P$ and $Q$ can be substituted for any term of the correct type (which is `o` for both $P$ and $Q$ here).
+Now, the type `o` has knows inhabitants and structure. However, Isabelle (or rather, Pure) cannot reason about it, because it cannot connect the type `o` meaningfully with its meta-theory. To resolve this, a judgment must translate from the object-level proposition type `o` to the meta-level type `prop`.
 
 ```Isabelle
 judgment
   Trueprop :: ‹o ⇒ prop›  (‹_› 5)
 ```
 
-The syntax annotation $(‹\_› med 5)$ means that any term of type $o$ is implicitly augmented with the $"Trueprop"$
- judgment. The very low precedence value of 5 ensures that the $"Trueprop"$ judgment is only applied to top-level terms. For example, the term $x or "True"$ is the same as $"Trueprop" (x or "True")$ and both are of type $"Prop"$ due to the $"Trueprop"$ predicate converting the formula to that type.
+The syntax annotation $(‹\_› med 5)$ means that any term of type `o` is implicitly augmented with the $"Trueprop"$
+ judgment. The very low precedence value of 5 ensures that the $"Trueprop"$ judgment is only applied to top-level terms. For example, the term $x or "True"$ is the same as $"Trueprop" (x or "True")$ and both are of type `prop` due to the $"Trueprop"$ predicate converting the formula to that type.
 
-As you might have noticed, we have made use of this implicit conversion from $o$ to $"Prop"$ already in the axiomatization block from earlier. That is, the $"Trueprop"$ judgment must be declared before the axiomatization block, else the latter will just report a typing error.
+As you might have noticed, we have made use of this implicit conversion from `o` to `Prop` already in the axiomatization block from earlier. That is, the $"Trueprop"$ judgment must be declared before the axiomatization block, else the latter will just report a typing error.
 
 Now, we can state and prove a first lemma in this tiny object logic, using the previously defined axioms.
 
@@ -152,55 +155,14 @@ Further, we can view the added axioms as new inference rules, with the explicit 
   #true-axiom
 ]
 
-It is technically possible to avoid declaring a new proposition type for an object logic and instead use $"Prop"$ directly as the type of propositions. However, doing so means that the (object) logic immediately inherits the built-in connectives and deduction rules, such as implication $(arrow.long.double)$ and universal quantification $(and.big)$, and the sequent-style reasoning built into the kernel.
+It is technically possible to avoid declaring a new proposition type for an object logic and instead use `Prop` directly as the type of propositions. However, doing so means that the (object) logic immediately inherits the built-in connectives and deduction rules, such as implication $(arrow.long.double)$ and universal quantification $(and.big)$, and the sequent-style reasoning built into the kernel.
 
 This implicit structure reduces the control one has over the logic, and as a result, the best practice is to take a clean-slate approach, declare a new type for object-level propositions, and define a separate set of connectives and inference rules for it.
 
 == Grounded Deduction (GD)
 
-=== Motivation: Recursive Definitions in Classical and Constructive Logic
+This subsection provides a full characterization of the GD logic that is later formalized.
 
-Grounded deduction is a logical framework developed recently at EPFL. Its development is motivated by the observation that in logics of both classical and constructive tradition, there is inherently no definitional freedom. That is, definitions must describe provably terminating expressions. The reason for this is that without such restrictions in place, logics built on either tradition would be immediately inconsistent.
+GD makes definitions first-class objects in the logic and allows arbitrary references of the symbol currently being defined or other, previously defined symbols, in the expanded term.
 
-To see this, consider the definition
-$ L equiv not L. $
-
-Let us imagine that this is a valid definition in a classical logic (that is, a logic that at least has the law of excluded middle (LEM) and double negation elimination). We may then reason about its truth value using the LEM.
-
-Let us first prove that $L$ holds by contradiction.
-
-Assuming $not L$, we can derive $not not L$ by the definition and then $L$ via double negation elimination. Since we derived both $L$ and $not L$ from hypothetically assuming $not L$, a contradiction, this allows us to definitely conclude $L$.
-
-However, having proven $L$, we can also derive $not L$ by applying the definition, and thus derived a contradiction in the logic itself, making it inconsistent.
-
-What went wrong? The law of excluded middle forces a truth value on any term in classical logic, thus circular or non-sensical definitions such as $L equiv not L$, for which no truth value can or should be assigned, cannot be admitted.
-
-Constructive logics discard the law of excluded middle and are thus safe from a proof by contradiction like the one shown above. However, in intuitionistic tradition, lambda calculus terms are interpreted as proof terms, witnessing the truth of the proposition encoded by their type. Lambda functions of type $A => B$ are then interpreted as producing a proof of $B$ given a proof of $A$, which however means that they must always terminate.
-
-To see this, consider the following attempt at a definition of an (ill-founded) term of type $forall alpha. alpha$, i.e., a proof of every proposition:
-
-$ "prove_anything" := Lambda alpha. "prove_anything" alpha $
-
-Here, the construct $Lambda$ is the type-level analogue of lambda abstraction: it abstracts over a type variable and substitutes it in the body. That is, if $e$ has type $T$, then $Lambda alpha. e$ has type $forall alpha. T$. If such a term were permitted in the logic, it would type-check as having type $forall alpha. alpha$. Instantiating it at any type $P$ yields a term of type $P$, i.e., a proof of $P$ for arbitrary $P$, making every proposition in the logic trivially provable.
-
-What went wrong this time? Functions in constructive logics represent logical implication. If a function has type $A => B$, the function must provide proof of $B$, that is, return a term $b: B$ given any term $a: A$. The function _witnesses_ the implication of $A$ to $B$. If the function does not terminate on an input however, this proof is not actually constructed and assuming the hypothetical resulting proof term leads to inconsistency.
-
-Having shown that the presence of arbitrarily recursive definitions leads to logical inconsistency in both widely recognized schools of logic, let us now motivate why a formal system resistant to arbitrary  definitional recursion would be desirable in the first place.
-In computer science in particular, the need for an ability to define arbitrary recursion is immediate; virtually every popular programming language is turing complete, which requires arbitrary recursion. Also, many programs are not designed to terminate at all, like operating system kernels or web servers.
-Additionally, the ability to state paradoxical definitions and use a formal system to reason about them is of interest in and of itself. A less trivial example of such a paradoxical recursive definition than the Liar’s paradox stated above would be Yablo’s paradox. This paradox is notable, because unlike the classical liar sentence (“This sentence is false”), it constructs a self-referential paradox without direct self-reference, using an infinite sequence of sentences.
-
-Let us consider an infinite list of sentences $(Y_n)_(n in N)$, where each sentence $Y_n$ is defined as follows:
-
-$ Y_n equiv forall k. k > n => not Y_k $
-
-That is, each sentence $Y_n$ asserts that all sentences following it are untrue.
-
-Now suppose that one of the sentences $Y_i$ is true. Then, by its definition, all $Y_j$ with $j > i$ must be false. In particular, $Y_(i+1)$​is false, which means that there must exist some $k > i+1$ such that $Y_k$ is true. But this contradicts the statement by $Y_i$ that all $Y_j$ with $j > i$ are false, in particular $Y_k$. Hence, no $Y_i$​can be true.
-
-But then, $not Y_i$ holds for all $i in N$. This however means that $Y_0$ must be true, as its claim of $not Y_i$ for any $i > 0$ is indeed fulfilled. A seemingly paradoxical setup, even though there is no direct self-reference. No truth value can be assigned to any of the $Y_i$.
-
-=== An Overview of GD
-
-GD makes definitions first-class objects in the logic and allows arbitrary references of itself or other, previously-defined symbols, in the expanded term.
-
-To prevent immediate inconsistency, GD must of course weaken other deduction rules. Specifically, GD adds a so-called _habeas quid_ sequent to many inference rules. Intuitively, this means that in certain inference rules, a term must first be shown to terminate in order to be used. This is the basic idea of GD. The following formalization is based on the GD formalization in @GD.
+To prevent immediate inconsistency, GD must of course weaken other deduction rules. Specifically, GD adds a so-called _habeas quid_ sequent to many inference rules. Intuitively, this means that in certain inference rules, a (sub)term must first be shown to terminate in order to be used. This is the basic idea of GD. The following formalization is based on the GD formalization in @GD.
