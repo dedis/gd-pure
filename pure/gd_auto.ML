@@ -43,7 +43,7 @@ struct
     let
       val rewrites = get_rewrites ctxt
     in
-      REPEAT_DETERM_N 5 (auto_step_tac rewrites ctxt i ORELSE assume_tac ctxt i)
+      CHANGED (REPEAT_DETERM_N 5 (auto_step_tac rewrites ctxt i ORELSE assume_tac ctxt i))
     end
 
 end

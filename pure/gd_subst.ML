@@ -1,4 +1,4 @@
-structure GD_Simp =
+structure GD_Subst =
 struct
   fun get_thm_eq thm =
     let
@@ -61,7 +61,7 @@ struct
         end
     | _ => no_tac
 
-  fun gd_simp_method thm_name ctxt =
+  fun gd_subst_method thm_name ctxt =
     SIMPLE_METHOD' (
         let
           val thm = Proof_Context.get_thm ctxt thm_name
@@ -76,7 +76,7 @@ end
 
 val _ =
 Theory.setup
-    (Method.setup @{binding simp}
-    (Scan.lift Args.name >> GD_Simp.gd_simp_method)
+    (Method.setup @{binding subst}
+    (Scan.lift Args.name >> GD_Subst.gd_subst_method)
     "Rewrite once using the given theorem."
 )
