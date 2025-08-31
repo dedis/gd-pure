@@ -65,10 +65,9 @@ struct
     SIMPLE_METHOD' (
         let
           val thm = Proof_Context.get_thm ctxt thm_name
-          val auto_tac = GDAuto.gd_auto_tac ctxt 1
         in
           SUBGOAL (fn (t, _) =>
-              (rw ctxt thm t 1) THEN TRY auto_tac
+              (rw ctxt thm t 1)
               )
         end)
 

@@ -2,16 +2,18 @@ structure GDAuto =
 struct
 
   val structural_rules = [
-    @{thm disjI3}, @{thm eqSym}, @{thm nat0}, @{thm natS}, @{thm natP},
-    @{thm eqSubst}, @{thm sucInj}, @{thm sucNonZero}, @{thm predSucInv},
-    @{thm dNegI}, @{thm nat0}
+    @{thm disjI3}, @{thm nat0}, @{thm natS}, @{thm natP},
+    @{thm eqSubst},
+    @{thm nat0}, @{thm natS}, @{thm natP}, @{thm sucNonZero}, @{thm sucInj},
+    @{thm predSucInv}, @{thm pred0}, @{thm neq_def}, @{thm eqBool},
+    @{thm sucCong}, @{thm disjI3}, @{thm dNegI}
   ]
 
   fun get_rewrites ctxt =
     Named_Theorems.get ctxt @{named_theorems gd_auto}
 
   fun auto_rewrite_tac rewrites ctxt =
-    REPEAT_ALL_NEW (resolve_tac ctxt rewrites)
+    REPEAT_ALL_NEW (assume_tac ctxt ORELSE' resolve_tac ctxt rewrites)
 
   fun combine [] i = no_tac
     | combine (tac :: tacs) i = tac i ORELSE combine tacs i
@@ -39,13 +41,32 @@ struct
       auto_rewrite_tac rewrites ctxt i
     ]
 
-  fun gd_auto_tac ctxt i =
+  fun base_tac ctxt i =
     let
       val rewrites = get_rewrites ctxt
     in
-      CHANGED (REPEAT_DETERM_N 5 (auto_step_tac rewrites ctxt i ORELSE assume_tac ctxt i))
+      CHANGED (REPEAT_DETERM_N 5 (assume_tac ctxt i ORELSE auto_step_tac rewrites ctxt i))
     end
 
+  fun sidecond_tac ctxt : int -> tactic =
+    SOLVED' (base_tac ctxt)
+
+  fun try_rule ctxt i (th: thm) =
+    DETERM (resolve_tac ctxt [th] i THEN sidecond_tac ctxt i)
+
+  fun cond_tac ctxt i =
+    let
+      val rules = Named_Theorems.get ctxt @{named_theorems gd_cond}
+      val tacs  = map (try_rule ctxt i) rules
+    in
+      CHANGED (FIRST tacs)
+    end
+
+  fun gd_auto_tac ctxt i =
+    FIRST [
+      base_tac ctxt i,
+      cond_tac ctxt i
+    ]
 end
 
 val _ =

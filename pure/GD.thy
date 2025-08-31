@@ -8,6 +8,7 @@ begin
 text \<open>The following theory development formalizes the Grounded Deduction Logic.\<close>
 
 named_theorems gd_auto "Lemmas of shape simp \<Longrightarrow> comp"
+named_theorems gd_cond "Conditionally applied if P can be solved: P \<Longrightarrow> simp \<Longrightarrow> comp"
 
 section \<open>Axiomatization of truth in GD\<close>
 
@@ -86,7 +87,7 @@ apply (fold conj_def)
 apply (rule p_and_q)
 done
 
-lemma conjI:
+lemma conjI [gd_auto]:
   assumes p: "p"
   assumes q: "q"
   shows "p \<and> q"
@@ -281,7 +282,7 @@ where
   condI2B: \<open>\<lbrakk>\<not>c; e B\<rbrakk> \<Longrightarrow> (if c then d else e) = e\<close> and
   condTB: \<open>\<lbrakk>c B; c \<Longrightarrow> d B; \<not>c \<Longrightarrow> e B\<rbrakk> \<Longrightarrow> if c then d else e B\<close>
 
-lemma condI1BEq:
+lemma condI1BEq [simp]:
   assumes c_holds: "c"
   assumes d_bool: "d B"
   assumes a_eq_d: "a = d"
@@ -294,7 +295,7 @@ apply (rule c_holds)
 apply (rule d_bool)
 done
 
-lemma condI2BEq:
+lemma condI2BEq [simp]:
   assumes not_c: "\<not>c"
   assumes d_bool: "d B"
   assumes a_eq_d: "b = d"
@@ -307,7 +308,7 @@ apply (rule not_c)
 apply (rule d_bool)
 done
 
-lemma condI3B:
+lemma condI3B [simp]:
   assumes a_bool: "a B"
   assumes c_bool: "c B"
   shows "(if c then a else a) = a"
@@ -413,7 +414,6 @@ done
 
 ML_file "gd_auto.ML"
 ML_file "gd_subst.ML"
-ML_file "gd_simp.ML"
 
 section \<open>Definitional Mechanism in GD\<close>
 
@@ -422,8 +422,14 @@ axiomatization
 where
   defE: \<open>\<lbrakk>a := b; Q b\<rbrakk> \<Longrightarrow> Q a\<close>
 
-lemmas [simp] = condI2 condI1 condI3 predSucInv neq_def pred0
-lemmas [gd_auto] = condI3 nat0 natS natP sucNonZero predSucInv pred0 neq_def eqBool sucCong disjI3
+ML_file "gd_simp.ML"
+
+lemmas [simp] = condI1B condI2B condI1 condI2 predSucInv neq_def pred0
+lemmas [gd_auto] = nat0 natS natP sucNonZero predSucInv pred0 neq_def eqBool sucCong disjI3 dNegI
+
+lemma [simp]: "(a = a) \<equiv> (a N)"
+  unfolding isNat_def by (rule Pure.reflexive)
+
 ML_file \<open>unfold_def.ML\<close>
 
 section \<open>Deductions of non-elementary inference rules.\<close>
@@ -433,6 +439,73 @@ lemma true [gd_auto]: "True"
 
 lemma true_bool [gd_auto]: "True B"
   unfolding bJudg_def by (rule disjI1, rule true)
+
+lemma bool_refl [gd_cond]: "a B \<Longrightarrow> a = a"
+apply (rule eqSubst[where a="(if True then a else a)" and b="a"])
+apply (rule condI1B, simp)
+apply (rule condI1BEq, simp)
+apply (rule condTB, simp)
+apply (rule eqSym)
+apply (rule condI1B, simp)
+done
+
+lemma [gd_cond]: "\<not>c \<and> (d N) \<Longrightarrow> b = d \<Longrightarrow> (if c then a else b) = d"
+apply (simp)
+apply (rule condI2)
+apply (rule conjE1, simp)
+apply (rule conjE2, simp)
+done
+
+lemma [gd_cond]: "c \<and> (d N) \<Longrightarrow> a = d \<Longrightarrow> (if c then a else b) = d"
+apply (simp)
+apply (rule condI1)
+apply (rule conjE1, simp)
+apply (rule conjE2, simp)
+done
+
+lemma [gd_cond]: "\<not>c \<and> (d B) \<Longrightarrow> b = d \<Longrightarrow> (if c then a else b) = d"
+apply (simp)
+apply (rule condI2B)
+apply (rule conjE1, simp)
+apply (rule conjE2, simp)
+done
+
+lemma [gd_cond]: "c \<and> (d B) \<Longrightarrow> a = d \<Longrightarrow> (if c then a else b) = d"
+apply (simp)
+apply (rule condI1B)
+apply (rule conjE1, simp)
+apply (rule conjE2, simp)
+done
+
+lemma [gd_cond]: "c \<Longrightarrow> if c then True else b"
+  by simp
+
+lemma [gd_cond]: "\<not>c \<Longrightarrow> if c then a else True"
+  by simp
+
+lemma [gd_cond]: "a \<Longrightarrow> a B"
+  unfolding bJudg_def by (rule disjI1, simp)
+
+lemma [gd_cond]: "\<not>a \<Longrightarrow> a B"
+  unfolding bJudg_def by (rule disjI2, simp)
+
+lemma [gd_cond]: "\<not>c \<Longrightarrow> b \<Longrightarrow> if c then a else b"
+apply (rule eqSubst[where a="b"])
+apply (rule eqSym)
+apply (rule condI2B, simp)
+done
+
+lemma [gd_cond]: "c \<Longrightarrow> a \<Longrightarrow> if c then a else b"
+apply (rule eqSubst[where a="a"])
+apply (rule eqSym)
+apply (rule condI1B, simp)
+done
+
+lemma if_trueI [gd_auto]: "c \<Longrightarrow> if c then True else False"
+  by simp
+
+lemma [gd_auto]: "True = True"
+  by simp
 
 lemma not_false [gd_auto]: "\<not>False"
 proof (unfold False_def)
@@ -444,7 +517,7 @@ proof (unfold False_def)
 qed
 
 lemma false_bool [gd_auto]: "False B"
-proof (unfold GD.bJudg_def)
+proof (unfold bJudg_def)
   show "False \<or> \<not>False"
   proof -
     have "\<not>False" by (rule not_false)
@@ -683,9 +756,6 @@ apply (rule H1)
 apply (assumption)
 done
 
-lemma [gd_auto]: "c \<Longrightarrow> c B"
-unfolding bJudg_def by (rule disjI1, assumption)
-
 declare [[simp_trace = true, simp_trace_depth_limit = 8]]
 
 lemma mult_terminates [gd_auto]:
@@ -743,8 +813,6 @@ apply (fold isNat_def)
 apply (simp)
 done
 
-print_simpset
-
 lemma mult_zero [simp, gd_auto]:
   shows "a * 0 = 0"
 by (unfold_def def_mult, rule condI1, gd_auto)
@@ -771,6 +839,18 @@ proof (rule ind[where a="a"], gd_auto, rule forallI, rule entailsI)
   fix x
   assume hyp: "1+x = S x"
   show "a N \<Longrightarrow> x N \<Longrightarrow> 1+(S x) = S S x"
+    by (unfold_def def_add, simp, rule hyp)
+qed
+
+lemma one_plus_suc [simp, gd_auto]:
+  shows "a N \<Longrightarrow> a + 1 = S a"
+proof (rule ind[where a="a"], gd_auto, rule forallI, rule entailsI)
+  fix x
+  assume hyp: "x+1 = S x"
+  show "x N \<Longrightarrow> (S x)+1 = S S x"
+    apply (unfold_def def_add)
+    apply (simp+)
+    apply (fold isNat_def)
     by (unfold_def def_add, simp, rule hyp)
 qed
 
@@ -1051,8 +1131,6 @@ apply (simp+)
 apply (rule x_z, simp)+
 apply (rule x_nz, simp)+
 done
-
-ML_file "gd_cases.ML"
 
 lemma leq_monotone_pred:
   assumes x_nat: "x N"
@@ -1488,8 +1566,8 @@ proof (rule grounded_contradiction[where q="x < 1 = 0"])
       done
 qed
 
-lemma le_monotone_suc:
-  shows "x N \<Longrightarrow> y N \<Longrightarrow> x < y = 1 \<Longrightarrow> S x < S y = 1"
+lemma le_monotone_suc [gd_auto]:
+  shows "x < y = 1 \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> S x < S y = 1"
 by (unfold_def def_less, simp)
 
 lemma le_monotone_pred:
@@ -1979,11 +2057,7 @@ apply (assumption)
 done
 
 lemma cpair_0_0_0 [simp, gd_auto]: "\<langle>0, 0\<rangle> = 0"
-apply (unfold cpair_def)
-apply (subst add_zero)
-apply (subst zero_add)
-apply (subst zero_mult)
-done
+unfolding cpair_def by simp
 
 (* recover w=x+y from the pair z *)
 definition cpzw :: "num \<Rightarrow> num" where
@@ -2081,6 +2155,20 @@ apply (rule cpair_inj)
 apply (rule eq)
 apply (rule a_nat)
 apply (rule b_nat)
+done
+
+lemma [gd_auto]:
+  "\<not>a \<or> \<not>b \<Longrightarrow> \<not> (a \<and> b)"
+unfolding conj_def
+by (rule dNegI, assumption)
+
+lemma [gd_auto]:
+  "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> \<not> a = c \<or> \<not> b = d \<Longrightarrow> \<not> \<langle>a, b\<rangle> = \<langle>c, d\<rangle>"
+apply (rule grounded_contradiction[where q="\<not>(a=c \<and> b=d)"], simp)
+apply (rule cpair_inj_l[where b="b" and d="d"], simp)
+apply (rule dNegE, assumption)
+apply (rule cpair_inj_r[where a="a" and c="c"], simp)
+apply (rule dNegE, assumption)
 done
 
 lemma if_leq_not_greater:
@@ -2699,7 +2787,8 @@ proof -
                       done
                     have H: "x N \<Longrightarrow> ya N \<Longrightarrow> P(ya) < P(S x) = 1"
                       apply (rule less_monotone_pred)
-                      apply (simp)
+                      apply (rule natP, assumption)
+                      apply (subst predSucInv, assumption+)
                       apply (rule eqSubst[where a="ya" and b="S P ya"])
                       apply (rule eqSym)
                       apply (simp)
@@ -2713,7 +2802,7 @@ proof -
                       done
                     have H3: "xa N \<Longrightarrow> ya N \<Longrightarrow> P(xa) < P(ya) = 1"
                       apply (rule less_monotone_pred)
-                      apply (gd_auto)
+                      apply (rule natP, assumption)+
                       apply (rule eqSubst[where a="xa" and b="S P xa"])
                       apply (rule eqSym)
                       apply (gd_auto)
@@ -2774,7 +2863,9 @@ proof (rule forallI entailsI)+
     apply (rule eqSubst[where b="S x - S S xa" and a="P(S(x) - S(xa))"])
     apply (unfold_def def_sub, simp+)
     apply (rule cases_nat[where x="S(x) - S(xa)"], simp+)
-    apply (rule less_monotone_pred, simp)
+    apply (rule less_monotone_pred)
+    apply (rule natP, rule sub_terminates)
+    apply (rule natS, assumption)+
     apply (rule eqSubst[where a="S x - S xa" and b="S P (S x - S xa)"], simp)
     apply (rule less_trans[where y="S x"], simp)
     apply (rule hyp, simp)
@@ -2869,7 +2960,13 @@ lemma
   shows "a * b \<ge> b = 1"
 sorry
 
-lemma cpair_strict_mono_r:
+lemma cpair_strict_mono_l [gd_auto]:
+  assumes y_nz: "\<not> x = 0"
+  assumes y_neq_1: "\<not> x = 1"
+  shows "x N \<Longrightarrow> y N \<Longrightarrow> x < \<langle>x, y\<rangle> = 1"
+sorry
+
+lemma cpair_strict_mono_r [gd_auto]:
   assumes y_nz: "\<not> y = 0"
   shows "x N \<Longrightarrow> y N \<Longrightarrow> y < \<langle>x, y\<rangle> = 1"
 apply (rule less_is_leq_neq)
@@ -2906,7 +3003,9 @@ lemma [gd_auto]:
   shows "p \<and> q B"
 apply (unfold conj_def)
 apply (gd_auto)
-sorry
+apply (rule p_bool)
+apply (rule q_bool)
+done
 
 lemma notE_impl:
   shows "\<not> a \<Longrightarrow> a \<longrightarrow> b"
@@ -2914,6 +3013,69 @@ apply (unfold impl_def)
 apply (rule disjI1)
 apply (assumption)
 done
+
+lemma [gd_auto]:
+  "a N \<Longrightarrow> b N \<Longrightarrow> \<not> (a = b) \<Longrightarrow> \<not> (S a = S b)"
+apply (rule grounded_contradiction[where q="a = b"], simp)
+apply (rule sucInj)
+apply (rule dNegE, simp)
+done
+
+lemma [gd_cond]:
+  "\<not>a \<Longrightarrow> b \<Longrightarrow> a \<or> b"
+by (rule disjI2, simp)
+
+lemma [gd_cond]:
+  "\<not>b \<Longrightarrow> a \<Longrightarrow> a \<or> b"
+by (rule disjI1, simp)
+
+lemma [gd_auto]: "y N \<Longrightarrow> x = 0 \<Longrightarrow> y - x = y"
+by (simp)
+
+lemma [gd_auto]: "a N \<Longrightarrow> b N \<Longrightarrow> a \<le> b = 0 \<Longrightarrow> S a \<le> S b = 0"
+by (unfold_def def_leq, simp)
+
+lemma gr_mono_suc [gd_auto]: "a N \<Longrightarrow> b N \<Longrightarrow> a > b = 1 \<Longrightarrow> S a > S b = 1"
+unfolding greater_def
+apply (simp)
+apply (rule sub_eq_self_imp_zero[where y="0"])
+apply (simp)
+done
+
+lemma [gd_auto]: "a N \<Longrightarrow> S a > 0 = 1"
+unfolding greater_def
+by (simp)
+
+lemma [gd_cond]: "a < b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> \<not> a = b"
+apply (rule grounded_contradiction[where q="a < a = 1"], simp)
+apply (rule eqSubst[where a="a < b" and b="a < a"])
+apply (rule eqSubst[where a="a" and b="b"])
+apply (rule dNegE, assumption)
+apply (rule eqSubst[where a="0" and b="a < a"])
+apply (rule eqSym, simp)
+apply (rule eqSubst[where a="0" and b="a < a"])
+apply (rule eqSym, simp)
+done
+
+lemma le_less_trans: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a \<le> b = 1 \<Longrightarrow> b < c = 1 \<Longrightarrow> a < c = 1"
+apply (rule cases_bool[where p="a = b"], simp)
+apply (rule eqSubst[where a="b" and b="a"])
+apply (rule eqSym, assumption+)
+apply (rule less_trans[where y="b"], simp)
+apply (rule less_is_leq_neq, simp)
+done
+
+lemma [gd_auto]: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a \<le> b = 1 \<Longrightarrow> \<not> b = 0 \<Longrightarrow> \<not> b = 1 \<Longrightarrow> a < \<langle>b,c\<rangle> = 1"
+  by (rule le_less_trans[where b="b"], simp)
+
+lemma [gd_auto]: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a \<le> c = 1 \<Longrightarrow> \<not> c = 0 \<Longrightarrow> a < \<langle>b,c\<rangle> = 1"
+  by (rule le_less_trans[where b="c"], simp)
+
+lemma neg_conjI1: "\<not>a \<Longrightarrow> \<not>(a \<and> b)"
+  unfolding conj_def by (rule dNegI, rule disjI1, simp)
+
+lemma neg_conjI2: "\<not>b \<Longrightarrow> \<not>(a \<and> b)"
+  unfolding conj_def by (rule dNegI, rule disjI2, simp)
 
 ML_file "gd_typeencode.ML"
 
@@ -2945,92 +3107,56 @@ where
                              else False"
 
 lemma nil_nat [gd_auto]: "Nil N"
-unfolding Nil_def list_type_tag_def
-  by gd_auto
+unfolding Nil_def list_type_tag_def by simp
 
-lemma cons_nat:
-  "n N \<Longrightarrow> xs N \<Longrightarrow> Cons n xs N"
-unfolding Cons_def list_type_tag_def
-  by gd_auto
+lemma cons_nat [gd_auto]: "n N \<Longrightarrow> xs N \<Longrightarrow> Cons n xs N"
+unfolding Cons_def list_type_tag_def by simp
 
-lemma "is_list Nil"
-apply (rule eqSubst[where a="True"])
+lemma [gd_auto]: "is_list Nil"
+by (unfold_def is_list_def, simp)
+
+lemma [gd_auto]: "n N \<Longrightarrow> xs N \<Longrightarrow> \<not> Nil = Cons n xs"
+unfolding Nil_def Cons_def list_type_tag_def by simp
+
+lemma [gd_auto]: "n N \<Longrightarrow> xs N \<Longrightarrow> \<not> Cons n xs = Nil"
+by (fold neq_def, rule neq_sym, simp+)
+
+lemma list_nat [gd_cond]:
+  shows "is_list x \<Longrightarrow> x N"
 apply (unfold_def is_list_def)
-apply (rule eqSym)
-apply (rule condI1B)
-apply (fold isNat_def)
-apply (gd_auto)
-done
-
-lemma [gd_auto]:
-  shows "n N \<Longrightarrow> xs N \<Longrightarrow> \<not> Cons n xs = Nil"
-unfolding Nil_def Cons_def list_type_tag_def
-apply (rule grounded_contradiction[where q="\<langle>2,n,xs\<rangle> = 1"])
-apply (gd_auto)
-apply (rule cpair_inj_r[where a="0" and c="0"])
-apply (gd_auto)
-apply (rule dNegE)
-apply (assumption)
-apply (rule grounded_contradiction[where q="2=1"])
-apply (gd_auto)
-apply (rule sucInj)
-apply (rule cpair_inj_l[where b="\<langle>n,xs\<rangle>" and d="0"])
-apply (gd_auto)
-apply (subst cpair_1_0_1)
-apply (rule dNegE)
-apply (gd_auto)
-apply (fold neq_def)
-apply (gd_auto)
-done
-
-lemma list_nat:
-  assumes x_list: "is_list x"
-  shows "x N"
 sorry
 
-lemma cons_is_list:
-  assumes n_nat: "n N"
-  assumes xs_list: "is_list xs"
-  shows "is_list (Cons n xs)"
-apply (rule eqSubst[where a="True"])
-apply (unfold_def is_list_def)
-apply (rule eqSym)
-apply (rule condI2BEq)
-apply (gd_auto)
-apply (rule n_nat)
-apply (rule list_nat)
-apply (rule xs_list)
-apply (gd_auto)
-proof -
-  show "(if Cons n xs = Cons n xs \<and> is_list xs \<and> (n N) then True else False) = True"
-    apply (rule condI1B)
-    apply (rule conjI)+
-    apply (fold isNat_def)
-    apply (rule cons_nat)
-    apply (rule n_nat)
-    apply (rule list_nat)
-    apply (rule xs_list)
-    apply (rule xs_list)
-    apply (rule n_nat)
-    apply (rule true_bool)
-    done
-  show "True" by (rule true)
-qed
+(* TODO: remove the xs N assumption here. *)
+lemma cons_is_list [gd_auto]:
+  shows "n N \<Longrightarrow> xs N \<Longrightarrow> is_list xs \<Longrightarrow> is_list (Cons n xs)"
+by (unfold_def is_list_def, simp)
 
 lemma is_list_terminates [gd_auto]:
   assumes x_nat: "x N"
-  shows "is_list x B"
+  shows "x N \<Longrightarrow> is_list x B"
 apply (unfold_def is_list_def)
 apply (rule condTB)
-apply (gd_auto)
-apply (rule x_nat)
-apply (gd_auto)
+apply (simp)
 apply (rule condTB)
-apply (gd_auto)
 sorry
 
 lemma "is_list x \<Longrightarrow> (x = Nil) \<or> (\<exists>n xs. x = Cons n xs)"
 sorry
+
+lemma is_list_cases [consumes 1, case_names Nil Cons]:
+  assumes "is_list x"
+  obtains (Nil) "x = Nil" | (Cons) n xs where "x = Cons n xs"
+    sorry
+
+lemma is_list_cases2 [consumes 1, case_names Nil Cons, elim!]:
+  assumes main_premise: "is_list x"
+  and nil_branch:   "x = Nil \<Longrightarrow> Q"
+  and cons_branch:  "\<And>n xs. x = Cons n xs \<Longrightarrow> Q"
+  shows "Q"
+    sorry
+
+thm is_list_cases
+
 lemma "Cons n xs = Cons m ys \<Longrightarrow> n = m \<and> xs = ys"
 sorry
 
@@ -3043,41 +3169,136 @@ apply (rule less_trans[where y="\<langle>n, xs\<rangle>"])
 apply (gd_auto)
 apply (gd_auto)
 apply (rule cpair_strict_mono_r)
-apply (gd_auto)
-apply (gd_auto)
+sorry
+
+lemma [gd_auto]: "\<not> 0 = Nil"
+sorry
+
+lemma [gd_auto]: "\<not> (0 = Cons n xs \<and> is_list xs \<and> (n N))"
+apply (rule neg_conjI1)+
 sorry
 
 lemma list_induction:
-  assumes a_nat: "a N"
+  assumes a_list: "is_list a"
   assumes q_nil: "Q Nil"
   assumes step: "\<forall>x xs. x N \<turnstile> is_list xs \<turnstile> Q xs \<turnstile> Q (Cons x xs)"
-  shows "is_list a \<longrightarrow> Q a"
-proof (rule strong_induction[where a="a"])
-  show "a N" by (rule a_nat)
-  show "is_list 0 \<longrightarrow> Q 0"
-    apply (rule implI)
-    apply (rule is_list_terminates)
-    apply (gd_auto)
-    apply (rule eqSubst[where a="Nil" and b="0"])
-    apply (rule Nil_zero)
-    apply (rule q_nil)
-    done
-  show "\<forall>x. (\<forall>y. y \<le> x = 1 \<turnstile> is_list y \<longrightarrow> Q y) \<turnstile> is_list S x \<longrightarrow> Q S x"
-    proof (rule forallI, rule entailsI)+
-      fix x
-      assume hyp: "\<forall>y. y\<le>x = 1 \<turnstile> is_list y \<longrightarrow> Q y"
-      show "x N \<Longrightarrow> is_list S x \<longrightarrow> Q (S x)"
-        apply (rule implI)
-        apply (rule cases_bool [where p="is_list S x"])
-        apply (rule is_list_terminates)
-        apply (gd_auto)
-        apply (assumption)
-        sorry
+  shows "Q a"
+proof -
+  have "is_list a \<longrightarrow> Q a"
+    proof (rule strong_induction[where a="a"])
+      show "a N" by (rule list_nat, rule a_list)
+      show "is_list 0 \<longrightarrow> Q 0"
+        apply (rule notE_impl)
+        apply (unfold_def is_list_def)
+        apply (simp+)
+        done
+      show "\<forall>x. (\<forall>y. y \<le> x = 1 \<turnstile> is_list y \<longrightarrow> Q y) \<turnstile> is_list S x \<longrightarrow> Q S x"
+        proof (rule forallI, rule entailsI)+
+          fix x
+          assume hyp: "\<forall>y. y\<le>x = 1 \<turnstile> is_list y \<longrightarrow> Q y"
+          show "x N \<Longrightarrow> is_list S x \<longrightarrow> Q (S x)"
+            apply (rule implI)
+            apply (rule cases_bool [where p="is_list S x"])
+            apply (simp)
+            sorry
+        qed
     qed
+  then show ?thesis
+    apply (rule implE)
+    apply (rule a_list)
+    done
 qed
 
-lemma "is_list (Cons 4 (Cons 2 (Nil)))"
+(*
+ fun sum :: "List \<Rightarrow> num" where
+   sum_nil: "sum Nil = 0" and
+   sum_cons: "sum (Cons n xs) = n + sum xs"
+ *)
+
+axiomatization
+  sum :: "List \<Rightarrow> num"
+where
+  sum_def: "sum x := if x = Nil then 0
+                     else if (x = (Cons n xs) \<and> is_list xs \<and> (n N)) then n + (sum xs)
+                     else omega"
+
+ML \<open>
+fun my_cases_tac ctxt rule_thm =
+  let
+    (* 1. Get the case names from the theorem's attributes *)
+    val case_names_opt =
+      Rule_Cases.case_names (fst (Rule_Cases.get rule_thm))
+      Attrib.get_stringss ctxt (Rule_Cases.lookup_case_names rule_thm) "case_names";
+
+    (* 2. Prepare a list of names. If the attribute is missing,
+          generate default names "1", "2", etc. *)
+    val num_cases = Thm.nprems_of rule_thm - 1; (* rule has N premises + 1 conclusion *)
+    val names =
+      case case_names_opt of
+        SOME [names] => names
+      | _ => map string_of_int (1 upto num_cases);
+
+    (* 3. The core tactic application.
+          - eresolve_tac is the ML equivalent of the 'erule' proof method.
+            It applies the elimination rule to the first subgoal.
+          - THEN_ALL_NEW is a combinator that says "for all the new subgoals
+            created by eresolve_tac, do the following...".
+          - Proof.case is the magic function that sets up the Isar 'case'
+            environment. It takes a list of (name, tactic) pairs.
+            We use 'all_tac', which is the identity tactic (it does nothing).
+    *)
+    val tac =
+      eresolve_tac ctxt [rule_thm] 1
+      THEN_ALL_NEW (Proof.case (List.map (fn name => (name, all_tac)) names));
+  in
+    tac
+  end;
+
+(* Hook the ML function into Isar as a new method called "my_cases". *)
+val _ =
+  Method.setup @
+    (Scan.lift Parse.rule >> (fn rule_name => fn ctxt =>
+      let
+        val rule_thm = Proof_Context.get_thm ctxt rule_name;
+      in
+        SIMPLE_METHOD (my_cases_tac ctxt rule_thm)
+      end))
+    "my_cases: a rudimentary cases method for Pure";
+\<close>
+
+lemma [gd_auto]:
+  assumes h: "is_list x"
+  shows "sum x N"
+using h
+proof (elim is_list_cases)
+  case Nil
 sorry
+
+lemma [simp]: "sum Nil = 0"
+apply (unfold_def sum_def)
+apply (simp)
+done
+
+lemma [simp]: "n N \<Longrightarrow> is_list xs \<Longrightarrow> sum (Cons n xs) = n + sum xs"
+apply (rule eqSym)
+apply (unfold_def sum_def)
+apply (rule eqSym)
+apply (rule condI2Eq)
+apply (simp)
+apply (rule list_nat, simp)
+apply (rule condI1, simp)
+apply (rule list_nat, simp)
+done
+
+lemma "sum (Cons 4 (Cons 3 (Nil))) = 7"
+apply (simp)
+apply (unfold_def def_add)
+apply (unfold_def def_add)
+apply (simp)
+done
+
+lemma "is_list (Cons 4 (Cons 3 (Nil)))"
+by (simp)
 
 (*
 declaretype num =

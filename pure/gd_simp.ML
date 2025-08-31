@@ -1,10 +1,17 @@
 structure GD_Simp =
 struct
-  fun reflect_eq th = th RS @{thm eq_reflection};
+  fun reflect_eq th: thm = th RS @{thm eq_reflection};
+
+  fun match_object_rule th trm =
+    case trm of
+    Const (@{const_name GD.eq},  _) $ _ $ _ =>
+        (case try reflect_eq th of SOME th' => [th'] | NONE => [])
+    | _ => []
 
   fun mksimps (_: Proof.context) th =
     (case Thm.concl_of th of
        Const (\<^const_name>\<open>Pure.eq\<close>, _) $ _ $ _ => [th]  (* already t \<equiv> u *)
+     | Const (\<^const_name>\<open>GD.Trueprop\<close>, _) $ x => match_object_rule th x
      | _ => (case try reflect_eq th of SOME th' => [th'] | NONE => []))
   fun gd_mk_meta_cong (_: Proof.context) rl =
     (case Thm.concl_of rl of
