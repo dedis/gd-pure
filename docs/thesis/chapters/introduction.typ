@@ -3,7 +3,7 @@
 
 == Motivation: Recursive Definitions in Classical and Constructive Logic
 
-We start with the simple observation that in logics of both classical and constructive tradition, there is inherently no definitional freedom. That is, definitions must describe provably terminating expressions. The reason for this is that without such restrictions in place, logics built on either tradition would be immediately inconsistent.
+We start with the simple observation that in logics of both classical and constructive tradition, there is a seemingly inherent lack of definitional freedom. That is, definitions must describe provably terminating expressions. The reason for these restrictions is that, without them in place, logics built on either tradition would be inconsistent.
 
 To see this, consider the definition
 $ L equiv not L. $
@@ -12,7 +12,7 @@ Let us imagine that this is a valid definition in a classical logic (that is, a 
 
 Let us first prove that $L$ holds by contradiction.
 
-Assuming $not L$, we can derive $not not L$ by the definition and then $L$ via double negation elimination. Since we derived both $L$ and $not L$ from hypothetically assuming $not L$, a contradiction, this allows us to definitely conclude $L$.
+Assuming $not L$, we can derive $not not L$ by unfolding the definition once and then $L$ via double negation elimination. Since we derived both $L$ and $not L$ from hypothetically assuming $not L$, a contradiction, this allows us to definitely conclude $L$.
 
 However, having proven $L$, we can also derive $not L$ by applying the definition, and thus derived a contradiction in the logic itself, making it inconsistent.
 
@@ -32,12 +32,12 @@ What went wrong this time? Functions in constructive logics represent logical im
 
 == Enter GD
 
-Grounded deduction (GD) is a logical framework developed recently at EPFL, whose development was motivated by precisely the observation made above. The project aims to axiomatize a consistent formal system, in which arbitrary recursion in definitions is permitted, which is still as expressive as possible. There is an ongoing formalization project of GD in the proof assistant Isabelle/HOL, which already yielded a consistency proof of the quantifier-free fragment of GD, showing great promise for the credibility of GD. However, the other aim of GD is to show that it is also expressive and importantly, usable as a tool for formalizing mathematics itself. The formalization in the mature HOL logic enables studying meta-logical properties of GD, such as consistency. However, it is not suitable for providing GD as a tool for formal reasoning itself for two main reasons.
+Grounded deduction (GD) is a logical framework developed recently at EPFL, whose development was motivated by precisely the observation made above. The project aims to axiomatize a consistent formal system, in which arbitrary recursion in definitions is permitted, which is still as expressive as possible. There is an ongoing formalization project of GD in the proof assistant Isabelle/HOL, which already yielded a consistency proof of the quantifier-free fragment of GD, showing great promise for its credibility. However, the other aim of GD is to show that it is also expressive and importantly, usable as a tool for formalizing mathematics itself. The formalization in the mature HOL logic enables studying meta-logical properties of GD, such as consistency. However, it is not suitable for providing GD as a tool for formal reasoning itself for two main reasons.
 
 - Formalizing GD within a mature metalogic such as HOL adds the axioms of the metalogic to the trusted base of GD, which is undesirable from a meta-logical perspective.
 - A logic is developed largely for idealistic reasons; the authors believe its reasoning principles are the right ones for at least some domain. Formalizing such a logic within another rich logic means that its reasoning principles are simply embedded in the, likely very different principles, of the meta-logic, defeating that purpose.
 
-It is thus highly desirable to formalize a foundational formal system like GD atop a very minimal meta-logic.
+It is thus highly desirable to formalize a foundational formal system like GD atop a very minimal reasoning framework.
 
 This is exactly what Isabelle provides with the Pure framework: A minimal, generic logical calculus to formalize object logics on top of. Any object logic in Isabelle, including Isabelle/HOL, are formalized atop Pure.
 

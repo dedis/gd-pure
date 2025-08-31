@@ -28,3 +28,42 @@ As an initial motivation, here is how cumbersome a simple proof looks like in th
 // 4. rewrite engine (no more eqSubst everywhere)
 // 5. auto rewrite engine with all gd_simp
 // 6. rewrite engine with proof search wrapper: gd_auto
+
+Before:
+```Isabelle
+lemma cons_is_list:
+  assumes n_nat: "n N"
+  assumes xs_list: "is_list xs"
+  shows "is_list (Cons n xs)"
+apply (rule eqSubst[where a="True"])
+apply (unfold_def is_list_def)
+apply (rule eqSym)
+apply (rule condI2BEq)
+apply (gd_auto)
+apply (rule n_nat)
+apply (rule list_nat)
+apply (rule xs_list)
+apply (gd_auto)
+proof -
+  show "(if Cons n xs = Cons n xs ∧ is_list xs ∧ (n N) then True else False) = True"
+    apply (rule condI1B)
+    apply (rule conjI)+
+    apply (fold isNat_def)
+    apply (rule cons_nat)
+    apply (rule n_nat)
+    apply (rule list_nat)
+    apply (rule xs_list)
+    apply (rule xs_list)
+    apply (rule n_nat)
+    apply (rule true_bool)
+    done
+  show "True" by (rule true)
+qed
+```
+
+After:
+```Isabelle
+lemma cons_is_list [gd_auto]:
+  shows "n N ⟹ xs N ⟹ is_list xs ⟹ is_list (Cons n xs)"
+by (unfold_def is_list_def, simp)
+```

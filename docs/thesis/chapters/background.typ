@@ -155,9 +155,9 @@ Further, we can view the added axioms as new inference rules, with the explicit 
   #true-axiom
 ]
 
-It is technically possible to avoid declaring a new proposition type for an object logic and instead use `Prop` directly as the type of propositions. However, doing so means that the (object) logic immediately inherits the built-in connectives and deduction rules, such as implication $(arrow.long.double)$ and universal quantification $(and.big)$, and the sequent-style reasoning built into the kernel.
+It is technically possible to avoid declaring a new proposition type for an object logic and instead use `prop` directly as the type of propositions. However, doing so means that the (object) logic immediately inherits the built-in connectives and deduction rules, such as implication $(arrow.long.double)$ and universal quantification $(and.big)$, and the sequent-style reasoning built into the kernel.
 
-This implicit structure reduces the control one has over the logic, and as a result, the best practice is to take a clean-slate approach, declare a new type for object-level propositions, and define a separate set of connectives and inference rules for it.
+Such a structure reduces the control one has over the logic and keeps many reasoning principles implicit.
 
 == Grounded Deduction (GD)
 
@@ -165,4 +165,4 @@ This subsection provides a full characterization of the GD logic that is later f
 
 GD makes definitions first-class objects in the logic and allows arbitrary references of the symbol currently being defined or other, previously defined symbols, in the expanded term.
 
-To prevent immediate inconsistency, GD must of course weaken other deduction rules. Specifically, GD adds a so-called _habeas quid_ sequent to many inference rules. Intuitively, this means that in certain inference rules, a (sub)term must first be shown to terminate in order to be used. This is the basic idea of GD. The following formalization is based on the GD formalization in @GD.
+To prevent immediate inconsistency, GD must weaken other deduction rules commonly seen in classical logic. Specifically, GD adds a so-called _habeas quid_ sequent to many inference rules. Intuitively, this means that in certain inference rules, a (sub)term must first be shown to terminate. The following formalization is based on the GD formalization in @GD.
