@@ -25,8 +25,6 @@ struct
       ORELSE' resolve_tac ctxt close
       ORELSE' GDAuto.gd_auto_tac ctxt
     end
-  fun solver_tac ctxt i =
-    DEPTH_SOLVE (step_tac ctxt i);
   val gd_solver =
     Raw_Simplifier.mk_solver "GD_solver"
       (fn ctxt => fn i =>
@@ -40,7 +38,6 @@ let
     |> Simplifier.set_mkcong GD_Simp.gd_mk_meta_cong
   fun set_subgoaler ctxt =
     ctxt
-    |> Simplifier.set_subgoaler GDAuto.gd_auto_tac
     |> Simplifier.set_subgoaler asm_simp_tac
   fun set_solver ctxt =
     Raw_Simplifier.setSolver (set_subgoaler (set_mks ctxt), GD_Simp.gd_solver)
