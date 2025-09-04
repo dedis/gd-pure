@@ -4,8 +4,21 @@ struct
   fun uncond_rules ctxt = Named_Theorems.get ctxt @{named_theorems auto}
   fun cond_rules ctxt = Named_Theorems.get ctxt @{named_theorems cond}
 
-  fun auto_rewrite_tac ctxt =
-    REPEAT_ALL_NEW (assume_tac ctxt ORELSE' resolve_tac ctxt (uncond_rules ctxt))
+  fun repeat_all_bounded 0 _   = K no_tac
+    | repeat_all_bounded k tac =
+      let
+        val one_iter = CHANGED o DETERM o tac
+        val rec_call = repeat_all_bounded (k-1) tac
+      in
+        one_iter THEN_ALL_NEW (rec_call ORELSE' K all_tac)
+      end
+
+  fun uncond_rewrite_tac_bounded ctxt fuel =
+    let
+      val tac = assume_tac ctxt ORELSE' resolve_tac ctxt (uncond_rules ctxt)
+    in
+      repeat_all_bounded fuel tac
+    end
 
   fun solver_tac ctxt fuel i =
     if fuel = 0 then no_tac
@@ -20,7 +33,7 @@ struct
           FIRST (map transform
             (cond_rules ctxt))
       in
-        CHANGED (FIRST [assume_tac ctxt i, auto_rewrite_tac ctxt i, cond_tacs])
+        FIRST [assume_tac ctxt i, uncond_rewrite_tac_bounded ctxt (fuel-1) i, cond_tacs]
         THEN (TRY (solver_tac ctxt (fuel-1) i))
     end
 

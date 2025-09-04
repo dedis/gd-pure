@@ -465,16 +465,10 @@ apply (rule conjE2, simp)
 done
 
 lemma [cond]: "c \<Longrightarrow> if c then True else b"
-apply (rule eqSubst[where a="True"])
-apply (rule eqSym)
-apply (simp)
-done
+by simp
 
 lemma [cond]: "\<not>c \<Longrightarrow> if c then a else True"
-apply (rule eqSubst[where a="True"])
-apply (rule eqSym)
-apply (simp)
-done
+by simp
 
 lemma [cond]: "a \<Longrightarrow> a B"
   unfolding bJudg_def by (rule disjI1, simp)
@@ -485,7 +479,8 @@ lemma [cond]: "\<not>a \<Longrightarrow> a B"
 lemma [cond]: "\<not>c \<Longrightarrow> b \<Longrightarrow> if c then a else b"
 apply (rule eqSubst[where a="b"])
 apply (rule eqSym)
-apply (rule condI2B, simp)
+apply (rule condI2B)
+apply (simp+)
 done
 
 lemma [cond]: "c \<Longrightarrow> a \<Longrightarrow> if c then a else b"
@@ -2982,6 +2977,9 @@ by simp
 
 lemma [auto]: "n N \<Longrightarrow> xs N \<Longrightarrow> \<not> Cons n xs = Nil"
 by (fold neq_def, rule neq_sym, simp+)
+
+lemma "is_list x \<Longrightarrow> (x = Nil) \<or> (\<exists>n xs. x = Cons n xs)"
+sorry
 
 lemma list_nat [cond]:
   shows "is_list x \<Longrightarrow> x N"
