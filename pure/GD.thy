@@ -2903,9 +2903,15 @@ by (unfold_def is_list_def, auto)
 ML_file "gd_induct.ML"
 
 lemma is_list_terminates [auto]: "x N \<Longrightarrow> is_list x B"
-apply (induct x)
-apply (unfold_def is_list_def)
-sorry
+proof (induct strong x, simp)
+  case Base
+    show ?case
+      sorry
+next
+  case (Step xa)
+    show ?case
+      sorry
+qed
 
 lemma is_list_cases [consumes 1, case_names Nil Cons]:
   assumes "is_list x"
@@ -2936,7 +2942,7 @@ sorry
 lemma list_induction:
   assumes a_list: "is_list a"
   assumes q_nil: "Q Nil"
-  assumes step: "\<And>x xs. x N \<Longrightarrow> is_list xs \<Longrightarrow> Q xs \<Longrightarrow> Q (Cons x xs)"
+  assumes step: "x N \<Longrightarrow> is_list xs \<Longrightarrow> Q xs \<Longrightarrow> Q (Cons x xs)"
   shows "Q a"
 proof -
   have "is_list a \<longrightarrow> Q a"
