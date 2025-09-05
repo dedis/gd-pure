@@ -258,7 +258,7 @@ where
   forallE: "\<lbrakk>\<forall>c'. Q c'; a N\<rbrakk> \<Longrightarrow> Q a" and
   existsI: "\<lbrakk>a N; Q a\<rbrakk> \<Longrightarrow> \<exists>x. Q x" and
   existsE: "\<lbrakk>\<exists>i. Q i; \<And>a. a N \<Longrightarrow> Q a \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R" and
-  ind: \<open>\<lbrakk>a N; Q 0; \<forall>x.(Q x \<turnstile> Q S(x))\<rbrakk> \<Longrightarrow> Q a\<close>
+  ind [case_names HQ Zero Suc]: \<open>\<lbrakk>a N; Q 0; \<forall>x.(Q x \<turnstile> Q S(x))\<rbrakk> \<Longrightarrow> Q a\<close>
   (*
   forAllNeg: "\<lbrakk>\<not>(\<forall>x. Q x); (Q x) B\<rbrakk> \<Longrightarrow> \<exists>x. \<not>(Q x)" and
   existsNeg: "\<lbrakk>\<not>(\<exists>x. Q x); (Q x) B\<rbrakk> \<Longrightarrow> \<forall>x. \<not>(Q x)" and
@@ -2990,15 +2990,17 @@ lemma cons_is_list [auto]:
   shows "n N \<Longrightarrow> is_list xs \<Longrightarrow> is_list (Cons n xs)"
 by (unfold_def is_list_def, auto)
 
-lemma is_list_terminates [auto]: "x N \<Longrightarrow> is_list x B"
-apply (unfold_def is_list_def)
-apply (rule condTB)
-apply (rule eqBool, assumption)
-apply (rule nil_nat)
-apply (rule true_bool)
-sorry
+ML_file "gd_induct.ML"
 
-lemma "is_list x \<Longrightarrow> (x = Nil) \<or> (\<exists>n xs. x = Cons n xs)"
+lemma is_list_terminates [auto]: "x N \<Longrightarrow> is_list x B"
+apply (induct strong x)
+apply (unfold_def is_list_def)
+apply (unfold Nil_def)
+apply (unfold list_type_tag_def)
+apply (rule condTB)
+apply (simp)
+apply (rule condTB)
+apply (simp)
 sorry
 
 lemma is_list_cases [consumes 1, case_names Nil Cons]:
@@ -3025,10 +3027,6 @@ apply (auto)
 sorry
 
 lemma [auto]: "\<not> 0 = Nil"
-sorry
-
-lemma [auto]: "\<not> (0 = Cons n xs \<and> is_list xs \<and> (n N))"
-apply (rule neg_conjI1)+
 sorry
 
 lemma list_induction:
