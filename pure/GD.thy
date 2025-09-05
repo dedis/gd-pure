@@ -258,7 +258,7 @@ where
   forallE: "\<lbrakk>\<forall>c'. Q c'; a N\<rbrakk> \<Longrightarrow> Q a" and
   existsI: "\<lbrakk>a N; Q a\<rbrakk> \<Longrightarrow> \<exists>x. Q x" and
   existsE: "\<lbrakk>\<exists>i. Q i; \<And>a. a N \<Longrightarrow> Q a \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R" and
-  ind [case_names HQ Zero Suc]: \<open>\<lbrakk>a N; Q 0; \<forall>x.(Q x \<turnstile> Q S(x))\<rbrakk> \<Longrightarrow> Q a\<close>
+  ind [case_names HQ Base Step]: \<open>\<lbrakk>a N; Q 0; \<And>x. x N \<Longrightarrow> Q x \<Longrightarrow> Q S(x)\<rbrakk> \<Longrightarrow> Q a\<close>
   (*
   forAllNeg: "\<lbrakk>\<not>(\<forall>x. Q x); (Q x) B\<rbrakk> \<Longrightarrow> \<exists>x. \<not>(Q x)" and
   existsNeg: "\<lbrakk>\<not>(\<exists>x. Q x); (Q x) B\<rbrakk> \<Longrightarrow> \<forall>x. \<not>(Q x)" and
@@ -591,8 +591,8 @@ proof (rule ind[where a="a"])
     apply (rule neq_sym)
     apply (auto)
     done
-  show "\<forall>x. (x\<noteq>S(x)) \<turnstile> (S(x) \<noteq> S(S(x)))"
-    proof (rule forallI entailsI)+
+  show "\<And>x. x N \<Longrightarrow> (x\<noteq>S(x)) \<Longrightarrow> (S(x) \<noteq> S(S(x)))"
+    proof -
       fix x
       assume x_nat: "x N"
       assume x_neq_s: "x \<noteq> S(x)"
@@ -702,8 +702,8 @@ proof (rule ind[where a=y])
         apply (rule x_nat)
         done
     qed
-  show ind_step: "\<forall>a. ((x + a) N) \<turnstile> ((x + S(a)) N)"
-    proof (rule forallI, rule entailsI, unfold_def def_add)
+  show ind_step: "\<And>a. a N \<Longrightarrow> ((x + a) N) \<Longrightarrow> ((x + S(a)) N)"
+    proof (unfold_def def_add)
       fix a
       assume a_nat: "a N" and BC: "add x a N"
       show "if (S(a) = 0) then x else S(add x P(S(a))) N"
@@ -758,8 +758,8 @@ proof (rule ind[where a=y])
   show "y N \<Longrightarrow> y N" by (simp)
   show bc: "x N \<Longrightarrow> mult x 0 N"
     by (unfold_def def_mult, simp)
-  show step: "x N \<Longrightarrow> y N \<Longrightarrow> \<forall>a. ((x * a) N) \<turnstile> ((x * S(a)) N)"
-    proof (rule forallI, rule entailsI, unfold_def def_mult)
+  show step: "x N \<Longrightarrow> y N \<Longrightarrow> (\<And>a. a N \<Longrightarrow> ((x * a) N) \<Longrightarrow> ((x * S(a)) N))"
+    proof (unfold_def def_mult)
       fix a
       assume hyp: "mult x a N"
       show "a N \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> if (S(a) = 0) then 0 else (add x (mult x P(S(a)))) N"
@@ -781,16 +781,11 @@ done
 
 lemma zero_add [simp, auto]:
   shows "a N \<Longrightarrow> 0 + a = a"
-apply (rule ind[where a="a"])
-apply (assumption)
-apply (simp)
-proof (rule forallI, rule entailsI)
+proof (rule ind[where a="a"], simp)
   fix x
   assume hyp: "0 + x = x"
   show "a N \<Longrightarrow> x N \<Longrightarrow> 0 + S x = S x"
-    apply (unfold_def def_add)
-    apply (simp add: hyp)
-    done
+    by (unfold_def def_add, simp add: hyp)
 qed
 
 lemma add_succ [auto]:
@@ -807,14 +802,11 @@ by (unfold_def def_mult, rule condI1, auto)
 
 lemma zero_mult [simp, auto]:
   shows "a N \<Longrightarrow> 0 * a = 0"
-proof (rule ind[where a="a"], auto, rule forallI, rule entailsI)
+proof (rule ind[where a="a"], auto)
   fix x
   assume hyp: "0 * x = 0"
   show "a N \<Longrightarrow> x N \<Longrightarrow> 0 * S x = 0"
-    apply (unfold_def def_mult)
-    apply (simp)
-    apply (rule hyp)
-    done
+    by (unfold_def def_mult, simp add: hyp)
 qed
 
 lemma mult_one [simp, auto]:
@@ -823,30 +815,23 @@ by (unfold_def def_mult, simp)
 
 lemma plus_one_suc [simp, auto]:
   shows "a N \<Longrightarrow> 1 + a = S a"
-proof (rule ind[where a="a"], auto, rule forallI, rule entailsI)
+proof (rule ind[where a="a"], auto)
   fix x
   assume hyp: "1+x = S x"
   show "a N \<Longrightarrow> x N \<Longrightarrow> 1+(S x) = S S x"
-    apply (unfold_def def_add)
-    apply (simp add: hyp)
-    done
+    by (unfold_def def_add, simp add: hyp)
 qed
 
 lemma one_plus_suc [simp, auto]:
   shows "a N \<Longrightarrow> a + 1 = S a"
-proof (rule ind[where a="a"], auto, rule forallI, rule entailsI)
-  fix x
-  assume hyp: "x+1 = S x"
-  show "x N \<Longrightarrow> (S x)+1 = S S x"
-    by (unfold_def def_add, simp)
-qed
+by (unfold_def def_add, simp)
 
 lemma [auto]: "x N \<Longrightarrow> x = x"
 by (fold isNat_def)
 
 lemma one_mult [simp, auto]:
   shows "a N \<Longrightarrow> 1 * a = a"
-proof (rule ind[where a="a"], auto, rule forallI, rule entailsI)
+proof (rule ind[where a="a"], auto)
   fix x
   assume hyp: "1*x = x"
   show "a N \<Longrightarrow> x N \<Longrightarrow> 1*(S x) = S x"
@@ -869,8 +854,8 @@ proof -
         show "x' N \<Longrightarrow> x' \<le> 0 N"
           by (unfold_def def_leq, simp, rule condT, simp)
       qed
-    show "\<forall>x. (\<forall>xa. xa \<le> x N) \<turnstile> (\<forall>xa. xa \<le> S(x) N)"
-      proof (rule forallI, rule entailsI)+
+    show "\<And>x. x N \<Longrightarrow> (\<forall>xa. xa \<le> x N) \<Longrightarrow> (\<forall>xa. xa \<le> S(x) N)"
+      proof -
         fix x
         assume H: "\<forall>xa. xa \<le> x N"
         show "x N \<Longrightarrow> \<forall>xa. xa \<le> S(x) N"
@@ -900,7 +885,7 @@ proof -
   proof (rule ind[where a="y"], simp)
     show "\<forall>x. x < 0 N"
       by (rule forallI, simp)
-    show "\<forall>x. (\<forall>xa. xa < x N) \<turnstile> (\<forall>xa. xa < S x N)"
+    show "\<And>x. x N \<Longrightarrow> (\<forall>xa. xa < x N) \<Longrightarrow> (\<forall>xa. xa < S x N)"
       proof (rule forallI entailsI)+
         fix x y
         assume hyp: "\<forall>xa. xa < x N"
@@ -923,8 +908,8 @@ qed
 lemma leq_refl [simp, auto]:
   shows "x N \<Longrightarrow> (x \<le> x) = 1"
 proof (rule ind[where a="x"], simp)
-  show "\<forall>x.(x \<le> x = 1) \<turnstile> (S(x) \<le> S(x) = 1)"
-  proof (rule forallI entailsI)+
+  show "\<And>x. x N \<Longrightarrow> (x \<le> x = 1) \<Longrightarrow> (S(x) \<le> S(x) = 1)"
+  proof -
     fix x
     assume x_refl: "x \<le> x = 1"
     show "x N \<Longrightarrow> ((S(x)) \<le> S(x)) = 1"
@@ -941,8 +926,8 @@ proof (rule ind[where a="z"])
   show "z N" by (rule z_nat)
   show "((P(0)) \<le> 0) = 1"
     by (unfold_def def_leq, simp)
-  show "\<forall>x. ((P(x))\<le>x = 1) \<turnstile> (((P(S(x)))\<le>S(x)) = 1)"
-    proof (rule forallI entailsI)+
+  show "\<And>x. x N \<Longrightarrow> ((P(x))\<le>x = 1) \<Longrightarrow> (((P(S(x)))\<le>S(x)) = 1)"
+    proof -
       fix x
       assume ind_hyp: "((P(x)) \<le> x) = 1"
       show "x N \<Longrightarrow> ((P(S(x))) \<le> (S(x))) = 1"
@@ -954,25 +939,19 @@ proof (rule ind[where a="z"])
 qed
 
 lemma leq_suc [simp, auto]:
-  assumes x_nat: "x N"
-  shows "x \<le> S(x) = 1"
+  shows "x N \<Longrightarrow> x \<le> S(x) = 1"
 apply (rule ind[where a="x"])
-apply (rule x_nat)
-apply (auto)
-apply (rule forallI entailsI)+
-proof -
+proof (auto)
   fix x
   assume hyp: "x \<le> S x = 1"
   show "x N \<Longrightarrow> S x \<le> S S x = 1"
-    by (unfold_def def_leq, simp, rule hyp)
+    by (unfold_def def_leq, simp add: hyp)
 qed
 
 lemma less_suc [simp, auto]:
   shows "x N \<Longrightarrow> x < S(x) = 1"
 apply (rule ind[where a="x"], simp)
-apply (unfold_def def_less, simp)
-apply (rule forallI entailsI)+
-apply (unfold_def def_less, simp)
+apply (unfold_def def_less, simp)+
 done
 
 lemma [auto]: "x N \<Longrightarrow> \<not> 0 = S x"
@@ -1003,8 +982,8 @@ lemma num_cases:
   shows "x N \<Longrightarrow> x = 0 \<or> (\<exists>y. x = S y)"
 proof (rule ind[where a="x"], simp)
   show "0 = 0 \<or> (\<exists>y. 0 = S y)" by (rule disjI1, simp)
-  show "\<forall>x. x=0 \<or> (\<exists>y. x = S y) \<turnstile> S x = 0 \<or> (\<exists>y. S x = S y)"
-    proof (rule forallI entailsI)+
+  show "\<And>x. x N \<Longrightarrow> x=0 \<or> (\<exists>y. x = S y) \<Longrightarrow> S x = 0 \<or> (\<exists>y. S x = S y)"
+    proof -
       fix x
       show "x N \<Longrightarrow> S x = 0 \<or> (\<exists>y. S x = S y)"
         apply (rule disjI2)
@@ -1057,25 +1036,7 @@ by (unfold_def def_leq, simp)
 
 lemma leq_suc_eq:
   shows "x N \<Longrightarrow> y N \<Longrightarrow> x \<le> y = S x \<le> S y"
-proof (rule ind[where a="y"])
-  show "y N \<Longrightarrow> y N" by (assumption)
-  show "x N \<Longrightarrow> x \<le> 0 = S x \<le> S 0"
-    apply (rule disjE1[where P="x = 0" and Q="\<not> x = 0"])
-    apply (fold bJudg_def)
-    apply (simp+)
-    apply (rule eqSubst[where a="0"])
-    apply (rule eqSym)
-    apply (unfold_def def_leq)
-    apply (simp+)
-    done
-  show "x N \<Longrightarrow> y N \<Longrightarrow> \<forall>xa. x \<le> xa = S(x) \<le> S(xa) \<turnstile> x \<le> S(xa) = S(x) \<le> S(S(xa))"
-    proof (rule forallI entailsI)+
-      fix xa
-      assume H: "x \<le> xa = S x \<le> S xa"
-      show "x N \<Longrightarrow> y N \<Longrightarrow> xa N \<Longrightarrow> x \<le> S xa = S x \<le> S S xa"
-        by (unfold_def def_leq, simp)
-    qed
-qed
+by (unfold_def def_leq, simp)
 
 lemma suc_pred_inv [simp, auto]:
   shows "x N \<Longrightarrow> \<not> x = 0 \<Longrightarrow> S P x = x"
@@ -1223,9 +1184,9 @@ proof -
         apply (rule H1)
         done
     qed
-  show "\<forall>x. (\<forall>xa y. xa \<le> y = 1 \<turnstile> y \<le> x = 1 \<turnstile> xa \<le> x = 1) \<turnstile>
+  show "\<And>x. x N \<Longrightarrow> (\<forall>xa y. xa \<le> y = 1 \<turnstile> y \<le> x = 1 \<turnstile> xa \<le> x = 1) \<Longrightarrow>
      (\<forall>xa y. xa \<le> y = 1 \<turnstile> y \<le> S x = 1 \<turnstile> xa \<le> S x = 1)"
-    proof (rule forallI, rule entailsI)+
+    proof -
       fix x
       show "x N \<Longrightarrow> \<forall>xa y. xa \<le> y = 1 \<turnstile> y \<le> x = 1 \<turnstile> xa \<le> x = 1 \<Longrightarrow>
             \<forall>xa y. xa \<le> y = 1 \<turnstile> y \<le> S x = 1 \<turnstile> xa \<le> S x = 1"
@@ -1292,7 +1253,7 @@ by (unfold_def def_div, simp)
 lemma div_1 [simp, auto]:
   assumes x_nat: "x N"
   shows "x N \<Longrightarrow> div x 1 = x"
-proof (rule ind, simp, rule forallI, rule entailsI)
+proof (rule ind, simp)
   fix xa
   assume ind_h: "div xa 1 = xa"
   show "xa N \<Longrightarrow> div S(xa) 1 = S(xa)"
@@ -1383,7 +1344,7 @@ proof -
           apply (simp)
           done
       qed
-    show "\<forall>x. (\<forall>xa. xa \<le> x = 1 \<turnstile> \<not> xa = x \<turnstile> xa < x = 1) \<turnstile>
+    show "\<And>x. x N \<Longrightarrow> (\<forall>xa. xa \<le> x = 1 \<turnstile> \<not> xa = x \<turnstile> xa < x = 1) \<Longrightarrow>
      (\<forall>xa. xa \<le> S x = 1 \<turnstile> \<not> xa = S x \<turnstile> xa < S x = 1)"
       proof (rule forallI entailsI)+
         fix x xa
@@ -1529,7 +1490,7 @@ proof -
           apply (auto)
           done
       qed
-    show "\<forall>x. (\<forall>xa. xa < S x = 1 \<turnstile> xa \<le> x = 1) \<turnstile>
+    show "\<And>x. x N \<Longrightarrow> (\<forall>xa. xa < S x = 1 \<turnstile> xa \<le> x = 1) \<Longrightarrow>
      (\<forall>xa. xa < S S x = 1 \<turnstile> xa \<le> S x = 1)"
       proof (rule forallI entailsI)+
         fix x xa
@@ -1598,10 +1559,10 @@ proof (rule contradiction)
     qed
 qed
 
-lemma strong_induction:
+lemma strong_induction [consumes 1, case_names HQ Base Step]:
   assumes a_nat: "a N"
   assumes bc: "Q 0"
-  assumes step: "\<forall>x.((\<forall>y. y\<le>x = 1 \<turnstile> Q y) \<turnstile> (Q S(x)))"
+  assumes step: "\<And>x. x N \<Longrightarrow> (\<forall>y. y\<le>x = 1 \<turnstile> Q y) \<Longrightarrow> (Q S(x))"
   shows "Q a"
 proof -
   have q: "\<forall>x. (x \<le> a = 1) \<turnstile> Q x"
@@ -1624,7 +1585,7 @@ proof -
             apply (rule bc)
             done
         qed
-      show "\<forall>x. (\<forall>xa. xa \<le> x = 1 \<turnstile> Q xa) \<turnstile> (\<forall>xa. xa \<le> S x = 1 \<turnstile> Q xa)"
+      show "\<And>x. x N \<Longrightarrow> (\<forall>xa. xa \<le> x = 1 \<turnstile> Q xa) \<Longrightarrow> (\<forall>xa. xa \<le> S x = 1 \<turnstile> Q xa)"
         proof (rule forallI entailsI)+
           fix x xa
           assume x_nat: "x N"
@@ -1656,13 +1617,12 @@ proof -
                 apply (rule xa_not_leq_x)
                 apply (rule xa_leq_sx)
                 done
-              have "(\<forall>y. y\<le>x = 1 \<turnstile> Q y) \<turnstile> (Q S(x))"
-                apply (rule forallE[where a="x"])
-                apply (rule step)
-                apply (rule x_nat)
+              have H2: "x N \<Longrightarrow> (\<forall>y. y\<le>x = 1 \<turnstile> Q y) \<Longrightarrow> (Q S(x))"
+                apply (rule step, simp)
                 done
-              then have q_sx: "Q S(x)"
-                apply (rule entailsE)
+              have q_sx: "Q S(x)"
+                apply (rule H2)
+                apply (rule x_nat)
                 apply (rule hyp)
                 done
               show "Q xa"
@@ -1700,8 +1660,8 @@ proof (rule ind[where a=y])
     apply (rule x_nat)
     apply (rule x_nat)
     done
-  show ind_step: "\<forall>a. ((x - a) N) \<turnstile> ((x - S(a)) N)"
-    proof (rule forallI, rule entailsI, unfold_def def_sub)
+  show ind_step: "\<And>a. a N \<Longrightarrow> ((x - a) N) \<Longrightarrow> ((x - S(a)) N)"
+    proof (unfold_def def_sub)
       fix a
       assume HQ: "a N" and BC: "x - a N"
       show "if (S(a) = 0) then x else P(x - P(S(a))) N"
@@ -1721,8 +1681,7 @@ proof (rule ind[where a=y])
             apply (rule predSucInv)
             apply (rule HQ)
             apply (fold isNat_def)
-            apply (rule BC)
-            apply (rule BC)
+            apply (rule BC)+
             done
         qed
     qed
@@ -1761,7 +1720,7 @@ proof -
           apply (rule x_nat)
           done
       qed
-    show "\<forall>x. (\<forall>xa. S xa - S x \<le> xa = 1) \<turnstile> (\<forall>xa. S xa - S S x \<le> xa = 1)"
+    show "\<And>x. x N \<Longrightarrow> (\<forall>xa. S xa - S x \<le> xa = 1) \<Longrightarrow> (\<forall>xa. S xa - S S x \<le> xa = 1)"
       proof (rule forallI entailsI)+
         fix x xa
         assume x_nat: "x N" and xa_nat: "xa N"
@@ -1828,8 +1787,8 @@ proof (rule strong_induction[where a="x"])
     apply (rule y_nat)
     apply (auto)
     done
-  show "\<forall>x. (\<forall>ya. ya \<le> x = 1 \<turnstile> div ya (S y) N) \<turnstile> div (S x) (S y) N "
-    proof (rule forallI entailsI)+
+  show "\<And>x. x N \<Longrightarrow> (\<forall>ya. ya \<le> x = 1 \<turnstile> div ya (S y) N) \<Longrightarrow> div (S x) (S y) N "
+    proof -
       fix x
       assume x_nat: "x N"
       assume hyp: "\<forall>ya. ya \<le> x = 1 \<turnstile> div ya (S y) N"
@@ -1894,7 +1853,7 @@ proof -
             apply (auto)
             done
         qed
-      show "\<forall>x. (\<forall>y. S y * S x > x = 1) \<turnstile> (\<forall>y. S y * S S x > S x = 1)"
+      show "\<And>x. x N \<Longrightarrow> (\<forall>y. S y * S x > x = 1) \<Longrightarrow> (\<forall>y. S y * S S x > S x = 1)"
         proof (rule forallI entailsI)+
           fix x y
           assume x_nat: "x N" and y_nat: "y N" and hyp: "\<forall>y. S y * S x > x = 1"
@@ -2130,8 +2089,8 @@ lemma leq_monotone [auto, simp]:
 proof (rule ind[where a="x"])
   show "x N" by (rule x_nat)
   show "0 \<le> y + 0 = 1" by (auto, rule y_nat)
-  show "\<forall>x. x \<le> y + x = 1 \<turnstile> S x \<le> y + S x = 1"
-    proof (rule forallI entailsI)+
+  show "\<And>x. x N \<Longrightarrow> x \<le> y + x = 1 \<Longrightarrow> S x \<le> y + S x = 1"
+    proof -
       fix xa
       assume xa_nat: "xa N" and hyp: "xa \<le> y + xa = 1"
       show "S xa \<le> y + S xa = 1"
@@ -2199,8 +2158,7 @@ qed
 
 lemma add_suc_comm:
   shows "x N \<Longrightarrow> y N \<Longrightarrow> y + S(x) = S(y) + x"
-apply (rule ind[where a="x"], simp+)
-proof (rule forallI entailsI)+
+proof (rule ind[where a="x"], simp+)
   fix xa
   assume hyp: "y + S xa = S y + xa"
   show "x N \<Longrightarrow> y N \<Longrightarrow> xa N \<Longrightarrow> y + S S xa = S y + S xa"
@@ -2216,61 +2174,24 @@ proof (rule forallI entailsI)+
 qed
 
 lemma add_comm [auto]:
-  assumes x_nat: "x N"
-  assumes y_nat: "y N"
-  shows "x + y = y + x"
-apply (rule ind[where a="y"])
-apply (rule y_nat)
+  shows "x N \<Longrightarrow> y N \<Longrightarrow> x + y = y + x"
+apply (rule ind[where a="y"], simp)
 apply (rule eqSubst[where a="x" and b="x + 0"])
 apply (rule eqSym)
 apply (auto)
-apply (rule x_nat)
 apply (rule eqSym)
-apply (rule zero_add)
-apply (rule x_nat)
-proof (rule forallI entailsI)+
+proof (auto)
   fix xa
-  assume xa_nat: "xa N"
   assume hyp: "x + xa = xa + x"
-  show "x + S xa = S xa + x"
+  show "x N \<Longrightarrow> xa N \<Longrightarrow> x + S xa = S xa + x"
     apply (rule eqSym)
     apply (unfold_def def_add)
     apply (rule eqSym)
-    apply (rule condI2Eq)
-    apply (fold neq_def)
-    apply (auto)
-    apply (rule xa_nat)
-    apply (auto)
-    apply (rule xa_nat)
-    apply (rule x_nat)
-    apply (rule eqSubst[where a="xa" and b="P S xa"])
-    apply (rule eqSym)
-    apply (auto)
-    apply (rule xa_nat)
-    apply (rule eqSubst[where a="xa + x" and b="x + xa"])
-    apply (rule eqSym)
-    apply (rule hyp)
+    apply (simp add: hyp)
     apply (rule eqSubst[where a="xa + S x" and b="S xa + x"])
-    apply (rule add_suc_comm)
-    apply (rule x_nat)
-    apply (rule xa_nat)
+    apply (rule add_suc_comm, simp)
     apply (unfold_def def_add)
-    apply (rule eqSym)
-    apply (rule condI2Eq)
-    apply (fold neq_def)
-    apply (auto)
-    apply (rule x_nat)
-    apply (auto)
-    apply (rule xa_nat)
-    apply (rule x_nat)
-    apply (rule eqSubst[where a="x" and b="P S x"])
-    apply (rule eqSym)
-    apply (auto)
-    apply (rule x_nat)
-    apply (fold isNat_def)
-    apply auto
-    apply (rule xa_nat)
-    apply (rule x_nat)
+    apply (simp)
     done
 qed
 
@@ -2312,17 +2233,13 @@ proof -
     proof -
       fix xa
       show "x N \<Longrightarrow> y N \<Longrightarrow> xa N \<Longrightarrow> \<not> (y = S(xa) + y)"
-        apply (rule ind[where a="y"], simp+)
-        proof (rule forallI, rule entailsI)
+        proof (rule ind[where a="y"], simp+)
           fix z
           assume hyp: "\<not> z = S xa + z"
           show "xa N \<Longrightarrow> z N \<Longrightarrow> \<not> S z = S xa + S z"
             apply (rule eqSubst[where a="S(S xa + z)" and b="S xa + S z"])
             apply (unfold_def def_add)
-            apply (rule eqSym)
-            apply (rule condI2Eq)
-            apply (fold neq_def)
-            apply (simp+)
+            apply (simp)
             apply (rule neq_monotone_suc)
             apply (simp)
             apply (rule hyp)
@@ -2516,9 +2433,9 @@ proof -
           apply (auto)
           done
       qed
-    show "\<forall>x. (\<forall>a. a - x = 0 \<turnstile> a \<le> x = 1) \<turnstile>
+    show "\<And>x. x N \<Longrightarrow> (\<forall>a. a - x = 0 \<turnstile> a \<le> x = 1) \<Longrightarrow>
      (\<forall>a. a - S x = 0 \<turnstile> a \<le> S x = 1)"
-      proof (rule forallI, rule entailsI, rule forallI, rule entailsI)
+      proof (rule forallI, rule entailsI)
         fix xa aa
         assume hyp: "\<forall>a. a - xa = 0 \<turnstile> a \<le> xa = 1"
         assume H1: "aa - S xa = 0"
@@ -2611,9 +2528,9 @@ proof -
           apply (simp)
           done
       qed
-    show "\<forall>x. (\<forall>xa y. xa < y = 1 \<turnstile> y < x = 1 \<turnstile> xa < x = 1) \<turnstile>
+    show "\<And>x. x N \<Longrightarrow> (\<forall>xa y. xa < y = 1 \<turnstile> y < x = 1 \<turnstile> xa < x = 1) \<Longrightarrow>
       (\<forall>xa y. xa < y = 1 \<turnstile> y < S x = 1 \<turnstile> xa < S x = 1)"
-      proof (rule forallI, rule entailsI)+
+      proof -
         fix x
         show "x N \<Longrightarrow> \<forall>xa y. xa < y = 1 \<turnstile> y < x = 1 \<turnstile> xa < x = 1 \<Longrightarrow>
               \<forall>xa y. xa < y = 1 \<turnstile> y < S x = 1 \<turnstile> xa < S x = 1"
@@ -2712,8 +2629,7 @@ apply (rule ind[where a="y"])
 apply (simp)
 apply (rule eqSubst[where a="P(S(x) - 0)" and b="S(x) - 1"])
 apply (unfold_def def_sub)
-apply (simp+)
-proof (rule forallI entailsI)+
+proof (simp+)
   fix xa
   assume hyp: "S x - S xa < S x = 1"
   show "x N \<Longrightarrow> xa N \<Longrightarrow> S x - S S xa < S x = 1"
@@ -2731,9 +2647,8 @@ qed
 
 lemma less_not_refl [simp]:
   shows "x N \<Longrightarrow> x < x = 0"
-apply (rule ind[where a="x"], simp, rule forallI, rule entailsI)
-apply (unfold_def def_less)
-apply (simp)
+apply (rule ind[where a="x"], simp)
+apply (unfold_def def_less, simp)
 done
 
 lemma "a N \<Longrightarrow> P(a - b) = P(a) - b"
@@ -2745,12 +2660,7 @@ sorry
 
 lemma div_x_x_1 [auto]:
   shows "x N \<Longrightarrow> div (S x) (S x) = 1"
-proof (rule ind[where a="x"], auto, rule forallI, rule entailsI)
-  fix xa
-  assume hyp: "div (S xa) (S xa) = 1"
-  show "xa N \<Longrightarrow> div (S S xa) (S S xa) = 1"
-    by (unfold_def def_div, simp)
-qed
+by (unfold_def def_div, simp)
 
 lemma cpair_1_0_1 [simp, auto]: "\<langle>1, 0\<rangle> = 1"
   unfolding cpair_def by (simp)
@@ -2993,14 +2903,8 @@ by (unfold_def is_list_def, auto)
 ML_file "gd_induct.ML"
 
 lemma is_list_terminates [auto]: "x N \<Longrightarrow> is_list x B"
-apply (induct strong x)
+apply (induct x)
 apply (unfold_def is_list_def)
-apply (unfold Nil_def)
-apply (unfold list_type_tag_def)
-apply (rule condTB)
-apply (simp)
-apply (rule condTB)
-apply (simp)
 sorry
 
 lemma is_list_cases [consumes 1, case_names Nil Cons]:
@@ -3032,18 +2936,18 @@ sorry
 lemma list_induction:
   assumes a_list: "is_list a"
   assumes q_nil: "Q Nil"
-  assumes step: "\<forall>x xs. x N \<turnstile> is_list xs \<turnstile> Q xs \<turnstile> Q (Cons x xs)"
+  assumes step: "\<And>x xs. x N \<Longrightarrow> is_list xs \<Longrightarrow> Q xs \<Longrightarrow> Q (Cons x xs)"
   shows "Q a"
 proof -
   have "is_list a \<longrightarrow> Q a"
-    proof (rule strong_induction[where a="a"])
+    proof (induct strong a)
       show "a N" by (rule list_nat, rule a_list)
       show "is_list 0 \<longrightarrow> Q 0"
         apply (rule notE_impl)
         apply (unfold_def is_list_def)
         sorry
-      show "\<forall>x. (\<forall>y. y \<le> x = 1 \<turnstile> is_list y \<longrightarrow> Q y) \<turnstile> is_list S x \<longrightarrow> Q S x"
-        proof (rule forallI, rule entailsI)+
+      show "\<And>x. x N \<Longrightarrow> (\<forall>y. y \<le> x = 1 \<turnstile> is_list y \<longrightarrow> Q y) \<Longrightarrow> is_list S x \<longrightarrow> Q S x"
+        proof -
           fix x
           assume hyp: "\<forall>y. y\<le>x = 1 \<turnstile> is_list y \<longrightarrow> Q y"
           show "x N \<Longrightarrow> is_list S x \<longrightarrow> Q (S x)"
