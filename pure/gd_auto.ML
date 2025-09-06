@@ -2,23 +2,18 @@ structure GDAuto =
 struct
 
   fun uncond_rules ctxt = Named_Theorems.get ctxt @{named_theorems auto}
-  fun cond_rules ctxt = Named_Theorems.get ctxt @{named_theorems cond}
+  fun cond_rules   ctxt = Named_Theorems.get ctxt @{named_theorems cond}
 
-  fun repeat_all_bounded 0 _   = K no_tac
-    | repeat_all_bounded k tac =
+  fun uncond_rewrite_tac _    0 = K no_tac
+    | uncond_rewrite_tac ctxt k =
       let
+        val tac = assume_tac ctxt ORELSE' resolve_tac ctxt (uncond_rules ctxt)
         val one_iter = CHANGED o DETERM o tac
-        val rec_call = repeat_all_bounded (k-1) tac
+        val recurse = uncond_rewrite_tac ctxt (k-1)
+        val succeed' = K all_tac
       in
-        one_iter THEN_ALL_NEW (rec_call ORELSE' K all_tac)
+        one_iter THEN_ALL_NEW (recurse ORELSE' succeed')
       end
-
-  fun uncond_rewrite_tac ctxt fuel =
-    let
-      val tac = assume_tac ctxt ORELSE' resolve_tac ctxt (uncond_rules ctxt)
-    in
-      repeat_all_bounded fuel tac
-    end
 
   fun solver_tac _    0 _ = no_tac
     | solver_tac ctxt k i =
@@ -33,11 +28,11 @@ struct
             (cond_rules ctxt))
       in
         FIRST [assume_tac ctxt i, uncond_rewrite_tac ctxt (k-1) i, cond_tacs]
-        THEN (TRY (solver_tac ctxt (k-1) i))
+        THEN TRY (solver_tac ctxt (k-1) i)
     end
 
   fun gd_auto_tac ctxt i =
-    let val fuel = 24 in
+    let val fuel = 20 in
       CHANGED (solver_tac ctxt fuel i)
     end
 
