@@ -647,15 +647,6 @@ definition greater :: "num \<Rightarrow> num \<Rightarrow> num" (infix ">" 50) w
 definition geq :: "num \<Rightarrow> num \<Rightarrow> num" (infix "\<ge>" 50) where
   "geq x y \<equiv> 1 - (x < y)"
 
-(* Returns y if S(y) > sqrt(x), else returns the greatest y s.t. y*y\<le>x. *)
-axiomatization
-  sqrt_h :: "num \<Rightarrow> num \<Rightarrow> num"
-where
-  def_sqrt_h: "sqrt_h := (\<lambda>x y. if (S(y) * S(y) > x = 1) then y else (sqrt_h x S(y)))"
-
-definition floor_sqrt :: "num \<Rightarrow> num" where
-  "floor_sqrt x \<equiv> sqrt_h x 0"
-
 lemma less_0_false [simp, auto]: "(x < 0) = 0"
 apply (unfold_def def_less)
 apply (rule condI1)
@@ -1794,98 +1785,6 @@ proof (rule strong_induction[where a="x"])
         done
     qed
 qed
-
-lemma suc_sq_gr:
-  assumes x_nat: "x N"
-  assumes y_nat: "y N"
-  shows "S y * S x > x = 1"
-proof -
-  have "\<forall>y. S y * S x > x = 1"
-    proof (rule ind[where a="x"])
-      show "x N" by (rule x_nat)
-      show "\<forall>y. S y * 1 > 0 = 1"
-        proof (rule forallI)
-          fix y
-          assume y_nat: "y N"
-          show "S y * 1 > 0 = 1"
-            apply (rule eqSubst[where a="S y" and b="S y * 1"])
-            apply (unfold_def def_mult)
-            apply (rule eqSym)
-            apply (rule condI2Eq)
-            apply (fold neq_def)
-            apply (auto)
-            apply (rule y_nat)
-            apply (rule eqSubst[where a="0" and b="S y * P S 0"])
-            apply (rule eqSubst[where a="0" and b="P S 0"])
-            apply (rule eqSym)
-            apply (auto)
-            apply (rule eqSym)
-            apply (auto)
-            apply (rule y_nat)
-            apply (unfold greater_def)
-            apply (rule eqSubst[where a="0" and b="S y\<le>0"])
-            apply (rule eqSym)
-            apply (auto)
-            apply (rule y_nat)
-            apply (auto)
-            done
-        qed
-      show "\<And>x. x N \<Longrightarrow> (\<forall>y. S y * S x > x = 1) \<Longrightarrow> (\<forall>y. S y * S S x > S x = 1)"
-        proof (rule forallI entailsI)+
-          fix x y
-          assume x_nat: "x N" and y_nat: "y N" and hyp: "\<forall>y. S y * S x > x = 1"
-          show "S y * S S x > S x = 1"
-            sorry
-        qed
-    qed
-    then show "S y * S x > x = 1"
-      sorry
-qed
-
-lemma sqrt_h_bounded:
-  assumes x_nat: "x N"
-  shows"\<exists>y. sqrt_h x y = y"
-apply (rule existsI[where a="x"])
-apply (rule x_nat)
-apply (unfold_def def_sqrt_h)
-apply (rule condI1Eq)
-apply (rule suc_sq_gr)
-apply (rule x_nat)
-apply (rule x_nat)
-apply (rule x_nat)
-apply (fold isNat_def)
-apply (rule x_nat)
-done
-
-lemma sqrt_h_terminates [auto]:
-  assumes x_nat: "x N"
-  assumes y_nat: "y N"
-  shows "sqrt_h x y N"
-apply (rule existsE[where Q="\<lambda>a. sqrt_h x a = a"])
-apply (rule sqrt_h_bounded)
-apply (rule x_nat)
-proof -
-  fix a
-  assume a_nat: "a N"
-  assume "sqrt_h x a = a"
-  let ?d = "a - y"
-  have "?d = ?d \<turnstile> sqrt_h x y N"
-    apply (rule ind[where a="a-y"])
-    apply (auto)
-    apply (rule a_nat)
-    apply (rule y_nat)
-    sorry
-  then show ?thesis
-    sorry
-qed
-
-lemma floor_sqrt_terminates [auto]:
-  assumes x_nat: "x N"
-  shows "floor_sqrt x N"
-apply (unfold floor_sqrt_def)
-apply (auto)
-apply (rule x_nat)
-done
 
 axiomatization cpair :: "num \<Rightarrow> num \<Rightarrow> num" where
   cpair_def: "cpair x y := if y = 0 then div (x * S(x)) 2
