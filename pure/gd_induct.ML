@@ -18,7 +18,7 @@ struct
     end
 
   fun induct_tac strong t =
-    CONTEXT_SUBGOAL (fn (goal, i) => fn (ctxt, st) =>
+    CONTEXT_SUBGOAL (fn (_, i) => fn (ctxt, st) =>
     let
       val th  = if strong then strong_induct_thm else induct_thm
       val th' = inst_thm ctxt t th

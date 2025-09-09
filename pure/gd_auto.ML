@@ -4,36 +4,28 @@ struct
   fun uncond_rules ctxt = Named_Theorems.get ctxt @{named_theorems auto}
   fun cond_rules   ctxt = Named_Theorems.get ctxt @{named_theorems cond}
 
-  fun uncond_rewrite_tac _    0 = K no_tac
-    | uncond_rewrite_tac ctxt k =
+  fun solver_tac _    0 = K no_tac
+    | solver_tac ctxt k =
       let
-        val tac = assume_tac ctxt ORELSE' resolve_tac ctxt (uncond_rules ctxt)
-        val one_iter = CHANGED o DETERM o tac
-        val recurse = uncond_rewrite_tac ctxt (k-1)
-        val succeed' = K all_tac
-      in
-        one_iter THEN_ALL_NEW (recurse ORELSE' succeed')
-      end
-
-  fun solver_tac _    0 _ = no_tac
-    | solver_tac ctxt k i =
-      let
-        fun transform th =
+        fun transform i th =
           DETERM (
             match_tac ctxt [th] i
             THEN SOLVED' (solver_tac ctxt (k-1)) i
           )
-        val cond_tacs =
-          FIRST (map transform
+        fun cond_tacs i =
+          FIRST (map (transform i)
             (cond_rules ctxt))
+        val tac = assume_tac ctxt ORELSE' cond_tacs ORELSE' resolve_tac ctxt (uncond_rules ctxt) ORELSE' resolve_tac ctxt (reflexive_thm :: Simplifier.prems_of ctxt)
+        val one_iter = CHANGED o DETERM o tac
+        val recurse = solver_tac ctxt (k-1)
+        val succeed' = K all_tac
       in
-        FIRST [assume_tac ctxt i, uncond_rewrite_tac ctxt (k-1) i, cond_tacs]
-        THEN TRY (solver_tac ctxt (k-1) i)
+        one_iter THEN_ALL_NEW (recurse ORELSE' succeed')
     end
 
   fun gd_auto_tac ctxt i =
     let val fuel = 20 in
-      CHANGED (solver_tac ctxt fuel i)
+      CHANGED (REPEAT (CHANGED (solver_tac ctxt fuel i)))
     end
 
   fun simp_tac ctxt =

@@ -17,18 +17,23 @@ struct
     (case Thm.concl_of rl of
       Const (\<^const_name>\<open>Pure.eq\<close>, _) $ _ $ _ => rl
     | _ => raise THM ("gd_mk_meta_cong: conclusion must be meta equality (\<equiv>)", 0, [rl]));
-  fun step_tac ctxt : int -> tactic =
+  fun step_tac ctxt i =
     let
       val close = reflexive_thm :: Simplifier.prems_of ctxt
+      val tac =
+        assume_tac ctxt
+        ORELSE' resolve_tac ctxt close
+        ORELSE' GDAuto.gd_auto_tac ctxt
+      val _ = tracing (Pretty.string_of
+        (Pretty.block [Pretty.str "prems: ",
+            Pretty.list "" "" (map (Syntax.pretty_term ctxt o Thm.prop_of) (Simplifier.prems_of ctxt))]));
+
     in
-      assume_tac ctxt
-      ORELSE' resolve_tac ctxt close
-      ORELSE' GDAuto.gd_auto_tac ctxt
+      REPEAT_DETERM (CHANGED (tac i))
     end
   val gd_solver =
     Raw_Simplifier.mk_solver "GD_solver"
-      (fn ctxt => fn i =>
-        REPEAT_DETERM (CHANGED (step_tac ctxt i)));
+      step_tac;
 end;
 
 let
@@ -38,7 +43,7 @@ let
     |> Simplifier.set_mkcong GD_Simp.gd_mk_meta_cong
   fun set_subgoaler ctxt =
     ctxt
-    |> Simplifier.set_subgoaler asm_simp_tac
+    |> Simplifier.set_subgoaler asm_full_simp_tac
   fun set_solver ctxt =
     Raw_Simplifier.setSolver (set_subgoaler (set_mks ctxt), GD_Simp.gd_solver)
   fun set_ssolver ctxt =

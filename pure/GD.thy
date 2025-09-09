@@ -136,7 +136,7 @@ apply (fold isNat_def)
 apply (rule a_nat)
 done
 
-lemma implI [auto]:
+lemma implI:
   assumes a_bool: "a B"
   assumes a_deduce_b: "a \<Longrightarrow> b"
   shows "a \<longrightarrow> b"
@@ -464,10 +464,10 @@ apply (rule conjE1, simp)
 apply (rule conjE2, simp)
 done
 
-lemma [cond]: "c \<Longrightarrow> if c then True else b"
+lemma [simp]: "c \<Longrightarrow> (if c then True else b) = True"
 by simp
 
-lemma [cond]: "\<not>c \<Longrightarrow> if c then a else True"
+lemma [simp]: "\<not>c \<Longrightarrow> (if c then a else True) = True"
 by simp
 
 lemma [cond]: "a \<Longrightarrow> a B"
@@ -572,56 +572,33 @@ proof (unfold neq_def, rule grounded_contradiction[where q="a=b"])
     done
 qed
 
-lemma neq_bool [auto]:
-  assumes a_nat: "a N"
-  assumes b_nat: "b N"
-  shows "(a \<noteq> b) B"
-apply (unfold neq_def)
-apply (auto)
-apply (rule a_nat)
-apply (rule b_nat)
-done
+lemma neq_bool [auto]: "a N \<Longrightarrow> b N \<Longrightarrow> (a \<noteq> b) B"
+by simp
 
-lemma sucNotEqual [auto]:
-  assumes a_nat: "a N"
-  shows "a \<noteq> S(a)"
-proof (rule ind[where a="a"])
-  show "a N" by (rule a_nat)
+lemma sucNotEqual [auto]: "a N \<Longrightarrow> a \<noteq> S(a)"
+proof (rule ind[where a="a"], simp)
   show "0 \<noteq> S(0)"
-    apply (rule neq_sym)
-    apply (auto)
-    done
+    by (rule neq_sym, simp)
   show "\<And>x. x N \<Longrightarrow> (x\<noteq>S(x)) \<Longrightarrow> (S(x) \<noteq> S(S(x)))"
     proof -
       fix x
-      assume x_nat: "x N"
       assume x_neq_s: "x \<noteq> S(x)"
-      show "S(x) \<noteq> S(S(x))"
-      proof (rule grounded_contradiction[where q="False"])
-        show "(S(x) \<noteq> S(S(x))) B"
-          apply (rule neq_bool)
-          apply (rule natS)
-          apply (rule x_nat)
-          apply (auto)
-          apply (rule x_nat)
+      show "x N \<Longrightarrow> S(x) \<noteq> S(S(x))"
+      proof (rule grounded_contradiction[where q="False"], simp)
+        assume H: "\<not> (S x \<noteq> S(S x))"
+        have eq_suc: "x = S(x)"
+          apply (rule sucInj)
+          apply (rule dNegE)
+          apply (fold neq_def)
+          apply (rule H)
           done
-        next
-          assume H: "\<not> (S(x) \<noteq> S(S(x)))"
-          have eq_suc: "x = S(x)"
-            apply (rule sucInj)
-            apply (rule dNegE)
-            apply (fold neq_def)
-            apply (rule H)
-            done
-          then show "False"
-            apply (rule exF)
-            apply (fold neq_def)
-            apply (rule x_neq_s)
-            done
-        next
-          show "\<not> False"
-          apply (auto)
+        then show "False"
+          apply (rule exF)
+          apply (fold neq_def)
+          apply (rule x_neq_s)
           done
+        show "\<not> False"
+        by simp
       qed
     qed
 qed
@@ -993,7 +970,7 @@ proof (rule ind[where a="x"], simp)
     qed
 qed
 
-lemma num_non_zero [auto]:
+lemma num_nonzero [auto]:
   "x N \<Longrightarrow> \<not> x = 0 \<Longrightarrow> \<exists>y. x = S(y)"
 proof -
   have "x N \<Longrightarrow> x = 0 \<or> (\<exists>y. x = S y)"
@@ -1910,8 +1887,9 @@ apply (auto)
 apply (rule x_nat)
 done
 
-definition cpair :: "num \<Rightarrow> num \<Rightarrow> num" where
-  "cpair x y \<equiv> y + (div ((x+y) * (S(x+y))) 2)"
+axiomatization cpair :: "num \<Rightarrow> num \<Rightarrow> num" where
+  cpair_def: "cpair x y := if y = 0 then div (x * S(x)) 2
+                           else cpair x P(y) + x + y + 2"
 
 nonterminal cpair_args
 
@@ -1923,81 +1901,113 @@ translations
   "\<langle>x, y\<rangle>" == "CONST cpair x y"
   "_cpair x (_cpair_args y z)" == "_cpair x (_cpair_arg (_cpair y z))"
 
-lemma cpair_terminates [auto]:
-  shows "x N \<Longrightarrow> y N \<Longrightarrow> \<langle>x, y\<rangle> N"
-apply (unfold cpair_def)
-apply (auto)
+ML_file "gd_induct.ML"
+
+lemma [simp]: "x N \<Longrightarrow> \<langle>x, 0\<rangle> = div (x * S(x)) 2"
+  by (unfold_def cpair_def, simp)
+
+lemma cpair_terminates [auto]: "x N \<Longrightarrow> y N \<Longrightarrow> \<langle>x, y\<rangle> N"
+apply (induct y, simp)
+apply (unfold_def cpair_def, simp)+
 done
 
-lemma cpair_0_0_0 [simp, auto]: "\<langle>0, 0\<rangle> = 0"
-unfolding cpair_def by simp
+lemma cpair_suc [auto]: "x N \<Longrightarrow> y N \<Longrightarrow> \<langle>x, S(y)\<rangle> = \<langle>x, y\<rangle> + x + S(y) + 2"
+apply (rule eqSym)
+apply (unfold_def cpair_def)
+apply (rule eqSym)
+apply (simp)
+done
 
-(* recover w=x+y from the pair z *)
-definition cpzw :: "num \<Rightarrow> num" where
-  "cpzw z \<equiv> div (floor_sqrt (8 * z + 1) - 1) 2"
+axiomatization
+  cpx :: "num \<Rightarrow> num" and
+  cpy :: "num \<Rightarrow> num"
+where
+  cpx_def: "cpx x := if x = 0 then 0
+                     else if cpx (P x) = 0 then S(cpy P(x))
+                     else P(cpx (P x))" and
+  cpy_def: "cpy x := if cpx (P x) = 0 then 0
+                     else S(cpy (P x))"
 
-(* recover t from w *)
-definition cpwt :: "num \<Rightarrow> num" where
-  "cpwt w \<equiv> div (w * S(w)) 2"
+lemma [simp]: "cpx 0 = 0"
+by (unfold_def cpx_def, simp)
 
-(* recover y from a pair z *)
-definition cpy :: "num \<Rightarrow> num" where
-  "cpy z \<equiv> z - (cpwt (cpzw z))"
+lemma [simp]: "cpy 0 = 0"
+by (unfold_def cpy_def, simp)
 
-(* recover x from a pair z *)
-definition cpx :: "num \<Rightarrow> num" where
-  "cpx z \<equiv> cpzw z - cpy z"
+lemma cpx_cpy_terminate: "x N \<Longrightarrow> (cpx x N) \<and> (cpy x N)"
+apply (induct x, simp)
+apply (unfold_def cpx_def, simp)
+apply (unfold_def cpy_def, simp)
+apply (unfold_def cpx_def, simp)
+apply (rule condT, simp)
+apply (rule condT, simp)
+apply (rule conjE1, simp)
+apply (rule conjE2, simp)
+apply (rule conjE1, simp)
+apply (unfold_def cpy_def, simp)
+apply (rule condT, simp)
+apply (rule conjE1, simp)
+apply (rule conjE2, simp)
+done
 
-lemma cpzw_terminates [auto]:
-  shows "x N \<Longrightarrow> cpzw x N"
-by (unfold cpzw_def, simp)
+lemma cpx_terminates [auto]: "x N \<Longrightarrow> cpx x N"
+by (rule conjE1, rule cpx_cpy_terminate, assumption)
 
-lemma cpwt_terminates [auto]:
-  shows "x N \<Longrightarrow> cpwt x N"
-by (unfold cpwt_def, simp)
+lemma cpy_terminates [auto]: "x N \<Longrightarrow> cpy x N"
+by (rule conjE2, rule cpx_cpy_terminate, assumption)
 
-lemma cpy_terminates [auto]:
-  assumes x_nat: "x N"
-  shows "x N \<Longrightarrow> cpy x N"
-by (unfold cpy_def, simp)
+lemma "x N \<Longrightarrow> cpx (S x) = (if cpx x = 0 then S(cpy x)
+                           else P(cpx x))"
+apply (rule eqSym)
+apply (unfold_def cpx_def)
+apply (rule eqSym)
+apply (simp)
+apply (rule condI2Eq, simp)
+apply (rule condT, simp)+
+done
 
-lemma cpx_terminates [auto]:
-  assumes x_nat: "x N"
-  shows "x N \<Longrightarrow> cpx x N"
-by (unfold cpx_def, simp)
+lemma [simp]: "x N \<Longrightarrow> cpy (S x) = (if cpx x = 0 then 0
+                           else S(cpy x))"
+apply (rule eqSym)
+apply (unfold_def cpy_def)
+apply (rule eqSym)
+apply (simp)
+apply (rule condT, simp)+
+done
 
-lemma cpy_proj: "cpy \<langle>a, b\<rangle> = b"
-unfolding cpy_def cpwt_def cpzw_def cpair_def
+lemma "cpx \<langle>0,0\<rangle> = 0"
+by simp
+
+lemma "cpy \<langle>0,0\<rangle> = 0"
+by simp
+
+lemma cpy_proj [simp, auto]: "a N \<Longrightarrow> b N \<Longrightarrow> cpy \<langle>a, b\<rangle> = b"
 sorry
 
-lemma cpx_proj: "cpx \<langle>a, b\<rangle> = a"
+lemma cpx_proj [simp, auto]: "a N \<Longrightarrow> b N \<Longrightarrow> cpx \<langle>a, b\<rangle> = a"
 sorry
 
 lemma cpair_inj:
   assumes eq: "\<langle>a, b\<rangle> = \<langle>c, d\<rangle>"
-  shows "a N \<Longrightarrow> b N \<Longrightarrow> a = c \<and> b = d"
+  shows "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> a = c \<and> b = d"
 proof -
   have H: "a N \<Longrightarrow> b N \<Longrightarrow> cpx \<langle>a, b\<rangle> = cpx \<langle>c, d\<rangle>"
     by (rule eqSubst[OF eq], simp)
-  have a_eq_c: "a N \<Longrightarrow> b N \<Longrightarrow> a = c"
-    apply (rule eqSubst[where a="cpx \<langle>a, b\<rangle>" and b="a"])
-    apply (rule cpx_proj)
-    apply (rule eqSubst[where a="cpx \<langle>c, d\<rangle>" and b="c"])
-    apply (rule cpx_proj)
-    apply (rule H)
-    apply (simp)
+  have a_eq_c: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> a = c"
+    apply (rule eqSubst[where a="cpx \<langle>a, b\<rangle>" and b="a"], simp)
+    apply (rule eqSubst[where a="cpx \<langle>c, d\<rangle>" and b="c"], simp)
+    apply (rule H, simp)
     done
   have H2: "a N \<Longrightarrow> b N \<Longrightarrow> cpy \<langle>a, b\<rangle> = cpy \<langle>c, d\<rangle>"
     by (rule eqSubst[OF eq], simp)
-  have b_eq_d: "a N \<Longrightarrow> b N \<Longrightarrow> b = d"
+  have b_eq_d: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> b = d"
     apply (rule eqSubst[where a="cpy \<langle>a, b\<rangle>" and b="b"])
-    apply (rule cpy_proj)
+    apply (rule cpy_proj, assumption+)
     apply (rule eqSubst[where a="cpy \<langle>c, d\<rangle>" and b="d"])
-    apply (rule cpy_proj)
-    apply (rule H2)
-    apply (simp)
+    apply (rule cpy_proj, assumption+)
+    apply (rule H2, assumption+)
     done
-  show "a N \<Longrightarrow> b N \<Longrightarrow> a = c \<and> b = d"
+  show "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> a = c \<and> b = d"
     apply (rule conjI)
     apply (rule a_eq_c)
     apply (simp)
@@ -2007,27 +2017,21 @@ proof -
 qed
 
 lemma cpair_inj_l:
-  assumes a_nat: "a N"
-  assumes b_nat: "b N"
   assumes eq: "\<langle>a, b\<rangle> = \<langle>c, d\<rangle>"
-  shows "a = c"
+  shows "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> a = c"
 apply (rule conjE1[where q="b=d"])
 apply (rule cpair_inj)
 apply (rule eq)
-apply (rule a_nat)
-apply (rule b_nat)
+apply (simp)
 done
 
 lemma cpair_inj_r:
-  assumes a_nat: "a N"
-  assumes b_nat: "b N"
   assumes eq: "\<langle>a, b\<rangle> = \<langle>c, d\<rangle>"
-  shows "b = d"
+  shows "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> b = d"
 apply (rule conjE2[where p="a=c"])
 apply (rule cpair_inj)
 apply (rule eq)
-apply (rule a_nat)
-apply (rule b_nat)
+apply (simp)
 done
 
 lemma [auto]:
@@ -2038,10 +2042,10 @@ by (rule dNegI, assumption)
 lemma [auto]:
   "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> \<not> a = c \<or> \<not> b = d \<Longrightarrow> \<not> \<langle>a, b\<rangle> = \<langle>c, d\<rangle>"
 apply (rule grounded_contradiction[where q="\<not>(a=c \<and> b=d)"], simp)
-apply (rule cpair_inj_l[where b="b" and d="d"], simp)
-apply (rule dNegE, assumption)
-apply (rule cpair_inj_r[where a="a" and c="c"], simp)
-apply (rule dNegE, assumption)
+apply (rule cpair_inj_l[where b="b" and d="d"])
+apply (rule dNegE, simp)
+apply (rule cpair_inj_r[where a="a" and c="c"])
+apply (rule dNegE, simp)
 done
 
 lemma if_leq_not_greater:
@@ -2195,33 +2199,14 @@ proof (auto)
     done
 qed
 
-lemma add_leq_monotone [cond]:
-  assumes x_le_y: "x \<le> y = 1"
-  assumes x_nat: "x N"
-  assumes y_nat: "y N"
-  assumes z_nat: "z N"
-  shows "x \<le> y + z = 1"
-apply (rule leq_trans[where y="y"])
-apply (rule x_nat)
-apply (rule y_nat)
-apply (auto)
-apply (rule y_nat)
-apply (rule z_nat)
-apply (rule x_le_y)
-apply (rule eqSubst[where a="z + y" and b="y + z"])
-apply (auto)
-apply (rule z_nat)
-apply (rule y_nat)
-apply (rule leq_monotone)
-apply (rule y_nat)
-apply (rule z_nat)
+lemma add_leq_monotone_1 [cond]: "x \<le> y = 1 \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> z N \<Longrightarrow> x \<le> y + z = 1"
+apply (rule leq_trans[where y="y"], simp)
+apply (rule eqSubst[where a="z + y" and b="y + z"], simp)
 done
 
-lemma cpair_mono_r [simp]:
-  assumes x_nat: "x N"
-  assumes y_nat: "y N"
-  shows "x N \<Longrightarrow> y N \<Longrightarrow> y \<le> \<langle>x, y\<rangle> = 1"
-unfolding cpair_def by auto
+lemma add_leq_monotone_2 [cond]: "x \<le> z = 1 \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> z N \<Longrightarrow> x \<le> y + z = 1"
+apply (rule leq_trans[where y="z"], simp)
+done
 
 lemma neq_monotone_add:
   assumes x_nat: "x N"
@@ -2722,28 +2707,6 @@ apply (rule x_geq_y)
 apply (simp)
 done
 
-lemma
-  assumes a_nz: "\<not> a = 0"
-  shows "a * b \<ge> b = 1"
-sorry
-
-lemma cpair_strict_mono_l [auto]:
-  assumes y_nz: "\<not> x = 0"
-  assumes y_neq_1: "\<not> x = 1"
-  shows "x N \<Longrightarrow> y N \<Longrightarrow> x < \<langle>x, y\<rangle> = 1"
-sorry
-lemma cpair_strict_mono_r [auto]:
-  assumes y_nz: "\<not> y = 0"
-  shows "x N \<Longrightarrow> y N \<Longrightarrow> y < \<langle>x, y\<rangle> = 1"
-apply (rule less_is_leq_neq)
-apply (simp+)
-apply (unfold cpair_def)
-apply (rule swap_add)
-apply (simp)
-apply (rule neq_monotone_add)
-apply (simp)
-sorry
-
 lemma [auto]:
   assumes p_bool: "p B"
   assumes q_bool: "q B"
@@ -2812,7 +2775,7 @@ lemma [auto]: "a N \<Longrightarrow> S a > 0 = 1"
 unfolding greater_def
 by (simp)
 
-lemma [cond]: "a < b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> \<not> a = b"
+lemma le_impl_neq [cond]: "a < b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> \<not> a = b"
 apply (rule grounded_contradiction[where q="a < a = 1"], simp)
 apply (rule eqSubst[where a="a < b" and b="a < a"])
 apply (rule eqSubst[where a="a" and b="b"])
@@ -2831,11 +2794,12 @@ apply (rule less_trans[where y="b"], simp)
 apply (rule less_is_leq_neq, simp)
 done
 
-lemma [cond]: " a \<le> b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> \<not> b = 0 \<Longrightarrow> \<not> b = 1 \<Longrightarrow> a < \<langle>b,c\<rangle> = 1"
-  by (rule le_less_trans[where b="b"], simp)
-
-lemma [cond]: "a \<le> c = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> \<not> c = 0 \<Longrightarrow> a < \<langle>b,c\<rangle> = 1"
-  by (rule le_less_trans[where b="c"], simp)
+lemma less_le_trans: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a < b = 1 \<Longrightarrow> b \<le> c = 1 \<Longrightarrow> a < c = 1"
+apply (rule cases_bool[where p="b = c"], simp)
+apply (rule eqSubst[where a="b" and b="c"], simp)
+apply (rule less_trans[where y="b"], simp)
+apply (rule less_is_leq_neq, simp)
+done
 
 lemma neg_conjI1: "\<not>a \<Longrightarrow> \<not>(a \<and> b)"
   unfolding conj_def by (rule dNegI, rule disjI1, simp)
@@ -2843,8 +2807,312 @@ lemma neg_conjI1: "\<not>a \<Longrightarrow> \<not>(a \<and> b)"
 lemma neg_conjI2: "\<not>b \<Longrightarrow> \<not>(a \<and> b)"
   unfolding conj_def by (rule dNegI, rule disjI2, simp)
 
-ML_file "gd_typeencode.ML"
+lemma [cond]: "(if c then a else b) = True \<Longrightarrow> (if c then a else b) B"
+  by simp
 
+lemma [cond]: "(if c then a else b) = False \<Longrightarrow> (if c then a else b) B"
+  by simp
+
+lemma [cond]: "c \<and> (a N) \<Longrightarrow> (if c then a else b) N"
+apply (subst condI1)
+apply (rule conjE1, simp)
+apply (rule conjE2, simp)+
+done
+
+lemma [cond]: "\<not>c \<and> (b N) \<Longrightarrow> (if c then a else b) N"
+apply (subst condI2)
+apply (rule conjE1, simp)
+apply (rule conjE2, simp)+
+done
+
+lemma [cond]: "((c B) \<and> (a N) \<and> (b N)) \<Longrightarrow> if c then a else b N"
+apply (rule condT)
+apply (rule conjE1, rule conjE1, simp)
+apply (rule conjE2, rule conjE1, simp)
+apply (rule conjE2, simp)
+done
+
+lemma [cond]: "((c B) \<and> (a B) \<and> (b B)) \<Longrightarrow> if c then a else b B"
+apply (rule condTB)
+apply (rule conjE1, rule conjE1, simp)
+apply (rule conjE2, rule conjE1, simp)
+apply (rule conjE2, simp)
+done
+
+lemma suc_nz: "\<not> x = 0 \<Longrightarrow> x N \<Longrightarrow> Q (S (P x)) \<Longrightarrow> Q x"
+by simp
+
+lemma [auto]: "x N \<Longrightarrow> y N \<Longrightarrow> x < x + S(y) = 1"
+apply (unfold_def def_add, simp)
+apply (rule le_less_trans[where b="x+y"], simp)
+done
+
+lemma cpair_strict_mono_l [cond]:
+  shows "\<not> x = 0 \<and> \<not> x = 1 \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> x < \<langle>x, y\<rangle> = 1"
+sorry
+
+lemma add_assoc: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a + b + c = a + (b + c)"
+apply (induct c, simp+)
+apply (unfold_def def_add, simp)
+apply (rule eqSym)
+apply (unfold_def def_add, simp)
+done
+
+lemma gr_mono_pred: "a N \<Longrightarrow> b N \<Longrightarrow> \<not> a = 0 \<Longrightarrow> \<not> b = 0 \<Longrightarrow> P a > P b = 1 \<Longrightarrow> a > b = 1"
+apply (rule suc_nz[where x="a"], simp)
+apply (rule suc_nz[where x="b"], simp)
+done
+
+lemma cpair_strict_mono_r [auto, simp]: "x N \<Longrightarrow> y N \<Longrightarrow> (S y) < \<langle>x, (S y)\<rangle> = 1"
+proof (induct y, simp+)
+  case Base
+    show "x N \<Longrightarrow> y N \<Longrightarrow> 1 < \<langle>x,1\<rangle> = 1"
+      apply (rule less_le_trans[where b="2"], simp)
+      apply (unfold_def cpair_def, simp)
+      done
+next
+  case (Step xa)
+  show "x N \<Longrightarrow> y N \<Longrightarrow> xa N \<Longrightarrow> S xa < \<langle>x, (S xa)\<rangle> = 1 \<Longrightarrow> S S xa < \<langle>x, (S S xa)\<rangle> = 1"
+    apply (unfold_def cpair_def, simp)
+    apply (rule less_le_trans[where b="S S xa + 2"])
+    apply (simp add: add_assoc)+
+    done
+qed
+
+lemma [simp, auto]:
+  shows "\<not> y = 0 \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> y < \<langle>x, y\<rangle> = 1"
+by (rule suc_nz[where x="y"], simp)
+
+lemma [cond, simp]: "x < y = 1 \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> x \<le> y = 1"
+proof -
+  have H: "y N \<Longrightarrow> \<forall>x. x < y = 1 \<longrightarrow> x \<le> y = 1"
+    proof (induct y, simp)
+      case Base
+        show ?case
+          apply (rule forallI)
+          apply (rule implI, simp+)
+          apply (rule exF[where P="0 = 1"], simp)
+          done
+    next
+      case (Step x)
+        show "y N \<Longrightarrow> x N \<Longrightarrow>
+              \<forall>xa. xa < x = 1 \<longrightarrow> xa \<le> x = 1 \<Longrightarrow>
+              \<forall>xa. xa < S x = 1 \<longrightarrow> xa \<le> S x = 1 "
+          apply (rule forallI)
+          proof -
+            fix xaa
+            show "y N \<Longrightarrow> x N \<Longrightarrow> \<forall>xaa. xaa < x = 1 \<longrightarrow> xaa \<le> x = 1 \<Longrightarrow>
+                  xaa N \<Longrightarrow> xaa < S x = 1 \<longrightarrow> xaa \<le> S x = 1"
+              apply (unfold_def def_less, simp)
+              apply (rule cases_bool[where p="xaa=0"], simp+)
+              apply (rule implI, simp+)+
+              apply (unfold_def def_leq, simp)
+              apply (rule implE[where a="P xaa < x = 1"])
+              apply (rule forallE[where a="P xaa"], simp)
+              done
+          qed
+    qed
+  show "x N \<Longrightarrow> y N \<Longrightarrow> x < y = 1 \<Longrightarrow> x \<le> y = 1"
+    apply (rule implE[where a="x < y = 1"], rule forallE[where a="x"])
+    apply (rule H, simp)
+    done
+qed
+
+lemma cpair_mono_r [simp, auto]:
+  shows "x N \<Longrightarrow> y N \<Longrightarrow> y \<le> \<langle>x, y\<rangle> = 1"
+by (rule cases_bool[where p="y = 0"], simp+)
+
+lemma noteq_sym [cond]: "\<not> a = b \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> \<not> b = a"
+apply (fold neq_def)
+apply (rule neq_sym)
+apply (simp)
+done
+
+lemma cpair_le_2 [cond, simp]: "(a \<le> c = 1 \<and> \<not> c = 0) \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a < \<langle>b,c\<rangle> = 1"
+apply (rule le_less_trans[where b="c"], simp)
+apply (rule conjE1, simp)
+apply (rule conjE2, simp)
+done
+
+lemma [cond, simp]: "(a \<le> b = 1 \<and> \<not> b = 0 \<and> \<not> b = 1) \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a < \<langle>b,c\<rangle> = 1"
+apply (rule le_less_trans[where b="b"], simp)
+apply (rule conjE1, rule conjE1, simp)
+apply (rule cpair_strict_mono_l, simp)
+apply (rule conjE2, rule conjE1, simp)
+apply (rule conjE2, simp)
+done
+
+lemma [simp, cond]: "a < b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> b > a = 1"
+proof -
+  have H:"a N \<Longrightarrow> b N \<Longrightarrow> \<forall>a. a < b = 1 \<longrightarrow> b > a = 1"
+    proof (induct b, simp)
+      case Base
+        show ?case
+        apply (simp, rule forallI, rule implI, simp)
+        apply (rule exF[where P="0=1"], simp)
+        done
+    next
+      case (Step x)
+        show "a N \<Longrightarrow> b N \<Longrightarrow> x N \<Longrightarrow>
+              \<forall>a. a < x = 1 \<longrightarrow> x > a = 1 \<Longrightarrow>
+              \<forall>a. a < S x = 1 \<longrightarrow> S x > a = 1"
+          apply (rule forallI)
+          proof -
+            fix aa
+            show "b N \<Longrightarrow> x N \<Longrightarrow> aa N \<Longrightarrow> \<forall>a. a < x = 1 \<longrightarrow> x > a = 1 \<Longrightarrow>
+                  aa < S x = 1 \<longrightarrow> S x > aa = 1"
+              apply (unfold_def def_less, simp)
+              apply (rule cases_bool[where p="aa=0"], simp+)
+              apply (rule implI, simp+)
+              apply (rule implI, simp)
+              apply (rule gr_mono_pred, simp+)
+              apply (rule implE[where a="P aa < x = 1"])
+              apply (rule forallE[where a="P aa"], simp)
+              done
+          qed
+    qed
+  show "a < b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> b > a = 1"
+    apply (rule implE[where a="a < b = 1"])
+    apply (rule forallE[where a="a"])
+    apply (rule H, simp)
+    done
+qed
+
+axiomatization
+  cpi' :: "num \<Rightarrow> num \<Rightarrow> num"
+where
+  cpi'_def: "cpi' n x := if n = 0 then 0
+                         else if n = 1 then x
+                         else cpy (cpi' (n-1) x)"
+
+definition cpi :: "num \<Rightarrow> num \<Rightarrow> num" where
+  "cpi n x \<equiv> cpx (cpi' n x)"
+
+lemma [simp]: "cpi' 0 a = 0"
+  by (unfold_def cpi'_def, simp)
+
+lemma [simp]: "cpi 0 a = 0"
+  by (unfold cpi_def, simp)
+
+lemma [simp]: "a N \<Longrightarrow> cpi' 1 a = a"
+by (unfold_def cpi'_def, simp)
+
+lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> cpi 1 \<langle>a, b\<rangle> = a"
+unfolding cpi_def by simp
+
+lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> cpi' 2 \<langle>a, b\<rangle> = b"
+apply (unfold_def cpi'_def, simp)
+apply (unfold_def def_sub, simp)
+done
+
+lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> cpi 2 \<langle>a, b, c\<rangle> = b"
+unfolding cpi_def by simp
+
+lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> cpi' 3 \<langle>a, b, c\<rangle> = c"
+apply (unfold_def cpi'_def, simp)
+apply (unfold_def def_sub, simp)
+done
+
+lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> cpi 3 \<langle>a, b, c, d\<rangle> = c"
+unfolding cpi_def by simp
+
+lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> cpi' 4 \<langle>a, b, c, d\<rangle> = d"
+apply (unfold_def cpi'_def, simp)
+apply (unfold_def def_sub, simp)
+done
+
+lemma [simp]: "x N \<Longrightarrow> x - 1 = P(x)"
+by (unfold_def def_sub, simp)
+
+lemma [auto]: "i N \<Longrightarrow> x N \<Longrightarrow> cpi' i x N"
+proof (induct i, simp)
+  case Base
+    show ?case by simp
+next
+  case (Step i)
+    assume hyp: "cpi' i x N"
+    show "i N \<Longrightarrow> x N \<Longrightarrow> cpi' (S i) x N"
+      apply (unfold_def cpi'_def)
+      apply (rule condT, simp+)+
+      apply (rule hyp)
+      done
+qed
+
+lemma [auto]: "i N \<Longrightarrow> x N \<Longrightarrow> cpi i x N"
+unfolding cpi_def by simp
+
+lemma [simp]: "i N \<Longrightarrow> cpi' i 0 = 0"
+apply (induct i, simp+)
+apply (unfold_def cpi'_def, simp)
+done
+
+lemma [simp]: "i N \<Longrightarrow> cpi i 0 = 0"
+unfolding cpi_def by simp
+
+lemma cpy_nz_arg_nz: "x N \<Longrightarrow> \<not> cpy x = 0 \<Longrightarrow> \<not> x = 0"
+apply (rule grounded_contradiction[where q="cpy x = 0"], simp)
+apply (rule eqSubst[where a="0" and b="x"])
+apply (rule eqSym, rule dNegE, assumption)
+apply (simp)
+done
+
+lemma cpx_nz_arg_nz: "x N \<Longrightarrow> \<not> cpx x = 0 \<Longrightarrow> \<not> x = 0"
+apply (rule grounded_contradiction[where q="cpx x = 0"], simp)
+apply (rule eqSubst[where a="0" and b="x"])
+apply (rule eqSym, rule dNegE, assumption)
+apply (simp)
+done
+
+lemma cpy_mono [simp]: "x N \<Longrightarrow> cpy x \<le> x = 1"
+proof (induct x, simp+)
+  case (Step xa)
+    show "x N \<Longrightarrow> xa N \<Longrightarrow> cpy xa \<le> xa = 1 \<Longrightarrow>
+      (if cpx xa = 0 then 0 else S(cpy xa)) \<le> (S xa) = 1"
+      by (rule cases_bool[where p="cpx xa = 0"], simp+)
+qed
+
+lemma cpy_strict_mono [simp]: "x N \<Longrightarrow> cpy (S x) < (S x) = 1"
+proof (induct strong x, simp)
+  case Base
+    show "x N \<Longrightarrow> cpy 1 < 1 = 1"
+      by (unfold_def cpy_def, simp)
+next
+  case (Step xa)
+    assume hyp: "\<forall>y. y\<le>xa = 1 \<turnstile> cpy (S y) < (S y) = 1"
+    show "x N \<Longrightarrow> xa N \<Longrightarrow> \<forall>y. y\<le>xa = 1 \<turnstile> cpy (S y) < (S y) = 1 \<Longrightarrow> cpy (S S xa) < S S xa = 1"
+      apply (unfold_def cpy_def, simp)
+      apply (rule cases_bool[where p="cpx (S xa) = 0"], simp+)
+      apply (rule cases_bool[where p="cpx xa = 0"], simp+)
+      apply (rule eqSubst[where a="S P xa" and b="xa"], simp)
+      apply (rule cpx_nz_arg_nz, simp)
+      apply (rule entailsE[where a="((P xa) \<le> xa) = 1"])
+      apply (rule forallE[where a="P xa"], simp)
+      done
+qed
+
+lemma [simp, auto]: "x N \<Longrightarrow> \<not> x = 0 \<Longrightarrow> cpy x < x = 1"
+apply (rule cases_nat_2[where x="x"])
+apply (rule exF[where P="x=0"], simp)
+apply (rule cpy_strict_mono, simp)
+done
+
+lemma [simp]: "i N \<Longrightarrow> x N \<Longrightarrow> cpi' (S S i) (S x) < S x = 1"
+proof (induct i, simp)
+  case Base
+    show "i N \<Longrightarrow> x N \<Longrightarrow> cpi' 2 (S x) < (S x) = 1"
+      apply (unfold_def cpi'_def, simp)
+      apply (rule cases_bool[where p="cpx x = 0"], simp+)
+      apply (rule cpx_nz_arg_nz, simp)
+      done
+next
+  case (Step xa)
+    show "i N \<Longrightarrow> x N \<Longrightarrow> xa N \<Longrightarrow> cpi' (S S xa) (S x) < (S x) = 1 \<Longrightarrow> cpi' (S S S xa) (S x) < (S x) = 1"
+      apply (unfold_def cpi'_def, simp)
+      apply (rule le_less_trans[where b="cpi' (S S xa) (S x)"], simp+)
+      done
+qed
+
+ML_file "gd_typeencode.ML"
 text "A manual construction of an inductive datatype.
   Later, we want this to be generated automatically from something
   like \<open>declaretype List = Nil | Cons of \<open>nat\<close> \<open>List\<close>\<close>."
@@ -2861,14 +3129,19 @@ definition Nil :: "List" where
 definition Cons :: "num \<Rightarrow> List \<Rightarrow> List" where
   "Cons n xs \<equiv> \<langle>list_type_tag,2,n,xs\<rangle>"
 
-consts
-  is_list :: "num \<Rightarrow> o"
-
 axiomatization
+  is_list :: "num \<Rightarrow> o" and
+  is_cons :: "num \<Rightarrow> o"
 where
+  is_cons_def: "is_cons x := (cpi 1 x = list_type_tag)
+                              \<and> (cpi 2 x = 2)
+                              \<and> ((cpi 3 x) N)
+                              \<and> (is_list (cpi' 4 x))" and
   is_list_def: "is_list x := if x = Nil
                                then True
-                             else if ((x = Cons n xs) \<and> (is_list xs) \<and> (n N))
+                             else if x = 0
+                               then False
+                             else if is_cons x
                                then True
                              else False"
 
@@ -2878,6 +3151,36 @@ unfolding Nil_def list_type_tag_def by simp
 lemma cons_nat [auto]: "n N \<Longrightarrow> xs N \<Longrightarrow> Cons n xs N"
 unfolding Cons_def list_type_tag_def by simp
 
+lemma list_cons_term [auto]: "x N \<Longrightarrow> (is_list x B) \<and> (is_cons x B)"
+proof (induct strong x)
+  case HQ
+    show "x N \<Longrightarrow> x N" by simp
+next
+  case Base
+    show "x N \<Longrightarrow> (is_list 0 B) \<and> (is_cons 0 B)"
+      apply (unfold_def is_list_def)
+      apply (unfold_def is_cons_def)
+      apply (unfold list_type_tag_def)
+      apply (unfold_def is_list_def)
+      apply (simp)
+      done
+next
+  case (Step xa)
+    show "x N \<Longrightarrow> xa N \<Longrightarrow> \<forall>y. y \<le> xa = 1 \<turnstile> (is_list y B) \<and> (is_cons y B) \<Longrightarrow> (is_list (S xa) B) \<and> (is_cons (S xa) B)"
+      apply (unfold_def is_list_def)
+      apply (unfold_def is_cons_def)
+      apply (unfold list_type_tag_def, simp)
+      apply (rule condTB, simp)+
+      apply (rule conjE1, rule entailsE, rule forallE, simp, rule le_suc_implies_leq, simp)+
+      done
+qed
+
+lemma is_list_terminates [auto]: "x N \<Longrightarrow> is_list x B"
+by (rule conjE1, rule list_cons_term, simp)
+
+lemma is_cons_terminates [auto]: "x N \<Longrightarrow> is_cons x B"
+by (rule conjE2, rule list_cons_term, simp)
+
 lemma [auto]: "is_list Nil"
 by (unfold_def is_list_def, auto)
 
@@ -2885,33 +3188,51 @@ lemma [auto]: "n N \<Longrightarrow> xs N \<Longrightarrow> \<not> Nil = Cons n 
 unfolding Nil_def Cons_def list_type_tag_def
 by simp
 
-lemma [auto]: "n N \<Longrightarrow> xs N \<Longrightarrow> \<not> Cons n xs = Nil"
-by (fold neq_def, rule neq_sym, simp+)
-
-lemma "is_list x \<Longrightarrow> (x = Nil) \<or> (\<exists>n xs. x = Cons n xs)"
-sorry
-
 lemma list_nat [cond]:
   shows "is_list x \<Longrightarrow> x N"
 apply (unfold_def is_list_def)
 sorry
 
+lemma [auto]: "\<not> 0 = Nil"
+unfolding Nil_def list_type_tag_def
+by simp
+
+lemma [auto]: "\<not> is_list 0"
+by (unfold_def is_list_def, simp)
+
+lemma [auto]: "n N \<Longrightarrow> xs N \<Longrightarrow> \<not> 0 = Cons n xs"
+unfolding Nil_def list_type_tag_def Cons_def
+by simp
+
+lemma [auto]: "n N \<Longrightarrow> is_list xs \<Longrightarrow> is_cons (Cons n xs)"
+apply (unfold_def is_cons_def)
+apply (unfold Cons_def list_type_tag_def)
+apply (simp)
+done
+
+(*
+lemma [auto]: "is_cons x \<Longrightarrow> x = (Cons n xs) \<and> (n N) \<and> (is_list xs)"
+apply (rule grounded_contradiction, simp)
+apply (unfold Cons_def)
+sorry
+*)
+
 lemma cons_is_list [auto]:
   shows "n N \<Longrightarrow> is_list xs \<Longrightarrow> is_list (Cons n xs)"
-by (unfold_def is_list_def, auto)
+apply (unfold_def is_list_def)
+apply (unfold_def is_cons_def)
+apply (unfold Cons_def list_type_tag_def)
+apply (simp+)
+done
 
-ML_file "gd_induct.ML"
+lemma "n N \<Longrightarrow> m N \<Longrightarrow> xs N \<Longrightarrow> ys N \<Longrightarrow> Cons n xs = Cons m ys \<Longrightarrow> n = m \<and> xs = ys"
+unfolding Cons_def list_type_tag_def
+apply (rule cpair_inj)
+apply (rule cpair_inj_r, rule cpair_inj_r, simp)
+done
 
-lemma is_list_terminates [auto]: "x N \<Longrightarrow> is_list x B"
-proof (induct strong x, simp)
-  case Base
-    show ?case
-      sorry
-next
-  case (Step xa)
-    show ?case
-      sorry
-qed
+lemma "is_list x \<Longrightarrow> (x = Nil) \<or> (\<exists>n xs. x = Cons n xs)"
+sorry
 
 lemma is_list_cases [consumes 1, case_names Nil Cons]:
   assumes "is_list x"
@@ -2927,16 +3248,21 @@ lemma is_list_cases2 [consumes 1, case_names Nil Cons, elim!]:
 
 thm is_list_cases
 
-lemma "Cons n xs = Cons m ys \<Longrightarrow> n = m \<and> xs = ys"
-sorry
-
 lemma "xs N \<Longrightarrow> n N \<Longrightarrow> xs < Cons n xs = 1"
 unfolding Cons_def list_type_tag_def
 apply (rule less_trans[where y="\<langle>1, n, xs\<rangle>"])
-apply (auto)
+apply (simp)
 sorry
 
-lemma [auto]: "\<not> 0 = Nil"
+(*
+ * TODO: maybe proof this first to simplify structure of list induction proof.
+ * The induction 'step' (corresponding to Cons) is probably too weak and needs
+ * object level connectives.
+ *)
+lemma "is_list a \<Longrightarrow> Q Nil \<Longrightarrow> (x N \<Longrightarrow> is_list xs \<Longrightarrow> Q xs \<Longrightarrow> Q (Cons x xs)) \<Longrightarrow> is_list a \<longrightarrow> Q a"
+apply (induct strong a, simp)
+apply (rule implI, simp)
+apply (rule exF[where P="is_list 0"], simp)
 sorry
 
 lemma list_induction:
@@ -2947,21 +3273,20 @@ lemma list_induction:
 proof -
   have "is_list a \<longrightarrow> Q a"
     proof (induct strong a)
-      show "a N" by (rule list_nat, rule a_list)
-      show "is_list 0 \<longrightarrow> Q 0"
+      case HQ
+      show ?case by (rule list_nat, rule a_list)
+    next
+      case Base
+      show ?case
         apply (rule notE_impl)
         apply (unfold_def is_list_def)
         sorry
-      show "\<And>x. x N \<Longrightarrow> (\<forall>y. y \<le> x = 1 \<turnstile> is_list y \<longrightarrow> Q y) \<Longrightarrow> is_list S x \<longrightarrow> Q S x"
-        proof -
-          fix x
-          assume hyp: "\<forall>y. y\<le>x = 1 \<turnstile> is_list y \<longrightarrow> Q y"
-          show "x N \<Longrightarrow> is_list S x \<longrightarrow> Q (S x)"
-            apply (rule implI)
-            apply (rule cases_bool [where p="is_list S x"])
-            apply (simp)
-            sorry
-        qed
+    next
+      case (Step x)
+      show ?case
+        apply (rule implI)
+        apply (rule cases_bool [where p="is_list S x"])
+        sorry
     qed
   then show ?thesis
     apply (rule implE)
@@ -2979,7 +3304,7 @@ axiomatization
   sum :: "List \<Rightarrow> num"
 where
   sum_def: "sum x := if x = Nil then 0
-                     else if (x = (Cons n xs) \<and> is_list xs \<and> (n N)) then n + (sum xs)
+                     else if (is_cons x) then (cpi 3 x) + (sum (cpi' 4 x))
                      else omega"
 
 lemma [auto]:
@@ -2998,15 +3323,16 @@ sorry
 *)
 
 lemma [simp]: "sum Nil = 0"
-apply (unfold_def sum_def)
-apply (auto)
-done
+by (unfold_def sum_def, auto)
 
-lemma [simp]: "n N \<Longrightarrow> is_list xs \<Longrightarrow> sum (Cons n xs) = n + sum xs"
+lemma [simp]: "n N \<Longrightarrow> is_list xs \<Longrightarrow> xs N \<Longrightarrow> sum (Cons n xs) = n + sum xs"
 apply (rule eqSym)
 apply (unfold_def sum_def)
 apply (rule eqSym)
 apply (auto)
+apply (unfold Cons_def)
+apply (unfold list_type_tag_def)
+apply (simp)
 done
 
 lemma "sum (Cons 4 (Cons 3 (Nil))) = 7"
