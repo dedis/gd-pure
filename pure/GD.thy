@@ -1240,16 +1240,6 @@ proof (rule ind, simp)
     done
 qed
 
-lemma leq_0_then_0:
-  shows "x N \<Longrightarrow> x \<le> 0 = 1 \<Longrightarrow> x = 0"
-apply (rule grounded_contradiction[where q="x \<le> 0 = 1"])
-apply (simp)
-apply (rule eqSubst[where a="0" and b="x \<le> 0"])
-apply (rule eqSym)
-apply (unfold_def def_leq)
-apply (simp+)
-done
-
 lemma neq_monotone_suc:
   shows "x N \<Longrightarrow> y N \<Longrightarrow> \<not> x = y \<Longrightarrow> \<not> S x = S y"
 apply (rule grounded_contradiction[where q="x = y"])
@@ -1308,7 +1298,7 @@ proof -
         assume x_nz: "\<not> x = 0"
         show "x N \<Longrightarrow> x \<le> 0 = 1 \<Longrightarrow> \<not>x = 0 \<Longrightarrow> x < 0 = 1"
           apply (rule exF[where P="x = 0"])
-          apply (rule leq_0_then_0)
+          apply (rule leq_0)
           apply (simp)
           done
       qed
@@ -1542,7 +1532,7 @@ proof -
           assume x_nat: "x N"
           assume x_le_0: "x \<le> 0 = 1"
           have x_zero: "x = 0"
-            apply (rule leq_0_then_0)
+            apply (rule leq_0)
             apply (rule x_nat)
             apply (rule x_le_0)
             done
@@ -2158,7 +2148,7 @@ lemma nz_monotone_leq:
 apply (rule grounded_contradiction[where q="S(x) = 0"])
 apply (auto)
 apply (rule y_nat)
-apply (rule leq_0_then_0)
+apply (rule leq_0)
 apply (rule natS)
 apply (rule x_nat)
 apply (rule eqSubst[where a="y" and b="0" and Q="\<lambda>c. S x \<le> c = 1"])
