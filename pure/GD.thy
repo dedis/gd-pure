@@ -2525,14 +2525,40 @@ apply (rule ind[where a="x"], simp)
 apply (unfold_def def_less, simp)
 done
 
-lemma "a N \<Longrightarrow> P(a - b) = P(a) - b"
-sorry
+lemma [simp]: "x N \<Longrightarrow> 0 - x = 0"
+apply (induct x, simp)
+apply (unfold_def def_sub, simp)
+done
+
+lemma unfold_sub: "a N \<Longrightarrow> b N \<Longrightarrow> a - (S b) = P(a - b)"
+apply (rule eqSym, unfold_def def_sub, rule eqSym)
+apply (simp)
+done
+
+lemma [simp]: "a N \<Longrightarrow> a - 1 = P(a)"
+by (unfold_def def_sub, simp)
+
+lemma sub_mono_suc: "a N \<Longrightarrow> b N \<Longrightarrow> S a - S b = a - b"
+apply (induct b, simp+)
+apply (rule eqSym, unfold_def def_sub, rule eqSym, simp)
+apply (simp add: unfold_sub)
+done
+
+lemma fold_sub: "a N \<Longrightarrow> b N \<Longrightarrow> P(S(a) - b) = (S a) - (S b)"
+by (rule eqSym, rule unfold_sub, simp)
+
+lemma sub_distr_pred: "a N \<Longrightarrow> b N \<Longrightarrow> P(a - b) = P(a) - b"
+apply (induct a, simp+)
+apply (simp add: fold_sub sub_mono_suc)
+done
 
 lemma [simp]: "a N \<Longrightarrow> a - a = 0"
+apply (induct a, simp)
 apply (unfold_def def_sub)
-sorry
+apply (simp add: sub_distr_pred)
+done
 
-lemma div_x_x_1 [auto]:
+lemma div_x_x_1 [auto, simp]:
   shows "x N \<Longrightarrow> div (S x) (S x) = 1"
 by (unfold_def def_div, simp)
 
@@ -2670,9 +2696,19 @@ apply (rule eqSubst[where a="a < b" and b="a < a"])
 apply (rule eqSubst[where a="a" and b="b"])
 apply (rule dNegE, assumption)
 apply (rule eqSubst[where a="0" and b="a < a"])
-apply (rule eqSym, simp)
-apply (rule eqSubst[where a="0" and b="a < a"])
-apply (rule eqSym, simp)
+apply (rule eqSym, simp+)
+done
+
+lemma [simp, auto]: "a N \<Longrightarrow> a > a = 0"
+unfolding greater_def by simp
+
+lemma gr_impl_neq [cond]: "a > b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> \<not> a = b"
+apply (rule grounded_contradiction[where q="a > a = 1"], simp)
+apply (rule eqSubst[where a="a > b" and b="a > a"])
+apply (rule eqSubst[where a="a" and b="b"])
+apply (rule dNegE, assumption)
+apply (rule eqSubst[where a="0" and b="a > a"])
+apply (rule eqSym, simp+)
 done
 
 lemma le_less_trans: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a \<le> b = 1 \<Longrightarrow> b < c = 1 \<Longrightarrow> a < c = 1"
@@ -2736,10 +2772,6 @@ apply (unfold_def def_add, simp)
 apply (rule le_less_trans[where b="x+y"], simp)
 done
 
-lemma cpair_strict_mono_l [cond]:
-  shows "\<not> x = 0 \<and> \<not> x = 1 \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> x < \<langle>x, y\<rangle> = 1"
-sorry
-
 lemma add_assoc: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a + b + c = a + (b + c)"
 apply (induct c, simp+)
 apply (unfold_def def_add, simp)
@@ -2767,6 +2799,47 @@ next
     apply (simp add: add_assoc)+
     done
 qed
+
+lemma sum_0_summands_0: "a N \<Longrightarrow> b N \<Longrightarrow> a + b = 0 \<Longrightarrow> a = 0 \<and> b = 0"
+apply (rule implE[where a="a+b=0"])
+apply (unfold_def def_add)
+apply (rule cases_bool[where p="b=0"], simp+)
+apply (rule implI, simp+)+
+apply (rule exF[where P="S(a + P b) = 0"], simp)+
+done
+
+lemma [cond]: "\<not> a = 0 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> \<not> a + b = 0"
+apply (rule grounded_contradiction[where q="a = 0"], simp)
+apply (rule conjE1[where q="b=0"], rule sum_0_summands_0, simp, rule dNegE, simp)
+done
+
+lemma [cond]: "\<not> b = 0 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> \<not> a + b = 0"
+apply (rule grounded_contradiction[where q="b = 0"], simp)
+apply (rule conjE2, rule sum_0_summands_0, simp, rule dNegE, simp)
+done
+
+lemma noteq_sym [cond]: "\<not> a = b \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> \<not> b = a"
+apply (fold neq_def)
+apply (rule neq_sym)
+apply (simp)
+done
+
+lemma [simp]: "x N \<Longrightarrow> y N \<Longrightarrow> P(S x + y) = x + y"
+apply (induct y, simp+)
+apply (rule eqSym, unfold_def def_add, rule eqSym, simp)
+apply (unfold_def def_add, simp)
+proof -
+  fix xa
+  show "x N \<Longrightarrow> y N \<Longrightarrow> xa N \<Longrightarrow> P(S x + xa) = x + xa \<Longrightarrow> S x + xa = S(x + xa)"
+  apply (rule eqSubst[where a="P(S x + xa)" and b="x+xa"], simp)
+  apply (subst suc_pred_inv, simp)
+  done
+qed
+
+lemma [cond, simp]: "0 < b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> a < a + b = 1"
+apply (induct a, simp+)
+apply (unfold_def def_less, simp+)
+done
 
 lemma [simp, auto]:
   shows "\<not> y = 0 \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> y < \<langle>x, y\<rangle> = 1"
@@ -2811,22 +2884,84 @@ lemma cpair_mono_r [simp, auto]:
   shows "x N \<Longrightarrow> y N \<Longrightarrow> y \<le> \<langle>x, y\<rangle> = 1"
 by (rule cases_bool[where p="y = 0"], simp+)
 
-lemma noteq_sym [cond]: "\<not> a = b \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> \<not> b = a"
-apply (fold neq_def)
-apply (rule neq_sym)
-apply (simp)
-done
-
 lemma cpair_le_2 [cond, simp]: "(a \<le> c = 1 \<and> \<not> c = 0) \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a < \<langle>b,c\<rangle> = 1"
 apply (rule le_less_trans[where b="c"], simp)
 apply (rule conjE1, simp)
 apply (rule conjE2, simp)
 done
 
+lemma leq_mono_add_l [cond, simp]: "b \<le> c = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a + b \<le> a + c = 1"
+apply (induct a, simp+)
+apply (unfold_def def_leq, simp)
+done
+
+lemma leq_mono_add_r [cond, simp]: "b \<le> c = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> b + a \<le> c + a = 1"
+apply (induct a, simp+)
+apply (unfold_def def_add, simp)+
+done
+
+lemma less_mono_add_l [cond, simp]: "b < c = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a + b < a + c = 1"
+apply (induct a, simp+)
+apply (unfold_def def_less, simp)
+done
+
+lemma less_mono_add_r [cond, simp]: "b < c = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> b + a < c + a = 1"
+apply (induct a, simp+)
+apply (unfold_def def_add, simp)+
+done
+
+lemma [auto]: "a N \<Longrightarrow> b N \<Longrightarrow> \<not> S(a) * S(b) = 0"
+by (unfold_def def_mult, simp)
+
+lemma mult_div: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> c < b = 1 \<Longrightarrow> (S a) < div ((S a)*b) c = 1"
+sorry
+
+lemma leq_mono_div: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a \<le> b = 1 \<Longrightarrow> div a (S c) \<le> div b (S c) = 1"
+sorry
+
+lemma leq_mono_mult_r [cond, simp]: "a \<le> b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a * c \<le> b * c = 1"
+sorry
+
+lemma leq_mono_mult_l [cond, simp]: "a \<le> b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> c * a \<le> c * b = 1"
+sorry
+
+lemma [cond, simp]: "a < b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a < b + c = 1"
+apply (induct c, simp+)
+apply (unfold_def def_add, simp)
+proof -
+  fix x
+  show "a < b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> x N \<Longrightarrow> a < b + x = 1 \<Longrightarrow> a < S(b + x) = 1"
+    by (rule less_le_trans[where b="b+x"], simp)
+qed
+
+lemma [auto, simp]:
+  "x N \<Longrightarrow> y N \<Longrightarrow> S S x < \<langle>(S S x), y\<rangle> = 1"
+apply (induct y, simp+)
+apply (rule less_le_trans[where b="div ((S S x) * 3) 2"], simp)
+apply (rule mult_div, simp)
+apply (rule leq_mono_div, simp+)
+apply (unfold_def cpair_def, simp)
+done
+
+lemma pred_inj_if_nz: "a N \<Longrightarrow> b N \<Longrightarrow> \<not> a = 0 \<Longrightarrow> \<not> b = 0 \<Longrightarrow> P a = P b \<Longrightarrow> a = b"
+apply (rule suc_nz[where x="a"], assumption+)
+apply (rule suc_nz[where x="b"], assumption+)
+apply (simp)
+done
+
+lemma cpair_strict_mono_l [simp]:
+  "\<not> x = 0 \<Longrightarrow> \<not> x = 1 \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> x < \<langle>x, y\<rangle> = 1"
+apply (rule suc_nz[where x="x"], simp)
+apply (rule suc_nz[where x="P(x)"])
+apply (rule grounded_contradiction[where q="x=1"], simp)
+apply (rule pred_inj_if_nz, simp+)
+apply (rule dNegE, simp)
+done
+
 lemma [cond, simp]: "(a \<le> b = 1 \<and> \<not> b = 0 \<and> \<not> b = 1) \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a < \<langle>b,c\<rangle> = 1"
 apply (rule le_less_trans[where b="b"], simp)
 apply (rule conjE1, rule conjE1, simp)
-apply (rule cpair_strict_mono_l, simp)
+apply (rule cpair_strict_mono_l)
 apply (rule conjE2, rule conjE1, simp)
 apply (rule conjE2, simp)
 done
@@ -2891,7 +3026,6 @@ unfolding cpi_def by simp
 
 lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> cpi' 2 \<langle>a, b\<rangle> = b"
 apply (unfold_def cpi'_def, simp)
-apply (unfold_def def_sub, simp)
 done
 
 lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> cpi 2 \<langle>a, b, c\<rangle> = b"
@@ -2899,7 +3033,6 @@ unfolding cpi_def by simp
 
 lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> cpi' 3 \<langle>a, b, c\<rangle> = c"
 apply (unfold_def cpi'_def, simp)
-apply (unfold_def def_sub, simp)
 done
 
 lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> cpi 3 \<langle>a, b, c, d\<rangle> = c"
@@ -2907,7 +3040,6 @@ unfolding cpi_def by simp
 
 lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> cpi' 4 \<langle>a, b, c, d\<rangle> = d"
 apply (unfold_def cpi'_def, simp)
-apply (unfold_def def_sub, simp)
 done
 
 lemma [simp]: "x N \<Longrightarrow> x - 1 = P(x)"
