@@ -2786,6 +2786,21 @@ apply (rule suc_nz[where x="a"], simp)
 apply (rule suc_nz[where x="b"], simp)
 done
 
+lemma not_le_mono_suc: "a N \<Longrightarrow> b N \<Longrightarrow> a < b = 0 \<Longrightarrow> S a < S b = 0"
+by (unfold_def def_less, simp)
+
+lemma geq_mono_suc [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> a \<ge> b = 1 \<Longrightarrow> S a \<ge> S b = 1"
+apply (unfold geq_def, simp)
+apply (rule not_le_mono_suc, simp)
+apply (rule sub_eq_self_imp_zero[where y="0"], simp)
+done
+
+lemma geq_mono_pred [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> \<not> a = 0 \<Longrightarrow> \<not> b = 0 \<Longrightarrow> P a \<ge> P b = 1 \<Longrightarrow> a \<ge> b = 1"
+apply (rule suc_nz[where x="a"], simp)
+apply (rule suc_nz[where x="b"], simp)
+apply (rule geq_mono_suc, simp)
+done
+
 lemma cpair_strict_mono_r [auto, simp]: "x N \<Longrightarrow> y N \<Longrightarrow> (S y) < \<langle>x, (S y)\<rangle> = 1"
 proof (induct y, simp+)
   case Base
@@ -2915,17 +2930,110 @@ done
 lemma [auto]: "a N \<Longrightarrow> b N \<Longrightarrow> \<not> S(a) * S(b) = 0"
 by (unfold_def def_mult, simp)
 
-lemma mult_div: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> c < b = 1 \<Longrightarrow> (S a) < div ((S a)*b) c = 1"
+lemma mult_div:
+  "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> c < b = 1 \<Longrightarrow> (S a) < div ((S a)*b) c = 1"
 sorry
 
-lemma leq_mono_div: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a \<le> b = 1 \<Longrightarrow> div a (S c) \<le> div b (S c) = 1"
-sorry
+lemma zero_not_less_impl_zero: "a N \<Longrightarrow> 0 < a = 0 \<Longrightarrow> a = 0"
+apply (rule grounded_contradiction[where q="0 < S(P a) = 0"], simp)
+apply (simp)
+apply (rule eqSubst[where a="1" and b="0 < S P a"], rule eqSym)
+apply (rule zero_less_true, simp)
+done
 
-lemma leq_mono_mult_r [cond, simp]: "a \<le> b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a * c \<le> b * c = 1"
-sorry
+lemma zero_not_less_zero [cond]: "a = 0 \<Longrightarrow> a N \<Longrightarrow> 0 < a = 0"
+by simp
 
-lemma leq_mono_mult_l [cond, simp]: "a \<le> b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> c * a \<le> c * b = 1"
-sorry
+lemma [simp, auto]: "x N \<Longrightarrow> S x \<ge> 0 = 1"
+by (unfold geq_def, simp)
+
+lemma "a N \<Longrightarrow> b N \<Longrightarrow> a \<le> b = 1 \<Longrightarrow> b \<ge> a = 1"
+proof -
+  have H:"a N \<Longrightarrow> b N \<Longrightarrow> \<forall>a. a \<le> b = 1 \<longrightarrow> b \<ge> a = 1"
+    proof (induct b, simp)
+      case Base
+        show ?case
+          apply (rule forallI, rule implI, simp)
+          apply (unfold geq_def, simp)
+          apply (rule zero_not_less_zero)
+          apply (rule leq_0, simp)
+          done
+    next
+      case (Step x)
+        show "a N \<Longrightarrow> b N \<Longrightarrow> x N \<Longrightarrow>
+              \<forall>a. a \<le> x = 1 \<longrightarrow> x \<ge> a = 1 \<Longrightarrow>
+              \<forall>a. a \<le> S x = 1 \<longrightarrow> S x \<ge> a = 1"
+          apply (rule forallI)
+          proof -
+            fix aa
+            show "b N \<Longrightarrow> x N \<Longrightarrow> aa N \<Longrightarrow> \<forall>a. a \<le> x = 1 \<longrightarrow> x \<ge> a = 1 \<Longrightarrow>
+                  aa \<le> S x = 1 \<longrightarrow> S x \<ge> aa = 1"
+              apply (unfold_def def_leq, simp)
+              apply (rule cases_bool[where p="aa=0"], simp+)
+              apply (rule implI, simp+)
+              apply (rule implI, simp)
+              apply (rule geq_mono_pred, simp+)
+              apply (rule implE[where a="P aa \<le> x = 1"])
+              apply (rule forallE[where a="P aa"], simp)
+              done
+          qed
+    qed
+  show "a \<le> b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> b \<ge> a = 1"
+    apply (rule implE[where a="a \<le> b = 1"])
+    apply (rule forallE[where a="a"])
+    apply (rule H, simp)
+    done
+qed
+
+lemma leq_mono_div:
+  "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a \<le> b = 1 \<Longrightarrow> div a (S c) \<le> div b (S c) = 1"
+apply (rule implE[where a="a\<le>b=1"])
+apply (induct strong a, simp)
+apply (rule implI, simp+)
+apply (rule implI, simp)
+proof -
+  fix x
+  show "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> x N \<Longrightarrow> a \<le> b = 1 \<Longrightarrow>
+     \<forall>y. y \<le> x = 1 \<turnstile> y \<le> b = 1 \<longrightarrow> div y (S c) \<le> div b (S c) = 1 \<Longrightarrow>
+     S x \<le> b = 1 \<Longrightarrow> div (S x) (S c) \<le> div b (S c) = 1"
+    apply (unfold_def def_div)
+    apply (rule cases_bool[where p="b<S c = 1"], simp+)
+    sorry
+qed
+
+lemma leq_mono_mult_r [cond, simp]:
+  "a \<le> b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a * c \<le> b * c = 1"
+apply (induct c, simp+)
+apply (unfold_def def_mult, simp)+
+proof -
+  fix x
+  show "a \<le> b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> x N \<Longrightarrow> a * x \<le> b * x = 1 \<Longrightarrow>
+        a + a * x \<le> b + b * x = 1"
+    by (rule leq_trans[where y="a + b*x"], simp)
+qed
+
+lemma leq_mono_mult_l [cond, simp]:
+  "a \<le> b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> c * a \<le> c * b = 1"
+apply (rule implE[where a="a\<le>b=1"])
+apply (rule forallE[where a="b"])
+apply (induct a, simp)
+apply (rule forallI, rule implI, simp+)
+proof (rule forallI)
+  fix a b
+  show "\<forall>b. a \<le> b = 1 \<longrightarrow> c * a \<le> c * b = 1 \<Longrightarrow>
+        a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> S a \<le> b = 1 \<longrightarrow> c * (S a) \<le> c * b = 1"
+    apply (rule cases_bool[where p="b=0"], simp)
+    apply (rule implI, simp)
+    apply (rule exF[where P="S a = 0"], simp)
+    apply (rule leq_0, simp)
+    apply (unfold_def def_leq, simp)
+    apply (rule implI, simp)
+    apply (unfold_def def_mult, simp)+
+    apply (rule leq_mono_add_l)
+    apply (rule implE[where a="a\<le>P b=1"])
+    apply (rule forallE[where a="P b"], simp)
+    done
+qed
 
 lemma [cond, simp]: "a < b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a < b + c = 1"
 apply (induct c, simp+)
@@ -2958,6 +3066,13 @@ apply (rule suc_nz[where x="P(x)"])
 apply (rule grounded_contradiction[where q="x=1"], simp)
 apply (rule pred_inj_if_nz, simp+)
 apply (rule dNegE, simp)
+done
+
+lemma cpair_mono_l:
+  "x N \<Longrightarrow> y N \<Longrightarrow> x \<le> \<langle>x,y\<rangle> = 1"
+apply (rule cases_bool[where p="x=0"], simp+)
+apply (rule cases_bool[where p="x=1"], simp+)
+apply (induct y, simp+)
 done
 
 lemma [cond, simp]: "(a \<le> b = 1 \<and> \<not> b = 0 \<and> \<not> b = 1) \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a < \<langle>b,c\<rangle> = 1"
@@ -3237,7 +3352,6 @@ done
 lemma [auto]: "is_cons x \<Longrightarrow> x = (Cons n xs) \<and> (n N) \<and> (is_list xs)"
 apply (rule grounded_contradiction, simp)
 apply (unfold Cons_def)
-sorry
 *)
 
 lemma cons_is_list [auto]:
@@ -3268,8 +3382,6 @@ lemma is_list_cases2 [consumes 1, case_names Nil Cons, elim!]:
   and cons_branch:  "\<And>n xs. x = Cons n xs \<Longrightarrow> Q"
   shows "Q"
     sorry
-
-thm is_list_cases
 
 lemma "xs N \<Longrightarrow> n N \<Longrightarrow> xs < Cons n xs = 1"
 unfolding Cons_def list_type_tag_def
