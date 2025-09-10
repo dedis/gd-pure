@@ -24,10 +24,6 @@ struct
         assume_tac ctxt
         ORELSE' resolve_tac ctxt close
         ORELSE' GDAuto.gd_auto_tac ctxt
-      val _ = tracing (Pretty.string_of
-        (Pretty.block [Pretty.str "prems: ",
-            Pretty.list "" "" (map (Syntax.pretty_term ctxt o Thm.prop_of) (Simplifier.prems_of ctxt))]));
-
     in
       REPEAT_DETERM (CHANGED (tac i))
     end

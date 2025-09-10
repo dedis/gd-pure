@@ -712,7 +712,9 @@ apply (rule H1)
 apply (assumption)
 done
 
+(*
 declare [[simp_trace = true, simp_trace_depth_limit = 8]]
+ *)
 
 lemma [auto]: "c B \<Longrightarrow> if c then True else True"
   by simp
