@@ -1,18 +1,21 @@
 structure GD_Simp =
 struct
   fun reflect_eq th: thm = th RS @{thm eq_reflection};
+  fun reflect_iff th: thm = th RS @{thm iff_reflection};
 
   fun match_object_rule th trm =
     case trm of
-    Const (@{const_name GD.eq},  _) $ _ $ _ =>
+      Const (@{const_name GD.eq},  _) $ _ $ _ =>
         (case try reflect_eq th of SOME th' => [th'] | NONE => [])
+    | Const (@{const_name GD.iff},  _) $ _ $ _ =>
+        (case try reflect_iff th of SOME th' => [th'] | NONE => [])
     | _ => []
 
   fun mksimps (_: Proof.context) th =
-    (case Thm.concl_of th of
-       Const (\<^const_name>\<open>Pure.eq\<close>, _) $ _ $ _ => [th]  (* already t \<equiv> u *)
+    case Thm.concl_of th of
+       Const (\<^const_name>\<open>Pure.eq\<close>, _) $ _ $ _ => [th]
      | Const (\<^const_name>\<open>GD.Trueprop\<close>, _) $ x => match_object_rule th x
-     | _ => (case try reflect_eq th of SOME th' => [th'] | NONE => []))
+     | _ => []
   fun gd_mk_meta_cong (_: Proof.context) rl =
     (case Thm.concl_of rl of
       Const (\<^const_name>\<open>Pure.eq\<close>, _) $ _ $ _ => rl
@@ -47,4 +50,18 @@ let
 in
   Theory.setup
     (Simplifier.map_theory_simpset set_ssolver)
-end
+end;
+
+val parse_nat =
+  Scan.optional (Scan.lift Parse.nat >> SOME) NONE
+
+val _ =
+  Theory.setup
+    (Method.setup @{binding gd_simp}
+      (parse_nat >> (fn opt_n => fn ctxt =>
+        let
+          val ctxt' = (case opt_n of NONE => ctxt | SOME n => Config.put gd_auto_depth_limit n ctxt)
+        in
+          SIMPLE_METHOD' (fn i => CHANGED (asm_simp_tac ctxt' i))
+        end))
+      "simp with GD solver; optional fuel")
