@@ -704,7 +704,9 @@ apply (rule H1)
 apply (assumption)
 done
 
+(*
 declare [[simp_trace = true, simp_trace_depth_limit = 8]]
+*)
 
 lemma [auto]: "c B \<Longrightarrow> if c then True else True"
   by simp
@@ -1036,7 +1038,7 @@ apply (rule x_z, simp)+
 apply (rule x_nz, simp)+
 done
 
-lemma leq_monotone_pred:
+lemma leq_monotone_pred [simp]:
   assumes x_nat: "x N"
   assumes y_nat: "y N"
   assumes H: "x \<le> y = 1"
@@ -1379,7 +1381,7 @@ proof (rule grounded_contradiction[where q="x < 1 = 0"])
       done
 qed
 
-lemma le_monotone_suc [auto]:
+lemma le_monotone_suc [simp]:
   shows "x < y = 1 \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> S x < S y = 1"
 by (unfold_def def_less, simp)
 
@@ -1614,7 +1616,7 @@ proof (rule ind[where a=y])
     qed
 qed
 
-lemma sub_nz_leq_pred:
+lemma sub_nz_leq_pred [simp]:
   assumes x_nat: "x N"
   assumes y_nat: "y N"
   shows "(S x) - (S y) \<le> x = 1"
@@ -1814,7 +1816,7 @@ by (rule conjE1, rule cpx_cpy_terminate, assumption)
 lemma cpy_terminates [auto]: "x N \<Longrightarrow> cpy x N"
 by (rule conjE2, rule cpx_cpy_terminate, assumption)
 
-lemma "x N \<Longrightarrow> cpx (S x) = (if cpx x = 0 then S(cpy x)
+lemma cpx_suc: "x N \<Longrightarrow> cpx (S x) = (if cpx x = 0 then S(cpy x)
                            else P(cpx x))"
 apply (rule eqSym)
 apply (unfold_def cpx_def)
@@ -1824,7 +1826,7 @@ apply (rule condI2Eq, simp)
 apply (rule condT, simp)+
 done
 
-lemma [simp]: "x N \<Longrightarrow> cpy (S x) = (if cpx x = 0 then 0
+lemma cpy_suc: "x N \<Longrightarrow> cpy (S x) = (if cpx x = 0 then 0
                            else S(cpy x))"
 apply (rule eqSym)
 apply (unfold_def cpy_def)
@@ -2931,7 +2933,7 @@ by simp
 lemma [simp]: "x N \<Longrightarrow> S x \<ge> 0 = 1"
 by (unfold geq_def, simp)
 
-lemma "a N \<Longrightarrow> b N \<Longrightarrow> a \<le> b = 1 \<Longrightarrow> b \<ge> a = 1"
+lemma le_impl_ge: "a N \<Longrightarrow> b N \<Longrightarrow> a \<le> b = 1 \<Longrightarrow> b \<ge> a = 1"
 proof -
   have H:"a N \<Longrightarrow> b N \<Longrightarrow> \<forall>a. a \<le> b = 1 \<longrightarrow> b \<ge> a = 1"
     proof (induct b, simp)
@@ -2969,20 +2971,83 @@ proof -
     done
 qed
 
+lemma [auto]: "a N \<Longrightarrow> b N \<Longrightarrow> a \<ge> b N"
+unfolding geq_def by simp
+
+lemma [simp]: "a N \<Longrightarrow> 0 \<ge> S a = 0"
+unfolding geq_def by simp
+
+lemma ge_impl_le: "a N \<Longrightarrow> b N \<Longrightarrow> a \<ge> b = 1 \<Longrightarrow> b \<le> a = 1"
+proof -
+  have H:"a N \<Longrightarrow> b N \<Longrightarrow> \<forall>a. a \<ge> b = 1 \<longrightarrow> b \<le> a = 1"
+    proof (induct b, simp)
+      case Base
+        show ?case
+          by (rule forallI, rule implI, simp)
+    next
+      case (Step x)
+        show "a N \<Longrightarrow> b N \<Longrightarrow> x N \<Longrightarrow>
+              \<forall>a. a \<ge> x = 1 \<longrightarrow> x \<le> a = 1 \<Longrightarrow>
+              \<forall>a. a \<ge> S x = 1 \<longrightarrow> S x \<le> a = 1"
+          apply (rule forallI)
+          proof -
+            fix aa
+            show "b N \<Longrightarrow> x N \<Longrightarrow> aa N \<Longrightarrow> \<forall>a. a \<ge> x = 1 \<longrightarrow> x \<le> a = 1 \<Longrightarrow>
+                  aa \<ge> S x = 1 \<longrightarrow> S x \<le> aa = 1"
+              apply (unfold_def def_leq, simp)
+              apply (rule cases_bool[where p="aa=0"], simp+)
+              apply (rule implI, simp+)
+              apply (unfold geq_def)
+              apply (unfold_def def_less, simp, fold geq_def)
+              apply (rule implI, simp)
+              apply (rule implE[where a="P aa \<ge> x = 1"])
+              apply (rule forallE[where a="P aa"], simp)
+              done
+          qed
+    qed
+  show "a \<ge> b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> b \<le> a = 1"
+    apply (rule implE[where a="a \<ge> b = 1"])
+    apply (rule forallE[where a="a"])
+    apply (rule H, simp)
+    done
+qed
+
+lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a \<le> b = 1 \<Longrightarrow> a - c \<le> b - c = 1"
+apply (induct c, simp+)
+apply (unfold_def def_sub, simp+)+
+done
+
 lemma leq_mono_div:
   "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a \<le> b = 1 \<Longrightarrow> div a (S c) \<le> div b (S c) = 1"
 apply (rule implE[where a="a\<le>b=1"])
+apply (rule forallE[where a="b"])
 apply (induct strong a, simp)
+apply (rule forallI)
 apply (rule implI, simp+)
+apply (rule forallI)
 apply (rule implI, simp)
 proof -
-  fix x
-  show "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> x N \<Longrightarrow> a \<le> b = 1 \<Longrightarrow>
-     \<forall>y. y \<le> x = 1 \<turnstile> y \<le> b = 1 \<longrightarrow> div y (S c) \<le> div b (S c) = 1 \<Longrightarrow>
-     S x \<le> b = 1 \<Longrightarrow> div (S x) (S c) \<le> div b (S c) = 1"
+  fix x b'
+  show "a N \<Longrightarrow> b N \<Longrightarrow> b' N \<Longrightarrow> c N \<Longrightarrow> x N \<Longrightarrow> a \<le> b = 1 \<Longrightarrow>
+     \<forall>y. y \<le> x = 1 \<turnstile> (\<forall>c'. y \<le> c' = 1 \<longrightarrow> div y (S c) \<le> div c' (S c) = 1) \<Longrightarrow>
+     S x \<le> b' = 1 \<Longrightarrow> div (S x) (S c) \<le> div b' (S c) = 1"
     apply (unfold_def def_div)
-    apply (rule cases_bool[where p="b<S c = 1"], simp+)
-    sorry
+    apply (rule cases_bool[where p="b' < S c = 1"], simp+)
+    apply (unfold_def def_div)
+    apply (rule cases_bool[where p="S x < S c = 1"], simp+)
+    apply (rule grounded_contradiction[where q="S x < S c = 1"], simp)
+    apply (rule le_less_trans[where b="b'"], simp+)
+    apply (rule ge_impl_le, simp)
+    apply (unfold_def def_div)
+    apply (rule cases_bool[where p="S x < S c = 1"], simp+)
+    apply (rule le_impl_ge, simp)
+    apply (rule leq_monotone_suc, simp)
+    apply (rule implE)
+    apply (rule forallE[where a="b' - S c"])
+    apply (rule entailsE)
+    apply (rule forallE[where a="S x - S c"])
+    apply (simp+)
+    done
 qed
 
 lemma leq_mono_mult_r [simp]:
@@ -3181,7 +3246,8 @@ apply (simp)
 done
 
 lemma cpy_mono [simp]: "x N \<Longrightarrow> cpy x \<le> x = 1"
-proof (induct x, simp+)
+apply (induct x)
+proof (simp add: cpy_suc)+
   case (Step xa)
     show "x N \<Longrightarrow> xa N \<Longrightarrow> cpy xa \<le> xa = 1 \<Longrightarrow>
       (if cpx xa = 0 then 0 else S(cpy xa)) \<le> (S xa) = 1"
@@ -3198,12 +3264,15 @@ next
     assume hyp: "\<forall>y. y\<le>xa = 1 \<turnstile> cpy (S y) < (S y) = 1"
     show "x N \<Longrightarrow> xa N \<Longrightarrow> \<forall>y. y\<le>xa = 1 \<turnstile> cpy (S y) < (S y) = 1 \<Longrightarrow> cpy (S S xa) < S S xa = 1"
       apply (unfold_def cpy_def, simp)
-      apply (rule cases_bool[where p="cpx (S xa) = 0"], simp+)
-      apply (rule cases_bool[where p="cpx xa = 0"], simp+)
+      apply (rule cases_bool[where p="cpx (S xa) = 0"])
+      apply (simp add: cpx_suc)+
+      apply (rule cases_bool[where p="cpx xa = 0"])
+      apply (simp add: cpx_suc cpy_suc)+
       apply (rule eqSubst[where a="S P xa" and b="xa"], simp)
       apply (rule cpx_nz_arg_nz, simp)
+      apply (rule le_monotone_suc)+
       apply (rule entailsE[where a="((P xa) \<le> xa) = 1"])
-      apply (rule forallE[where a="P xa"], simp)
+      apply (rule forallE[where a="P xa"], simp+)
       done
 qed
 
@@ -3217,10 +3286,7 @@ lemma [simp]: "i N \<Longrightarrow> x N \<Longrightarrow> cpi' (S S i) (S x) < 
 proof (induct i, simp)
   case Base
     show "i N \<Longrightarrow> x N \<Longrightarrow> cpi' 2 (S x) < (S x) = 1"
-      apply (unfold_def cpi'_def, simp)
-      apply (rule cases_bool[where p="cpx x = 0"], simp+)
-      apply (rule cpx_nz_arg_nz, simp)
-      done
+      by (unfold_def cpi'_def, simp)
 next
   case (Step xa)
     show "i N \<Longrightarrow> x N \<Longrightarrow> xa N \<Longrightarrow> cpi' (S S xa) (S x) < (S x) = 1 \<Longrightarrow> cpi' (S S S xa) (S x) < (S x) = 1"
