@@ -1385,6 +1385,10 @@ lemma le_monotone_suc [simp]:
   shows "x < y = 1 \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> S x < S y = 1"
 by (unfold_def def_less, simp)
 
+lemma [simp]:
+  shows "x < y = 0 \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> S x < S y = 0"
+by (unfold_def def_less, simp)
+
 lemma le_monotone_pred:
   assumes x_nat: "x N"
   assumes x_nz: "\<not> x = 0"
@@ -1946,7 +1950,7 @@ apply (rule eqSym)
 apply (auto)
 done
 
-lemma leq_monotone [auto, simp]:
+lemma leq_monotone_add [auto, simp]:
   assumes x_nat: "x N"
   assumes y_nat: "y N"
   shows "x \<le> y + x = 1"
@@ -2059,12 +2063,12 @@ proof (auto)
     done
 qed
 
-lemma add_leq_monotone_1 [simp]: "x \<le> y = 1 \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> z N \<Longrightarrow> x \<le> y + z = 1"
+lemma leq_monotone_add_r [simp]: "x \<le> y = 1 \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> z N \<Longrightarrow> x \<le> y + z = 1"
 apply (rule leq_trans[where y="y"], simp)
 apply (rule eqSubst[where a="z + y" and b="y + z"], simp)
 done
 
-lemma add_leq_monotone_2 [simp]: "x \<le> z = 1 \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> z N \<Longrightarrow> x \<le> y + z = 1"
+lemma leq_monotone_add_l [simp]: "x \<le> z = 1 \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> z N \<Longrightarrow> x \<le> y + z = 1"
 apply (rule leq_trans[where y="z"], simp)
 done
 
@@ -2916,10 +2920,6 @@ done
 lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> \<not> S(a) * S(b) = 0"
 by (unfold_def def_mult, simp)
 
-lemma mult_div:
-  "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> c < b = 1 \<Longrightarrow> (S a) < div ((S a)*b) c = 1"
-sorry
-
 lemma zero_not_less_impl_zero: "a N \<Longrightarrow> 0 < a = 0 \<Longrightarrow> a = 0"
 apply (rule grounded_contradiction[where q="0 < S(P a) = 0"], simp)
 apply (simp)
@@ -3017,7 +3017,7 @@ apply (induct c, simp+)
 apply (unfold_def def_sub, simp+)+
 done
 
-lemma leq_mono_div:
+lemma leq_mono_div [simp]:
   "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a \<le> b = 1 \<Longrightarrow> div a (S c) \<le> div b (S c) = 1"
 apply (rule implE[where a="a\<le>b=1"])
 apply (rule forallE[where a="b"])
@@ -3093,11 +3093,42 @@ proof -
     by (rule less_le_trans[where b="b+x"], simp)
 qed
 
+lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> a \<le> a + b = 1"
+by (induct b, simp+)
+
+lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> a + b < a = 0"
+apply (induct a, simp)
+apply (rule swap_add, simp)
+apply (unfold_def def_add, simp)
+apply (rule swap_add, simp+)
+done
+
+lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> a + b \<ge> a = 1"
+by (unfold geq_def, simp)
+
+lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> a * S(b) < a = 0"
+by (unfold_def def_mult, simp)
+
+lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> a + b - b = a"
+apply (induct b, simp+)
+apply (unfold_def def_add, simp add: sub_mono_suc)
+done
+
+lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> a + b - a = b"
+by (rule swap_add, simp+)
+
+lemma mult_div_inv: "a N \<Longrightarrow> b N \<Longrightarrow> div ((S a) * b) (S a) = b"
+apply (induct b, simp+)
+apply (unfold_def def_div, simp)
+apply (unfold_def def_mult, simp)
+done
+
 lemma [simp]:
   "x N \<Longrightarrow> y N \<Longrightarrow> S S x < \<langle>(S S x), y\<rangle> = 1"
-apply (induct y, simp+)
-apply (rule less_le_trans[where b="div ((S S x) * 3) 2"], simp)
-apply (rule mult_div, simp)
+apply (induct y, simp)
+apply (unfold_def cpair_def, simp)
+apply (rule less_le_trans[where b="div (2 * (S S S x)) 2"], simp)
+apply (simp add: mult_div_inv)
 apply (rule leq_mono_div, simp+)
 apply (unfold_def cpair_def, simp)
 done
