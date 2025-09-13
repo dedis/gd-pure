@@ -2674,11 +2674,9 @@ unfolding greater_def by simp
 lemma [simp]: "a < b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> \<not> a = b \<longleftrightarrow> True"
 apply (rule iffI, simp)
 apply (rule grounded_contradiction[where q="a < a = 1"], simp)
-apply (rule eqSubst[where a="a < b" and b="a < a"])
-apply (rule eqSubst[where a="a" and b="b"])
-apply (rule dNegE, assumption)
-apply (rule eqSubst[where a="0" and b="a < a"])
-apply (rule eqSym, simp+)
+apply (subst "a < b = a < a")
+apply (subst "a = b")
+apply (rule dNegE, simp+)
 done
 
 lemma [simp]: "a N \<Longrightarrow> a > a = 0"
@@ -2687,24 +2685,22 @@ unfolding greater_def by simp
 lemma [simp]: "a > b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> \<not> a = b \<longleftrightarrow> True"
 apply (rule iffI, simp)
 apply (rule grounded_contradiction[where q="a > a = 1"], simp)
-apply (rule eqSubst[where a="a > b" and b="a > a"])
-apply (rule eqSubst[where a="a" and b="b"])
-apply (rule dNegE, assumption)
-apply (rule eqSubst[where a="0" and b="a > a"])
-apply (rule eqSym, simp+)
+apply (subst "a > b = a > a")
+apply (subst "a = b")
+apply (rule dNegE)
+apply (simp+)
 done
 
 lemma le_less_trans: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a \<le> b = 1 \<Longrightarrow> b < c = 1 \<Longrightarrow> a < c = 1"
 apply (rule cases_bool[where p="a = b"], simp)
-apply (rule eqSubst[where a="b" and b="a"])
-apply (rule eqSym, assumption+)
+apply (subst "b = a")
 apply (rule less_trans[where y="b"], simp)
 apply (rule less_is_leq_neq, simp)
 done
 
 lemma less_le_trans: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a < b = 1 \<Longrightarrow> b \<le> c = 1 \<Longrightarrow> a < c = 1"
 apply (rule cases_bool[where p="b = c"], simp)
-apply (rule eqSubst[where a="b" and b="c"], simp)
+apply (subst "b = c")
 apply (rule less_trans[where y="b"], simp)
 apply (rule less_is_leq_neq, simp)
 done
@@ -2849,7 +2845,7 @@ apply (unfold_def def_add, simp)
 proof -
   fix xa
   show "x N \<Longrightarrow> y N \<Longrightarrow> xa N \<Longrightarrow> P(S x + xa) = x + xa \<Longrightarrow> S x + xa = S(x + xa)"
-  apply (rule eqSubst[where a="P(S x + xa)" and b="x+xa"], simp)
+  apply (subst "P(S x + xa) = x+xa")
   apply (subst rule: suc_pred_inv, simp+)
   done
 qed
@@ -2937,7 +2933,7 @@ by (unfold_def def_mult, simp)
 lemma zero_not_less_impl_zero: "a N \<Longrightarrow> 0 < a = 0 \<Longrightarrow> a = 0"
 apply (rule grounded_contradiction[where q="0 < S(P a) = 0"], simp)
 apply (simp)
-apply (rule eqSubst[where a="1" and b="0 < S P a"], rule eqSym)
+apply (subst "1 = 0 < S P a", rule eqSym)
 apply (rule zero_less_true, simp)
 done
 
@@ -3318,14 +3314,14 @@ unfolding cpi_def by simp
 
 lemma cpy_nz_arg_nz: "x N \<Longrightarrow> \<not> cpy x = 0 \<Longrightarrow> \<not> x = 0"
 apply (rule grounded_contradiction[where q="cpy x = 0"], simp)
-apply (rule eqSubst[where a="0" and b="x"])
+apply (subst "0 = x")
 apply (rule eqSym, rule dNegE, assumption)
 apply (simp)
 done
 
 lemma cpx_nz_arg_nz: "x N \<Longrightarrow> \<not> cpx x = 0 \<Longrightarrow> \<not> x = 0"
 apply (rule grounded_contradiction[where q="cpx x = 0"], simp)
-apply (rule eqSubst[where a="0" and b="x"])
+apply (subst "0 = x")
 apply (rule eqSym, rule dNegE, assumption)
 apply (simp)
 done
@@ -3353,7 +3349,7 @@ next
       apply (simp add: cpx_suc)+
       apply (rule cases_bool[where p="cpx xa = 0"])
       apply (simp add: cpx_suc cpy_suc)+
-      apply (rule eqSubst[where a="S P xa" and b="xa"], simp)
+      apply (subst "S P xa = xa", simp)
       apply (rule cpx_nz_arg_nz, simp)
       apply (rule le_monotone_suc)+
       apply (rule entailsE[where a="((P xa) \<le> xa) = 1"])
@@ -3384,14 +3380,10 @@ lemma cpair_surjective [auto]: "a N \<Longrightarrow> \<exists>b c. a = \<langle
 sorry
 
 lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> x = \<langle>a,b\<rangle> \<Longrightarrow> cpx x = a"
-apply (rule eqSubst[where a="\<langle>a,b\<rangle>" and b="x"])
-apply (rule eqSym, simp+)
-done
+by (subst "\<langle>a,b\<rangle> = x", simp)
 
 lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> x = \<langle>a,b\<rangle> \<Longrightarrow> cpy x = b"
-apply (subst "\<langle>a,b\<rangle> = x")
-apply (rule eqSym, simp+)
-done
+by (subst "\<langle>a,b\<rangle> = x", simp)
 
 lemma [auto]: "x N \<Longrightarrow> x = \<langle>cpx x, cpy x\<rangle>"
 apply (rule existsE[where Q="\<lambda>b. x=\<langle>cpx x,b\<rangle>"])
