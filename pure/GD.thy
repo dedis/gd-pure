@@ -426,7 +426,8 @@ section \<open>Definitional Mechanism in GD\<close>
 axiomatization
   def :: \<open>'a \<Rightarrow> 'a \<Rightarrow> o\<close> (infix \<open>:=\<close> 10)
 where
-  defE: \<open>\<lbrakk>a := b; Q b\<rbrakk> \<Longrightarrow> Q a\<close>
+  defE: \<open>\<lbrakk>a := b; Q b\<rbrakk> \<Longrightarrow> Q a\<close> and
+  defI: \<open>\<lbrakk>a := b; Q a\<rbrakk> \<Longrightarrow> Q b\<close>
 
 ML_file "gd_simp.ML"
 
