@@ -277,7 +277,8 @@ where
   forallE: "\<lbrakk>\<forall>c'. Q c'; a N\<rbrakk> \<Longrightarrow> Q a" and
   existsI: "\<lbrakk>a N; Q a\<rbrakk> \<Longrightarrow> \<exists>x. Q x" and
   existsE: "\<lbrakk>\<exists>i. Q i; \<And>a. a N \<Longrightarrow> Q a \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R" and
-  ind [case_names HQ Base Step]: \<open>\<lbrakk>a N; Q 0; \<And>x. x N \<Longrightarrow> Q x \<Longrightarrow> Q S(x)\<rbrakk> \<Longrightarrow> Q a\<close>
+  ind [case_names HQ Base Step]:
+           "\<lbrakk>a N; Q 0; \<And>x. x N \<Longrightarrow> Q x \<Longrightarrow> Q S(x)\<rbrakk> \<Longrightarrow> Q a"
   (*
   forAllNeg: "\<lbrakk>\<not>(\<forall>x. Q x); (Q x) B\<rbrakk> \<Longrightarrow> \<exists>x. \<not>(Q x)" and
   existsNeg: "\<lbrakk>\<not>(\<exists>x. Q x); (Q x) B\<rbrakk> \<Longrightarrow> \<forall>x. \<not>(Q x)" and
@@ -1845,10 +1846,10 @@ by simp
 lemma "cpy \<langle>0,0\<rangle> = 0"
 by simp
 
-lemma cpy_proj [simp, auto]: "a N \<Longrightarrow> b N \<Longrightarrow> cpy \<langle>a, b\<rangle> = b"
+lemma cpy_proj [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> cpy \<langle>a, b\<rangle> = b"
 sorry
 
-lemma cpx_proj [simp, auto]: "a N \<Longrightarrow> b N \<Longrightarrow> cpx \<langle>a, b\<rangle> = a"
+lemma cpx_proj [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> cpx \<langle>a, b\<rangle> = a"
 sorry
 
 lemma cpair_inj:
@@ -2411,7 +2412,7 @@ proof -
                     have H: "x N \<Longrightarrow> ya N \<Longrightarrow> P(ya) < P(S x) = 1"
                       apply (rule less_monotone_pred)
                       apply (rule natP, assumption)
-                      apply (subst predSucInv, assumption+)
+                      apply (subst rule: predSucInv, assumption+)
                       apply (rule eqSubst[where a="ya" and b="S P ya"])
                       apply (rule eqSym)
                       apply (simp)
@@ -2720,13 +2721,13 @@ lemma [cond]: "(if c then a else b) = False \<Longrightarrow> (if c then a else 
   by simp
 
 lemma [cond]: "c \<and> (a N) \<Longrightarrow> (if c then a else b) N"
-apply (subst condI1)
+apply (subst rule: condI1)
 apply (rule conjE1, simp)
 apply (rule conjE2, simp)+
 done
 
 lemma [cond]: "\<not>c \<and> (b N) \<Longrightarrow> (if c then a else b) N"
-apply (subst condI2)
+apply (subst rule: condI2)
 apply (rule conjE1, simp)
 apply (rule conjE2, simp)+
 done
@@ -2758,6 +2759,13 @@ apply (induct c, simp+)
 apply (unfold_def def_add, simp)
 apply (rule eqSym)
 apply (unfold_def def_add, simp)
+done
+
+lemma and_assoc: "(a \<and> b \<and> c) \<Longrightarrow> (a \<and> (b \<and> c))"
+apply (rule conjE1, rule conjE2, simp)
+apply (rule conjE1, rule conjE1, simp)
+apply (rule conjE2, rule conjE1, simp)
+apply (rule conjE2, rule conjE2, simp)
 done
 
 lemma gr_mono_pred: "a N \<Longrightarrow> b N \<Longrightarrow> \<not> a = 0 \<Longrightarrow> \<not> b = 0 \<Longrightarrow> P a > P b = 1 \<Longrightarrow> a > b = 1"
@@ -2841,7 +2849,7 @@ proof -
   fix xa
   show "x N \<Longrightarrow> y N \<Longrightarrow> xa N \<Longrightarrow> P(S x + xa) = x + xa \<Longrightarrow> S x + xa = S(x + xa)"
   apply (rule eqSubst[where a="P(S x + xa)" and b="x+xa"], simp)
-  apply (subst suc_pred_inv, simp+)
+  apply (subst rule: suc_pred_inv, simp+)
   done
 qed
 
@@ -2857,7 +2865,7 @@ lemma [simp]:
   shows "\<not> y = 0 \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> y < \<langle>x, y\<rangle> = 1"
 by (rule suc_nz[where x="y"], simp, rule cpair_strict_mono_r, simp)
 
-lemma [simp]: "x < y = 1 \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> x \<le> y = 1"
+lemma less_impl_leq [simp]: "x < y = 1 \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> x \<le> y = 1"
 proof -
   have H: "y N \<Longrightarrow> \<forall>x. x < y = 1 \<longrightarrow> x \<le> y = 1"
     proof (induct y, simp)
@@ -2891,28 +2899,33 @@ proof -
 qed
 
 lemma cpair_mono_r [simp]:
-  shows "x N \<Longrightarrow> y N \<Longrightarrow> y \<le> \<langle>x, y\<rangle> = 1"
+  "x N \<Longrightarrow> y N \<Longrightarrow> y \<le> \<langle>x, y\<rangle> = 1"
 by (rule cases_bool[where p="y = 0"], simp+)
 
-lemma cpair_le_2 [simp]: "a \<le> c = 1 \<Longrightarrow> \<not> c = 0 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a < \<langle>b,c\<rangle> = 1"
+lemma cpair_le_2 [simp]:
+  "a \<le> c = 1 \<Longrightarrow> \<not> c = 0 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a < \<langle>b,c\<rangle> = 1"
 by (rule le_less_trans[where b="c"], simp+)
 
-lemma leq_mono_add_l [simp]: "b \<le> c = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a + b \<le> a + c = 1"
+lemma leq_mono_add_l [simp]:
+  "b \<le> c = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a + b \<le> a + c = 1"
 apply (induct a, simp+)
 apply (unfold_def def_leq, simp)
 done
 
-lemma leq_mono_add_r [simp]: "b \<le> c = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> b + a \<le> c + a = 1"
+lemma leq_mono_add_r [simp]:
+  "b \<le> c = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> b + a \<le> c + a = 1"
 apply (induct a, simp+)
 apply (unfold_def def_add, simp)+
 done
 
-lemma less_mono_add_l [simp]: "b < c = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a + b < a + c = 1"
+lemma less_mono_add_l [simp]:
+  "b < c = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a + b < a + c = 1"
 apply (induct a, simp+)
 apply (unfold_def def_less, simp)
 done
 
-lemma less_mono_add_r [simp]: "b < c = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> b + a < c + a = 1"
+lemma less_mono_add_r [simp]:
+  "b < c = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> b + a < c + a = 1"
 apply (induct a, simp+)
 apply (unfold_def def_add, simp)+
 done
@@ -3084,7 +3097,8 @@ proof (rule forallI)
     done
 qed
 
-lemma [simp]: "a < b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a < b + c = 1"
+lemma [simp]:
+  "a < b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a < b + c = 1"
 apply (induct c, simp+)
 apply (unfold_def def_add, simp)
 proof -
@@ -3133,7 +3147,8 @@ apply (rule leq_mono_div, simp+)
 apply (unfold_def cpair_def, simp)
 done
 
-lemma pred_inj_if_nz: "a N \<Longrightarrow> b N \<Longrightarrow> \<not> a = 0 \<Longrightarrow> \<not> b = 0 \<Longrightarrow> P a = P b \<Longrightarrow> a = b"
+lemma pred_inj_if_nz:
+  "a N \<Longrightarrow> b N \<Longrightarrow> \<not> a = 0 \<Longrightarrow> \<not> b = 0 \<Longrightarrow> P a = P b \<Longrightarrow> a = b"
 apply (rule suc_nz[where x="a"], assumption+)
 apply (rule suc_nz[where x="b"], assumption+)
 apply (simp)
@@ -3434,7 +3449,8 @@ apply (unfold Cons_def)
 apply (simp)
 done
 
-lemma "n N \<Longrightarrow> m N \<Longrightarrow> xs N \<Longrightarrow> ys N \<Longrightarrow> Cons n xs = Cons m ys \<Longrightarrow> n = m \<and> xs = ys"
+lemma
+  "n N \<Longrightarrow> m N \<Longrightarrow> xs N \<Longrightarrow> ys N \<Longrightarrow> Cons n xs = Cons m ys \<Longrightarrow> n = m \<and> xs = ys"
 unfolding Cons_def
 apply (rule cpair_inj)
 apply (rule cpair_inj_r, rule cpair_inj_r, simp)
@@ -3453,23 +3469,25 @@ lemma is_list_cases2 [consumes 1, case_names Nil Cons, elim!]:
   and nil_branch:   "x = Nil \<Longrightarrow> Q"
   and cons_branch:  "\<And>n xs. x = Cons n xs \<Longrightarrow> Q"
   shows "Q"
-    sorry
-
-lemma "xs N \<Longrightarrow> n N \<Longrightarrow> xs < Cons n xs = 1"
-unfolding Cons_def list_type_tag_def
-apply (rule less_trans[where y="\<langle>1, n, xs\<rangle>"])
-apply (simp)
 sorry
 
+lemma [simp]: "is_list x \<Longrightarrow> x = 0 \<longleftrightarrow> False"
+sorry
+
+lemma [simp]: "is_list xs \<Longrightarrow> n N \<Longrightarrow> xs < Cons n xs = 1"
+unfolding Cons_def by simp
+
 (*
- * TODO: maybe proof this first to simplify structure of list induction proof.
+ * TODO: maybe prove this first to simplify structure of list induction proof.
  * The induction 'step' (corresponding to Cons) is probably too weak and needs
  * object level connectives.
  *)
-lemma "is_list a \<Longrightarrow> Q Nil \<Longrightarrow> (x N \<Longrightarrow> is_list xs \<Longrightarrow> Q xs \<Longrightarrow> Q (Cons x xs)) \<Longrightarrow> is_list a \<longrightarrow> Q a"
+lemma
+  "is_list a \<Longrightarrow> Q Nil \<Longrightarrow> (x N \<Longrightarrow> is_list xs \<Longrightarrow> Q xs \<Longrightarrow> Q (Cons x xs)) \<Longrightarrow> is_list a \<longrightarrow> Q a"
 apply (induct strong a, simp)
 apply (rule implI, simp)
 apply (rule exF[where P="is_list 0"], simp)
+apply (rule implI, simp)
 sorry
 
 lemma list_induction:
