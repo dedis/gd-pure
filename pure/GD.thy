@@ -3171,8 +3171,41 @@ apply (rule cases_bool[where p="x=1"], simp+)
 apply (induct y, simp+)
 done
 
-lemma [simp]: "a \<le> b = 1 \<Longrightarrow> \<not> b = 0 \<Longrightarrow> \<not> b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a < \<langle>b,c\<rangle> = 1"
+lemma [simp]:
+  "a \<le> b = 1 \<Longrightarrow> \<not> b = 0 \<Longrightarrow> \<not> b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a < \<langle>b,c\<rangle> = 1"
 by (rule le_less_trans[where b="b"], simp+)
+
+lemma cpair_of_nz_nz_l: "a N \<Longrightarrow> b N \<Longrightarrow> \<not> a = 0 \<Longrightarrow> \<not> \<langle>a,b\<rangle> = 0"
+apply (unfold_def cpair_def)
+apply (rule cases_bool[where p="b=0"], simp+)
+apply (unfold_def def_mult, simp)
+apply (rule swap_add, simp)
+apply (unfold_def def_mult, simp)
+apply (unfold_def def_div)
+apply (rule suc_nz[where x="a"], simp)
+apply (unfold_def def_add, simp)
+apply (unfold_def def_less, simp)
+apply (rule suc_nz[where x="a"], simp)
+apply (rule swap_add, simp)
+apply (unfold_def def_add, simp+)
+done
+
+lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> \<not> a = 0 \<Longrightarrow> \<langle>a,b\<rangle> = 0 \<longleftrightarrow> False"
+apply (rule iffI, simp)
+apply (rule exF[where P="\<langle>a,b\<rangle> = 0"], simp)
+apply (rule cpair_of_nz_nz_l, simp)
+apply (rule contradiction, simp)
+done
+
+lemma cpair_of_nz_nz_r: "a N \<Longrightarrow> b N \<Longrightarrow> \<not> b = 0 \<Longrightarrow> \<not> \<langle>a,b\<rangle> = 0"
+by (unfold_def cpair_def, simp)
+
+lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> \<not> b = 0 \<Longrightarrow> \<langle>a,b\<rangle> = 0 \<longleftrightarrow> False"
+apply (rule iffI, simp)
+apply (rule exF[where P="\<langle>a,b\<rangle> = 0"], simp)
+apply (rule cpair_of_nz_nz_r, simp)
+apply (rule contradiction, simp)
+done
 
 lemma [simp]: "a < b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> b > a = 1"
 proof -
@@ -3229,12 +3262,17 @@ lemma [simp]: "cpi 0 a = 0"
 lemma [simp]: "a N \<Longrightarrow> cpi' 1 a = a"
 by (unfold_def cpi'_def, simp)
 
+lemma [simp]: "a N \<Longrightarrow> cpi 1 a = cpx a"
+unfolding cpi_def by simp
+
 lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> cpi 1 \<langle>a, b\<rangle> = a"
 unfolding cpi_def by simp
 
 lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> cpi' 2 \<langle>a, b\<rangle> = b"
-apply (unfold_def cpi'_def, simp)
-done
+by (unfold_def cpi'_def, simp)
+
+lemma [simp]: "a N \<Longrightarrow> cpi' 2 a = cpy a"
+by (unfold_def cpi'_def, simp)
 
 lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> cpi 2 \<langle>a, b, c\<rangle> = b"
 unfolding cpi_def by simp
@@ -3342,6 +3380,46 @@ next
       done
 qed
 
+lemma cpair_surjective [auto]: "a N \<Longrightarrow> \<exists>b c. a = \<langle>b,c\<rangle>"
+sorry
+
+lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> x = \<langle>a,b\<rangle> \<Longrightarrow> cpx x = a"
+apply (rule eqSubst[where a="\<langle>a,b\<rangle>" and b="x"])
+apply (rule eqSym, simp+)
+done
+
+lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> x = \<langle>a,b\<rangle> \<Longrightarrow> cpy x = b"
+apply (subst "\<langle>a,b\<rangle> = x")
+apply (rule eqSym, simp+)
+done
+
+lemma [auto]: "x N \<Longrightarrow> x = \<langle>cpx x, cpy x\<rangle>"
+apply (rule existsE[where Q="\<lambda>b. x=\<langle>cpx x,b\<rangle>"])
+apply (rule existsE[where Q="\<lambda>c. \<exists>i. x=\<langle>c,i\<rangle>"])
+apply (simp)
+proof -
+  fix a
+  show "x N \<Longrightarrow> a N \<Longrightarrow> \<exists>i. x = \<langle>a,i\<rangle> \<Longrightarrow> \<exists>i. x = \<langle>cpx x,i\<rangle>"
+    apply (subst "a = cpx x")
+    apply (rule existsE[where Q="\<lambda>i. x=\<langle>a,i\<rangle>"], simp+)
+    done
+  show "x N \<Longrightarrow> a N \<Longrightarrow> x = \<langle>cpx x,a\<rangle> \<Longrightarrow> x = \<langle>cpx x,cpy x\<rangle>"
+    apply (subst "a = cpy x")
+    apply (subst "\<langle>cpx x,a\<rangle> = x")
+    apply (subst rule: cpy_proj, simp)
+    done
+qed
+
+lemma "x N \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> cpx x = a \<Longrightarrow> cpy x = b \<Longrightarrow> x = \<langle>a,b\<rangle>"
+apply (subst "cpx x = a")
+apply (subst "cpy x = b")
+done
+
+lemma "x N \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> cpi 1 x = a \<Longrightarrow> cpi' 2 x = b \<Longrightarrow> x = \<langle>a,b\<rangle>"
+apply (subst "cpx x = a")
+apply (subst "cpy x = b")
+done
+
 ML_file "gd_typeencode.ML"
 text "A manual construction of an inductive datatype.
   Later, we want this to be generated automatically from something
@@ -3351,20 +3429,26 @@ text "A manual construction of an inductive datatype.
 type_synonym List = num
 
 definition list_type_tag where
-  "list_type_tag \<equiv> 0"
+  "list_type_tag \<equiv> 1"
+
+definition list_nil_tag where
+  "list_nil_tag \<equiv> 1"
+
+definition list_cons_tag where
+  "list_cons_tag \<equiv> 2"
 
 definition Nil :: "List" where
-  "Nil \<equiv> \<langle>list_type_tag,1\<rangle>"
+  "Nil \<equiv> \<langle>list_type_tag,list_nil_tag\<rangle>"
 
 definition Cons :: "num \<Rightarrow> List \<Rightarrow> List" where
-  "Cons n xs \<equiv> \<langle>list_type_tag,2,n,xs\<rangle>"
+  "Cons n xs \<equiv> \<langle>list_type_tag,list_cons_tag,n,xs\<rangle>"
 
 axiomatization
   is_list :: "num \<Rightarrow> o" and
   is_cons :: "num \<Rightarrow> o"
 where
   is_cons_def: "is_cons x := (cpi 1 x = list_type_tag)
-                              \<and> (cpi 2 x = 2)
+                              \<and> (cpi 2 x = list_cons_tag)
                               \<and> ((cpi 3 x) N)
                               \<and> (is_list (cpi' 4 x))" and
   is_list_def: "is_list x := if x = Nil
@@ -3375,8 +3459,14 @@ where
                                then True
                              else False"
 
-lemma [simp]: "list_type_tag = 0"
+lemma [simp]: "list_type_tag = 1"
 unfolding list_type_tag_def by simp
+
+lemma [simp]: "list_nil_tag = 1"
+unfolding list_nil_tag_def by simp
+
+lemma [simp]: "list_cons_tag = 2"
+unfolding list_cons_tag_def by simp
 
 lemma nil_nat [auto]: "Nil N"
 unfolding Nil_def list_type_tag_def by simp
@@ -3418,6 +3508,39 @@ by (unfold_def is_list_def, simp)
 
 lemma [auto]: "n N \<Longrightarrow> xs N \<Longrightarrow> \<not> Nil = Cons n xs"
 unfolding Nil_def Cons_def by simp
+
+lemma [simp]: "is_cons x \<Longrightarrow> (x N) \<longleftrightarrow> True"
+sorry
+
+lemma cons_1_tag: "is_cons x \<Longrightarrow> list_type_tag = cpi 1 x"
+apply (rule eqSym)
+apply (rule conjE1, rule conjE1, rule conjE1)
+apply (fold_def is_cons_def, simp)
+done
+
+lemma cons_2_2: "is_cons x \<Longrightarrow> list_cons_tag = cpi 2 x"
+apply (rule eqSym)
+apply (rule conjE2, rule conjE1, rule conjE1)
+apply (fold_def is_cons_def, simp)
+done
+
+lemma "is_cons x \<Longrightarrow> (cpi 3 x) N"
+apply (rule conjE2)
+apply (fold_def is_cons_def, simp+)
+done
+
+lemma [cond]: "is_cons x \<Longrightarrow> is_list (cpi' 4 x)"
+apply (rule conjE2)
+apply (fold_def is_cons_def, simp+)
+done
+
+lemma [auto]: "is_cons x \<Longrightarrow> \<exists>n xs. ((n N) \<and> is_list xs \<and> x = Cons n xs)"
+apply (rule existsI[where a="cpi 3 x"], simp+)
+apply (rule existsI[where a="cpi' 4 x"], simp+)
+apply (unfold Cons_def)
+apply (subst rule: cons_1_tag, simp)
+apply (subst rule: cons_2_2, simp)
+sorry
 
 lemma list_nat [simp]:
   shows "is_list x \<Longrightarrow> (x N) \<longleftrightarrow> True"
