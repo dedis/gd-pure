@@ -717,7 +717,7 @@ done
 
 (*
 declare [[simp_trace = true, simp_trace_depth_limit = 8]]
-*)
+ *)
 
 lemma [auto]: "c B \<Longrightarrow> if c then True else True"
   by simp
@@ -1859,10 +1859,10 @@ by simp
 lemma "cpy \<langle>0,0\<rangle> = 0"
 by simp
 
-lemma cpy_proj [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> cpy \<langle>a, b\<rangle> = b"
+lemma cpx_proj [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> cpx \<langle>a, b\<rangle> = a"
 sorry
 
-lemma cpx_proj [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> cpx \<langle>a, b\<rangle> = a"
+lemma cpy_proj [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> cpy \<langle>a, b\<rangle> = b"
 sorry
 
 lemma cpair_inj:
@@ -3456,9 +3456,6 @@ unfolding Nil_def Cons_def by simp
 lemma [auto]: "n N \<Longrightarrow> xs N \<Longrightarrow> \<not> Cons n xs = Nil"
 unfolding Nil_def Cons_def by simp
 
-lemma [simp]: "is_cons x \<Longrightarrow> (x N) \<longleftrightarrow> True"
-sorry
-
 lemma cons_1_tag: "is_cons x \<Longrightarrow> list_type_tag = cpi 1 x"
 apply (rule eqSym)
 apply (rule conjE1, rule conjE1, rule conjE1)
@@ -3483,7 +3480,7 @@ apply (fold_def is_cons_def, simp+)
 done
 
 lemma cons_decode [auto]:
-  "is_cons x \<Longrightarrow> \<exists>n xs. ((n N) \<and> is_list xs \<and> x = Cons n xs)"
+  "is_cons x \<Longrightarrow> x N \<Longrightarrow> \<exists>n xs. ((n N) \<and> is_list xs \<and> x = Cons n xs)"
 apply (rule existsI[where a="cpi 3 x"], simp+)
 apply (rule existsI[where a="cpi' 4 x"], simp+)
 apply (unfold Cons_def)
@@ -3491,11 +3488,6 @@ apply (subst rule: cons_1_tag, simp)
 apply (subst rule: cons_2_2, simp)
 apply (rule cp4_proj, simp+)
 done
-
-lemma list_nat [simp]:
-  shows "is_list x \<Longrightarrow> (x N) \<longleftrightarrow> True"
-apply (unfold_def is_list_def)
-sorry
 
 lemma [auto]: "\<not> 0 = Nil"
 unfolding Nil_def by simp
@@ -3506,11 +3498,11 @@ by (unfold_def is_list_def, simp)
 lemma [auto]: "n N \<Longrightarrow> xs N \<Longrightarrow> \<not> 0 = Cons n xs"
 unfolding Nil_def Cons_def by simp
 
-lemma [auto]: "n N \<Longrightarrow> is_list xs \<Longrightarrow> is_cons (Cons n xs)"
+lemma [auto]: "n N \<Longrightarrow> xs N \<Longrightarrow> is_list xs \<Longrightarrow> is_cons (Cons n xs)"
 unfolding Cons_def by (unfold_def is_cons_def, simp)
 
 lemma cons_is_list [auto]:
-  "n N \<Longrightarrow> is_list xs \<Longrightarrow> is_list (Cons n xs)"
+  "n N \<Longrightarrow> xs N \<Longrightarrow> is_list xs \<Longrightarrow> is_list (Cons n xs)"
 apply (unfold_def is_list_def)
 apply (unfold_def is_cons_def)
 apply (unfold Cons_def)
@@ -3524,7 +3516,7 @@ apply (rule cpair_inj)
 apply (rule cpair_inj_r, rule cpair_inj_r, simp)
 done
 
-lemma list_cases: "is_list x \<Longrightarrow> (x = Nil) \<or> (\<exists>n xs. (n N) \<and> is_list xs \<and> (x = Cons n xs))"
+lemma list_cases: "x N \<Longrightarrow> is_list x \<Longrightarrow> (x = Nil) \<or> (\<exists>n xs. (n N) \<and> is_list xs \<and> (x = Cons n xs))"
 apply (rule implE[where a="is_list x"])
 apply (unfold_def is_list_def)
 apply (cases bool: "x=Nil", simp+)
@@ -3538,9 +3530,10 @@ apply (rule implI, simp)
 apply (rule exF[where P="False"], simp)
 done
 
-lemma cases_list [case_names HQ Nil Cons, cases]: "is_list x \<Longrightarrow>
+lemma cases_list [case_names _ HQ Nil Cons, cases]: "is_list x \<Longrightarrow>
+       (x N) \<Longrightarrow>
        (x = Nil \<Longrightarrow> Q) \<Longrightarrow>
-       (\<And>n xs. n N \<Longrightarrow> is_list xs \<Longrightarrow> x = Cons n xs \<Longrightarrow> Q)
+       (\<And>n xs. n N \<Longrightarrow> xs N \<Longrightarrow> is_list xs \<Longrightarrow> x = Cons n xs \<Longrightarrow> Q)
        \<Longrightarrow> Q"
 apply (rule disjE1[OF list_cases], simp, assumption)
 apply (rule existsE[where Q="\<lambda>n. \<exists>xs. (n N) \<and> is_list xs \<and> x = Cons n xs"])
@@ -3549,7 +3542,7 @@ proof -
   fix a
   show "is_list x \<Longrightarrow>
      (x = Nil \<Longrightarrow> Q) \<Longrightarrow>
-     (\<And>n xs. n N \<Longrightarrow> is_list xs \<Longrightarrow> x = Cons n xs \<Longrightarrow> Q) \<Longrightarrow>
+     (\<And>n xs. n N \<Longrightarrow> xs N \<Longrightarrow> is_list xs \<Longrightarrow> x = Cons n xs \<Longrightarrow> Q) \<Longrightarrow>
      \<exists>n xs. (n N) \<and> is_list xs \<and> x = Cons n xs \<Longrightarrow>
      a N \<Longrightarrow> \<exists>xs. (a N) \<and> is_list xs \<and> x = Cons a xs \<Longrightarrow> Q"
     apply (rule existsE[where Q="\<lambda>xs. (a N) \<and> is_list xs \<and> x = Cons a xs"])
@@ -3557,7 +3550,7 @@ proof -
     proof -
       fix aa
       show "
-      (\<And>n xs. n N \<Longrightarrow> is_list xs \<Longrightarrow> x = Cons n xs \<Longrightarrow> Q) \<Longrightarrow>
+      (\<And>n xs. n N \<Longrightarrow> xs N \<Longrightarrow> is_list xs \<Longrightarrow> x = Cons n xs \<Longrightarrow> Q) \<Longrightarrow>
         aa N \<Longrightarrow> (a N) \<and> is_list aa \<and> x = Cons a aa \<Longrightarrow> Q"
         apply (rule Pure.meta_mp[where P="a N"])
         apply (rule Pure.meta_mp[where P="is_list aa"])
@@ -3570,13 +3563,13 @@ proof -
     qed
 qed
 
-lemma [simp]: "is_list x \<Longrightarrow> x = 0 \<longleftrightarrow> False"
+lemma [simp]: "x N \<Longrightarrow> is_list x \<Longrightarrow> x = 0 \<longleftrightarrow> False"
 apply (rule iffI, simp+)
 apply (rule exF[where P="is_list 0"], simp)
 apply (rule exF[where P="False"], simp)
 done
 
-lemma [simp]: "is_list xs \<Longrightarrow> n N \<Longrightarrow> xs < Cons n xs = 1"
+lemma [simp]: "xs N \<Longrightarrow> is_list xs \<Longrightarrow> n N \<Longrightarrow> xs < Cons n xs = 1"
 unfolding Cons_def by simp
 
 (*
@@ -3593,21 +3586,21 @@ apply (rule implE[where a="Q x"])
 apply (rule forallE, simp)
 done
 
-lemma [case_names HQ Nil Cons, induct]:
-  "is_list a \<Longrightarrow> Q Nil \<Longrightarrow> (\<And>x xs. x N \<Longrightarrow> is_list xs \<Longrightarrow> Q xs \<Longrightarrow> Q (Cons x xs))
+lemma [case_names _ HQ Nil Cons, induct]:
+  "is_list a \<Longrightarrow> a N \<Longrightarrow> Q Nil \<Longrightarrow> (\<And>x xs. x N \<Longrightarrow> xs N \<Longrightarrow> is_list xs \<Longrightarrow> Q xs \<Longrightarrow> Q (Cons x xs))
    \<Longrightarrow> Q a"
 apply (rule implE[where a="is_list a"])
-apply (induct strong a, simp)
+apply (induct strong a)
 apply (rule implI, simp)
 apply (rule exF[where P="is_list 0"], simp)
 apply (rule implI, simp)
 proof -
   fix xa
-  assume cons: "(\<And>x xs. x N \<Longrightarrow> is_list xs \<Longrightarrow> Q xs \<Longrightarrow> Q (Cons x xs))"
-  show "xa N \<Longrightarrow> is_list S xa \<Longrightarrow> Q Nil \<Longrightarrow>
+  assume cons: "(\<And>x xs. x N \<Longrightarrow> xs N \<Longrightarrow> is_list xs \<Longrightarrow> Q xs \<Longrightarrow> Q (Cons x xs))"
+  show "a N \<Longrightarrow> xa N \<Longrightarrow> is_list S xa \<Longrightarrow> Q Nil \<Longrightarrow>
         \<forall>y. y \<le> xa = 1 \<longrightarrow> is_list y \<longrightarrow> Q y \<Longrightarrow>
         Q S xa"
-    proof (cases "S xa")
+    proof (cases "S xa", simp)
       case Nil
         from Nil show ?case
           by (simp+)
@@ -3638,8 +3631,8 @@ where
 lemma [simp]: "is_list 0 \<Longrightarrow> False"
 by (rule exF[where P="is_list 0"], simp)
 
-lemma [auto]: "is_list x \<Longrightarrow> sum x N"
-proof (induct x)
+lemma [auto]: "x N \<Longrightarrow> is_list x \<Longrightarrow> sum x N"
+proof (induct x, simp)
   case Nil
   show ?case
     by (unfold_def sum_def, simp add: sum_def)
@@ -3657,7 +3650,7 @@ qed
 lemma [simp]: "sum Nil = 0"
 by (unfold_def sum_def, simp)
 
-lemma [simp]: "n N \<Longrightarrow> is_list xs \<Longrightarrow> sum (Cons n xs) = n + sum xs"
+lemma [simp]: "n N \<Longrightarrow> xs N \<Longrightarrow> is_list xs \<Longrightarrow> sum (Cons n xs) = n + sum xs"
 apply (rule eqSym)
 apply (unfold_def sum_def)
 apply (unfold_def is_cons_def)
