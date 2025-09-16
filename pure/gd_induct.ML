@@ -3,9 +3,33 @@ struct
   val induct_thm = @{thm ind}
   val strong_induct_thm = @{thm strong_induction}
 
-  fun inst_thm ctxt t th =
+  fun try_inst_thm ctxt t th =
     let val ct = Thm.cterm_of ctxt t in
-      Drule.infer_instantiate' ctxt [SOME ct] th
+      try (fn th => Drule.infer_instantiate' ctxt [SOME ct] th) th
+    end
+
+  fun closes_first_prem ctxt i th st =
+    let
+      val tac =
+      DETERM (
+        resolve_tac ctxt [th] i
+        THEN ((SOLVED' (assume_tac ctxt)) i)
+      )
+    in
+      Option.isSome (Seq.pull (tac st))
+    end
+
+  fun select_induct_thm ctxt t i st =
+    let
+      val induct_thms = Named_Theorems.get ctxt @{named_theorems induct}
+      fun is_instantiable th =
+        case (try_inst_thm ctxt t th) of
+          NONE     => NONE
+        | SOME th' => if (closes_first_prem ctxt i th' st) then SOME th else NONE
+    in
+      case (get_first is_instantiable induct_thms) of
+        SOME th => th
+      | NONE    => induct_thm
     end
 
   fun apply_tac tac st =
@@ -13,24 +37,26 @@ struct
       val res = DETERM tac st
     in
       case Seq.pull res of
-          SOME (st', _) => st'
+        SOME (st', _) => st'
       | NONE => raise THM ("tactic failed", 0, [st])
     end
 
   fun induct_tac strong t =
     CONTEXT_SUBGOAL (fn (_, i) => fn (ctxt, st) =>
     let
-      val th  = if strong then strong_induct_thm else induct_thm
-      val th' = inst_thm ctxt t th
+      val th  = if strong then strong_induct_thm else (select_induct_thm ctxt t i st)
+      val th' = try_inst_thm ctxt t th
       val tac =
-        DETERM (match_tac ctxt [th'] i)
+        case th' of
+          SOME th'' => DETERM (match_tac ctxt [th''] i)
+        | NONE      => no_tac
       val st' = apply_tac tac st
       val (spec, _) = Rule_Cases.get th
-      val cases_prop =
-        Thm.prop_of (Rule_Cases.internalize_params st')
+      val cases_prop = Thm.prop_of (Rule_Cases.internalize_params st')
       val cases = Rule_Cases.make_common ctxt cases_prop spec
+      val post_tac = TRY (SOLVED' (assume_tac ctxt) i)
     in
-      CONTEXT_CASES cases all_tac (ctxt, st')
+      CONTEXT_CASES cases post_tac (ctxt, st')
     end)
 
   fun gd_induct_method (strong, t) _ =

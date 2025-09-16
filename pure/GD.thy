@@ -2725,7 +2725,7 @@ apply (rule geq_mono_suc, simp)
 done
 
 lemma cpair_strict_mono_r [simp]: "x N \<Longrightarrow> y N \<Longrightarrow> (S y) < \<langle>x, (S y)\<rangle> = 1"
-proof (induct y, simp+)
+proof (induct y)
   case Base
     show "x N \<Longrightarrow> y N \<Longrightarrow> 1 < \<langle>x,1\<rangle> = 1"
       apply (rule less_le_trans[where b="2"], simp)
@@ -2804,7 +2804,7 @@ by (rule suc_nz[where x="y"], simp, rule cpair_strict_mono_r, simp)
 lemma less_impl_leq [simp]: "x < y = 1 \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> x \<le> y = 1"
 proof -
   have H: "y N \<Longrightarrow> \<forall>x. x < y = 1 \<longrightarrow> x \<le> y = 1"
-    proof (induct y, simp)
+    proof (induct y)
       case Base
         show ?case
           apply (rule forallI, rule implI, simp+)
@@ -2885,7 +2885,7 @@ by (unfold geq_def, simp)
 lemma le_impl_ge: "a N \<Longrightarrow> b N \<Longrightarrow> a \<le> b = 1 \<Longrightarrow> b \<ge> a = 1"
 proof -
   have H:"a N \<Longrightarrow> b N \<Longrightarrow> \<forall>a. a \<le> b = 1 \<longrightarrow> b \<ge> a = 1"
-    proof (induct b, simp)
+    proof (induct b)
       case Base
         show ?case
           apply (rule forallI, rule implI, simp)
@@ -2929,7 +2929,7 @@ unfolding geq_def by simp
 lemma ge_impl_le: "a N \<Longrightarrow> b N \<Longrightarrow> a \<ge> b = 1 \<Longrightarrow> b \<le> a = 1"
 proof -
   have H:"a N \<Longrightarrow> b N \<Longrightarrow> \<forall>a. a \<ge> b = 1 \<longrightarrow> b \<le> a = 1"
-    proof (induct b, simp)
+    proof (induct b)
       case Base
         show ?case
           by (rule forallI, rule implI, simp)
@@ -3075,7 +3075,7 @@ done
 
 lemma [simp]:
   "x N \<Longrightarrow> y N \<Longrightarrow> S S x < \<langle>(S S x), y\<rangle> = 1"
-apply (induct y, simp)
+apply (induct y)
 apply (unfold_def cpair_def, simp)
 apply (rule less_le_trans[where b="div (2 * (S S S x)) 2"], simp)
 apply (simp add: mult_div_inv)
@@ -3145,7 +3145,7 @@ done
 lemma [simp]: "a < b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> b > a = 1"
 proof -
   have H:"a N \<Longrightarrow> b N \<Longrightarrow> \<forall>a. a < b = 1 \<longrightarrow> b > a = 1"
-    proof (induct b, simp)
+    proof (induct b)
       case Base
         show ?case
         apply (simp, rule forallI, rule implI, simp)
@@ -3407,9 +3407,6 @@ unfolding Cons_def list_type_tag_def by simp
 
 lemma list_cons_term [auto]: "x N \<Longrightarrow> (is_list x B) \<and> (is_cons x B)"
 proof (induct strong x)
-  case HQ
-    show "x N \<Longrightarrow> x N" by simp
-next
   case Base
     show "x N \<Longrightarrow> (is_list 0 B) \<and> (is_cons 0 B)"
       apply (unfold_def is_list_def)
