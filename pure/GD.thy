@@ -7,8 +7,10 @@ begin
 
 text \<open>The following theory development formalizes the Grounded Deduction Logic.\<close>
 
-named_theorems auto "Lemmas of shape simp \<Longrightarrow> comp"
+named_theorems auto "Unconditionally applied lemmas of shape simp \<Longrightarrow> comp"
 named_theorems cond "Conditionally applied if P can be solved: P \<Longrightarrow> simp \<Longrightarrow> comp"
+named_theorems cases "Tag for cases lemmas used by cases tactic."
+named_theorems induct "Tag for induction lemmas used by induct tactic."
 
 section \<open>Axiomatization of truth in GD\<close>
 
@@ -1775,6 +1777,7 @@ translations
   "_cpair x (_cpair_args y z)" == "_cpair x (_cpair_arg (_cpair y z))"
 
 ML_file "gd_induct.ML"
+ML_file "gd_cases.ML"
 
 lemma [simp]: "x N \<Longrightarrow> \<langle>x, 0\<rangle> = div (x * S(x)) 2"
   by (unfold_def cpair_def, simp)
@@ -2628,14 +2631,14 @@ apply (simp+)
 done
 
 lemma le_less_trans: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a \<le> b = 1 \<Longrightarrow> b < c = 1 \<Longrightarrow> a < c = 1"
-apply (rule cases_bool[where p="a = b"], simp)
-apply (subst "b = a")
+apply (cases bool: "a=b", simp)
+apply (subst "b=a")
 apply (rule less_trans[where y="b"], simp)
 apply (rule less_is_leq_neq, simp)
 done
 
 lemma less_le_trans: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a < b = 1 \<Longrightarrow> b \<le> c = 1 \<Longrightarrow> a < c = 1"
-apply (rule cases_bool[where p="b = c"], simp)
+apply (cases bool: "b = c", simp)
 apply (subst "b = c")
 apply (rule less_trans[where y="b"], simp)
 apply (rule less_is_leq_neq, simp)
@@ -2740,7 +2743,7 @@ qed
 lemma sum_0_summands_0: "a N \<Longrightarrow> b N \<Longrightarrow> a + b = 0 \<Longrightarrow> a = 0 \<and> b = 0"
 apply (rule implE[where a="a+b=0"])
 apply (unfold_def def_add)
-apply (rule cases_bool[where p="b=0"], simp+)
+apply (cases bool: "b = 0", simp+)
 apply (rule implI, simp+)+
 apply (rule exF[where P="S(a + P b) = 0"], simp)+
 done
@@ -2817,7 +2820,7 @@ proof -
             show "y N \<Longrightarrow> x N \<Longrightarrow> \<forall>xaa. xaa < x = 1 \<longrightarrow> xaa \<le> x = 1 \<Longrightarrow>
                   xaa N \<Longrightarrow> xaa < S x = 1 \<longrightarrow> xaa \<le> S x = 1"
               apply (unfold_def def_less, simp)
-              apply (rule cases_bool[where p="xaa=0"], simp+)
+              apply (cases bool: "xaa = 0", simp+)
               apply (rule implI, simp+)+
               apply (unfold_def def_leq, simp)
               apply (rule implE[where a="P xaa < x = 1"])
@@ -2833,7 +2836,7 @@ qed
 
 lemma cpair_mono_r [simp]:
   "x N \<Longrightarrow> y N \<Longrightarrow> y \<le> \<langle>x, y\<rangle> = 1"
-by (rule cases_bool[where p="y = 0"], simp+)
+by (cases bool: "y = 0", simp+)
 
 lemma cpair_le_2 [simp]:
   "a \<le> c = 1 \<Longrightarrow> \<not> c = 0 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a < \<langle>b,c\<rangle> = 1"
@@ -2901,7 +2904,7 @@ proof -
             show "b N \<Longrightarrow> x N \<Longrightarrow> aa N \<Longrightarrow> \<forall>a. a \<le> x = 1 \<longrightarrow> x \<ge> a = 1 \<Longrightarrow>
                   aa \<le> S x = 1 \<longrightarrow> S x \<ge> aa = 1"
               apply (unfold_def def_leq, simp)
-              apply (rule cases_bool[where p="aa=0"], simp+)
+              apply (cases bool: "aa = 0", simp+)
               apply (rule implI, simp+)
               apply (rule implI, simp)
               apply (rule geq_mono_pred, simp+)
@@ -2941,7 +2944,7 @@ proof -
             show "b N \<Longrightarrow> x N \<Longrightarrow> aa N \<Longrightarrow> \<forall>a. a \<ge> x = 1 \<longrightarrow> x \<le> a = 1 \<Longrightarrow>
                   aa \<ge> S x = 1 \<longrightarrow> S x \<le> aa = 1"
               apply (unfold_def def_leq, simp)
-              apply (rule cases_bool[where p="aa=0"], simp+)
+              apply (cases bool: "aa = 0", simp+)
               apply (rule implI, simp+)
               apply (unfold geq_def)
               apply (unfold_def def_less, simp, fold geq_def)
@@ -3017,7 +3020,7 @@ proof (rule forallI)
   fix a b
   show "\<forall>b. a \<le> b = 1 \<longrightarrow> c * a \<le> c * b = 1 \<Longrightarrow>
         a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> S a \<le> b = 1 \<longrightarrow> c * (S a) \<le> c * b = 1"
-    apply (rule cases_bool[where p="b=0"], simp)
+    apply (cases bool: "b=0", simp)
     apply (rule implI, simp)
     apply (rule exF[where P="S a = 0"], simp)
     apply (rule leq_0, simp)
@@ -3098,8 +3101,8 @@ done
 
 lemma cpair_mono_l [simp]:
   "x N \<Longrightarrow> y N \<Longrightarrow> x \<le> \<langle>x,y\<rangle> = 1"
-apply (rule cases_bool[where p="x=0"], simp+)
-apply (rule cases_bool[where p="x=1"], simp+)
+apply (cases bool: "x=0", simp+)
+apply (cases bool: "x=1", simp+)
 apply (induct y, simp+)
 done
 
@@ -3109,7 +3112,7 @@ by (rule le_less_trans[where b="b"], simp+)
 
 lemma cpair_of_nz_nz_l: "a N \<Longrightarrow> b N \<Longrightarrow> \<not> a = 0 \<Longrightarrow> \<not> \<langle>a,b\<rangle> = 0"
 apply (unfold_def cpair_def)
-apply (rule cases_bool[where p="b=0"], simp+)
+apply (cases bool: "b=0", simp+)
 apply (unfold_def def_mult, simp)
 apply (rule swap_add, simp)
 apply (unfold_def def_mult, simp)
@@ -3159,7 +3162,7 @@ proof -
             show "b N \<Longrightarrow> x N \<Longrightarrow> aa N \<Longrightarrow> \<forall>a. a < x = 1 \<longrightarrow> x > a = 1 \<Longrightarrow>
                   aa < S x = 1 \<longrightarrow> S x > aa = 1"
               apply (unfold_def def_less, simp)
-              apply (rule cases_bool[where p="aa=0"], simp+)
+              apply (cases bool: "aa=0", simp+)
               apply (rule implI, simp+)
               apply (rule implI, simp)
               apply (rule gr_mono_pred, simp+)
