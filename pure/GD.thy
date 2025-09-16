@@ -3178,6 +3178,12 @@ proof -
     done
 qed
 
+lemma [auto]: "a = b \<Longrightarrow> cpx a = cpx b"
+by (simp, rule eq_impl_term[where b="a"], rule eqSym, assumption)
+
+lemma [auto]: "a = b \<Longrightarrow> cpy a = cpy b"
+by (simp, rule eq_impl_term[where b="a"], rule eqSym, assumption)
+
 axiomatization
   cpi' :: "num \<Rightarrow> num \<Rightarrow> num"
 where
@@ -3194,10 +3200,18 @@ lemma [simp]: "cpi' 0 a = 0"
 lemma [simp]: "cpi 0 a = 0"
   by (unfold cpi_def, simp)
 
+lemma [auto]: "i N \<Longrightarrow> x N \<Longrightarrow> cpi' i x N"
+apply (induct i, simp)
+apply (unfold_def cpi'_def, simp)
+done
+
+lemma [auto]: "i N \<Longrightarrow> x N \<Longrightarrow> cpi i x N"
+unfolding cpi_def by simp
+
 lemma [simp]: "a N \<Longrightarrow> cpi' 1 a = a"
 by (unfold_def cpi'_def, simp)
 
-lemma [simp]: "a N \<Longrightarrow> cpi 1 a = cpx a"
+lemma [auto]: "a N \<Longrightarrow> cpi 1 a = cpx a"
 unfolding cpi_def by simp
 
 lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> cpi 1 \<langle>a, b\<rangle> = a"
@@ -3206,45 +3220,41 @@ unfolding cpi_def by simp
 lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> cpi' 2 \<langle>a, b\<rangle> = b"
 by (unfold_def cpi'_def, simp)
 
-lemma [simp]: "a N \<Longrightarrow> cpi' 2 a = cpy a"
+lemma [auto]: "a N \<Longrightarrow> cpi' 2 a = cpy a"
 by (unfold_def cpi'_def, simp)
+
+lemma [auto]: "a N \<Longrightarrow> cpi 2 a = cpx (cpy a)"
+unfolding cpi_def by simp
 
 lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> cpi 2 \<langle>a, b, c\<rangle> = b"
 unfolding cpi_def by simp
 
 lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> cpi' 3 \<langle>a, b, c\<rangle> = c"
-apply (unfold_def cpi'_def, simp)
-done
+by (unfold_def cpi'_def, simp)
+
+lemma [auto]: "a N \<Longrightarrow> cpi' 3 a = cpy (cpy a)"
+by (unfold_def cpi'_def, simp)
 
 lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> cpi 3 \<langle>a, b, c, d\<rangle> = c"
 unfolding cpi_def by simp
 
+lemma [auto]: "a N \<Longrightarrow> cpi 3 a = cpx (cpy (cpy a))"
+unfolding cpi_def by simp
+
 lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> cpi' 4 \<langle>a, b, c, d\<rangle> = d"
-apply (unfold_def cpi'_def, simp)
-done
+by (unfold_def cpi'_def, simp)
+
+lemma [auto]: "a N \<Longrightarrow> cpi' 4 a = cpy (cpy (cpy a))"
+by (unfold_def cpi'_def, simp)
+
+lemma [auto]: "a N \<Longrightarrow> cpi 4 a = cpx (cpy (cpy (cpy a)))"
+unfolding cpi_def by simp
 
 lemma [simp]: "x N \<Longrightarrow> x - 1 = P(x)"
 by (unfold_def def_sub, simp)
 
-lemma [auto]: "i N \<Longrightarrow> x N \<Longrightarrow> cpi' i x N"
-proof (induct i, simp)
-  case Base
-    show ?case by simp
-next
-  case (Step i)
-    assume hyp: "cpi' i x N"
-    show "i N \<Longrightarrow> x N \<Longrightarrow> cpi' (S i) x N"
-      apply (unfold_def cpi'_def)
-      apply (rule condT, simp+)+
-      apply (rule hyp)
-      done
-qed
-
-lemma [auto]: "i N \<Longrightarrow> x N \<Longrightarrow> cpi i x N"
-unfolding cpi_def by simp
-
 lemma [simp]: "i N \<Longrightarrow> cpi' i 0 = 0"
-apply (induct i, simp+)
+apply (induct i, simp)
 apply (unfold_def cpi'_def, simp)
 done
 
@@ -3318,10 +3328,10 @@ qed
 lemma cpair_surjective [auto]: "a N \<Longrightarrow> \<exists>b c. a = \<langle>b,c\<rangle>"
 sorry
 
-lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> x = \<langle>a,b\<rangle> \<Longrightarrow> cpx x = a"
+lemma "a N \<Longrightarrow> b N \<Longrightarrow> x = \<langle>a,b\<rangle> \<Longrightarrow> cpx x = a"
 by (subst "\<langle>a,b\<rangle> = x", simp)
 
-lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> x = \<langle>a,b\<rangle> \<Longrightarrow> cpy x = b"
+lemma "a N \<Longrightarrow> b N \<Longrightarrow> x = \<langle>a,b\<rangle> \<Longrightarrow> cpy x = b"
 by (subst "\<langle>a,b\<rangle> = x", simp)
 
 lemma [auto]: "x N \<Longrightarrow> x = \<langle>cpx x, cpy x\<rangle>"
@@ -3332,7 +3342,8 @@ proof -
   fix a
   show "x N \<Longrightarrow> a N \<Longrightarrow> \<exists>i. x = \<langle>a,i\<rangle> \<Longrightarrow> \<exists>i. x = \<langle>cpx x,i\<rangle>"
     apply (subst "a = cpx x")
-    apply (rule existsE[where Q="\<lambda>i. x=\<langle>a,i\<rangle>"], simp+)
+    apply (rule existsE[where Q="\<lambda>i. x=\<langle>a,i\<rangle>"])
+    apply (simp+)
     done
   show "x N \<Longrightarrow> a N \<Longrightarrow> x = \<langle>cpx x,a\<rangle> \<Longrightarrow> x = \<langle>cpx x,cpy x\<rangle>"
     apply (subst "a = cpy x")
@@ -3341,14 +3352,19 @@ proof -
     done
 qed
 
-lemma "x N \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> cpx x = a \<Longrightarrow> cpy x = b \<Longrightarrow> x = \<langle>a,b\<rangle>"
-apply (subst "cpx x = a")
-apply (subst "cpy x = b")
-done
+lemma cpair_eq_I: "x N \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> cpx x = a \<Longrightarrow> cpy x = b \<Longrightarrow> x = \<langle>a,b\<rangle>"
+by (subst "cpx x = a", subst "cpy x = b")
 
-lemma "x N \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> cpi 1 x = a \<Longrightarrow> cpi' 2 x = b \<Longrightarrow> x = \<langle>a,b\<rangle>"
-apply (subst "cpx x = a")
-apply (subst "cpy x = b")
+lemma cp4_proj: "x N \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> cpi 1 x = a \<Longrightarrow> cpi 2 x = b \<Longrightarrow>
+       cpi 3 x = c \<Longrightarrow> cpi' 4 x = d \<Longrightarrow>
+       x = \<langle>a,b,c,d\<rangle>"
+apply (rule cpair_eq_I, simp)
+apply (subst "cpi 1 x = cpx x", auto)
+apply (rule cpair_eq_I, simp)
+apply (subst "cpi 2 x = cpx (cpy x)", auto)
+apply (rule cpair_eq_I, simp)
+apply (subst "cpi 3 x = cpx (cpy (cpy x))", auto)
+apply (subst "cpi' 4 x = cpy (cpy (cpy x))", auto)
 done
 
 ML_file "gd_typeencode.ML"
@@ -3437,6 +3453,9 @@ by (unfold_def is_list_def, simp)
 lemma [auto]: "n N \<Longrightarrow> xs N \<Longrightarrow> \<not> Nil = Cons n xs"
 unfolding Nil_def Cons_def by simp
 
+lemma [auto]: "n N \<Longrightarrow> xs N \<Longrightarrow> \<not> Cons n xs = Nil"
+unfolding Nil_def Cons_def by simp
+
 lemma [simp]: "is_cons x \<Longrightarrow> (x N) \<longleftrightarrow> True"
 sorry
 
@@ -3453,8 +3472,9 @@ apply (fold_def is_cons_def, simp)
 done
 
 lemma "is_cons x \<Longrightarrow> (cpi 3 x) N"
-apply (rule conjE2)
-apply (fold_def is_cons_def, simp+)
+apply (rule conjE2, rule conjE2)
+apply (rule and_assoc, rule conjE1)
+apply (fold_def is_cons_def, simp)
 done
 
 lemma [cond]: "is_cons x \<Longrightarrow> is_list (cpi' 4 x)"
@@ -3462,13 +3482,15 @@ apply (rule conjE2)
 apply (fold_def is_cons_def, simp+)
 done
 
-lemma [auto]: "is_cons x \<Longrightarrow> \<exists>n xs. ((n N) \<and> is_list xs \<and> x = Cons n xs)"
+lemma cons_decode [auto]:
+  "is_cons x \<Longrightarrow> \<exists>n xs. ((n N) \<and> is_list xs \<and> x = Cons n xs)"
 apply (rule existsI[where a="cpi 3 x"], simp+)
 apply (rule existsI[where a="cpi' 4 x"], simp+)
 apply (unfold Cons_def)
 apply (subst rule: cons_1_tag, simp)
 apply (subst rule: cons_2_2, simp)
-sorry
+apply (rule cp4_proj, simp+)
+done
 
 lemma list_nat [simp]:
   shows "is_list x \<Longrightarrow> (x N) \<longleftrightarrow> True"
