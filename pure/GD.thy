@@ -3524,23 +3524,57 @@ apply (rule cpair_inj)
 apply (rule cpair_inj_r, rule cpair_inj_r, simp)
 done
 
-lemma "is_list x \<Longrightarrow> (x = Nil) \<or> (\<exists>n xs. x = Cons n xs)"
-sorry
+lemma list_cases: "is_list x \<Longrightarrow> (x = Nil) \<or> (\<exists>n xs. (n N) \<and> is_list xs \<and> (x = Cons n xs))"
+apply (rule implE[where a="is_list x"])
+apply (unfold_def is_list_def)
+apply (cases bool: "x=Nil", simp+)
+apply (rule implI, simp)
+apply (rule disjI1, simp)
+apply (cases bool: "is_cons x", simp+)
+apply (rule implI)
+apply (rule condTB, simp)+
+apply (simp+)
+apply (rule implI, simp)
+apply (rule exF[where P="False"], simp)
+done
 
-lemma is_list_cases [consumes 1, case_names Nil Cons]:
-  assumes "is_list x"
-  obtains (Nil) "x = Nil" | (Cons) n xs where "x = Cons n xs"
-    sorry
-
-lemma is_list_cases2 [consumes 1, case_names Nil Cons, elim!]:
-  assumes main_premise: "is_list x"
-  and nil_branch:   "x = Nil \<Longrightarrow> Q"
-  and cons_branch:  "\<And>n xs. x = Cons n xs \<Longrightarrow> Q"
-  shows "Q"
-sorry
+lemma cases_list [case_names HQ Nil Cons, cases]: "is_list x \<Longrightarrow>
+       (x = Nil \<Longrightarrow> Q) \<Longrightarrow>
+       (\<And>n xs. n N \<Longrightarrow> is_list xs \<Longrightarrow> x = Cons n xs \<Longrightarrow> Q)
+       \<Longrightarrow> Q"
+apply (rule disjE1[OF list_cases], simp, assumption)
+apply (rule existsE[where Q="\<lambda>n. \<exists>xs. (n N) \<and> is_list xs \<and> x = Cons n xs"])
+apply (assumption)
+proof -
+  fix a
+  show "is_list x \<Longrightarrow>
+     (x = Nil \<Longrightarrow> Q) \<Longrightarrow>
+     (\<And>n xs. n N \<Longrightarrow> is_list xs \<Longrightarrow> x = Cons n xs \<Longrightarrow> Q) \<Longrightarrow>
+     \<exists>n xs. (n N) \<and> is_list xs \<and> x = Cons n xs \<Longrightarrow>
+     a N \<Longrightarrow> \<exists>xs. (a N) \<and> is_list xs \<and> x = Cons a xs \<Longrightarrow> Q"
+    apply (rule existsE[where Q="\<lambda>xs. (a N) \<and> is_list xs \<and> x = Cons a xs"])
+    apply (assumption)
+    proof -
+      fix aa
+      show "
+      (\<And>n xs. n N \<Longrightarrow> is_list xs \<Longrightarrow> x = Cons n xs \<Longrightarrow> Q) \<Longrightarrow>
+        aa N \<Longrightarrow> (a N) \<and> is_list aa \<and> x = Cons a aa \<Longrightarrow> Q"
+        apply (rule Pure.meta_mp[where P="a N"])
+        apply (rule Pure.meta_mp[where P="is_list aa"])
+        apply (rule Pure.meta_mp[where P="x = Cons a aa"])
+        apply (assumption)
+        apply (rule conjE2, simp)
+        apply (rule conjE2, rule conjE1, simp)
+        apply (rule conjE1, rule conjE1, simp)
+        done
+    qed
+qed
 
 lemma [simp]: "is_list x \<Longrightarrow> x = 0 \<longleftrightarrow> False"
-sorry
+apply (rule iffI, simp+)
+apply (rule exF[where P="is_list 0"], simp)
+apply (rule exF[where P="False"], simp)
+done
 
 lemma [simp]: "is_list xs \<Longrightarrow> n N \<Longrightarrow> xs < Cons n xs = 1"
 unfolding Cons_def by simp
@@ -3550,24 +3584,43 @@ unfolding Cons_def by simp
  * The induction 'step' (corresponding to Cons) is probably too weak and needs
  * object level connectives.
  *)
-lemma
-  "is_list a \<Longrightarrow> Q Nil \<Longrightarrow> (x N \<Longrightarrow> is_list xs \<Longrightarrow> Q xs \<Longrightarrow> Q (Cons x xs)) \<Longrightarrow> is_list a \<longrightarrow> Q a"
+
+lemma obj_impl: "Q a \<longrightarrow> R a \<Longrightarrow> Q a \<Longrightarrow> R a"
+by (rule implE[where a="Q a"], simp)
+
+lemma obj_univ_impl: "\<forall>a. Q a \<longrightarrow> R a \<Longrightarrow> x N \<Longrightarrow> Q x \<Longrightarrow> R x"
+apply (rule implE[where a="Q x"])
+apply (rule forallE, simp)
+done
+
+lemma [case_names HQ Nil Cons, induct]:
+  "is_list a \<Longrightarrow> Q Nil \<Longrightarrow> (\<And>x xs. x N \<Longrightarrow> is_list xs \<Longrightarrow> Q xs \<Longrightarrow> Q (Cons x xs))
+   \<Longrightarrow> Q a"
+apply (rule implE[where a="is_list a"])
 apply (induct strong a, simp)
 apply (rule implI, simp)
 apply (rule exF[where P="is_list 0"], simp)
 apply (rule implI, simp)
-sorry
-
-lemma list_induction:
-  assumes q_nil: "Q Nil"
-  assumes step: "x N \<Longrightarrow> is_list xs \<Longrightarrow> Q xs \<Longrightarrow> Q (Cons x xs)"
-  shows "is_list a \<Longrightarrow> Q a"
-apply (rule implE[where a="is_list a"])
-apply (induct strong a, simp)
-apply (rule notE_impl, simp)
-apply (rule implI, simp)
-apply (rule cases_bool[where p="is_list S x"])
-sorry
+proof -
+  fix xa
+  assume cons: "(\<And>x xs. x N \<Longrightarrow> is_list xs \<Longrightarrow> Q xs \<Longrightarrow> Q (Cons x xs))"
+  show "xa N \<Longrightarrow> is_list S xa \<Longrightarrow> Q Nil \<Longrightarrow>
+        \<forall>y. y \<le> xa = 1 \<longrightarrow> is_list y \<longrightarrow> Q y \<Longrightarrow>
+        Q S xa"
+    proof (cases "S xa")
+      case Nil
+        from Nil show ?case
+          by (simp+)
+    next
+      case (Cons n xs)
+        from Cons and cons show ?case
+          apply (simp)
+          apply (rule cons, simp)
+          apply (rule obj_impl, rule obj_univ_impl, simp+)
+          apply (rule le_suc_implies_leq, simp+)
+          done
+    qed
+qed
 
 (*
  fun sum :: "List \<Rightarrow> num" where
@@ -3582,30 +3635,33 @@ where
                      else if (is_cons x) then (cpi 3 x) + (sum (cpi' 4 x))
                      else omega"
 
-lemma [auto]:
-  assumes h: "is_list x"
-  shows "sum x N"
-sorry
+lemma [simp]: "is_list 0 \<Longrightarrow> False"
+by (rule exF[where P="is_list 0"], simp)
 
-(*
-lemma [auto]:
-  assumes h: "is_list x"
-  shows "sum x N"
-using h
-proof (elim is_list_cases)
+lemma [auto]: "is_list x \<Longrightarrow> sum x N"
+proof (induct x)
   case Nil
-sorry
-*)
+  show ?case
+    by (unfold_def sum_def, simp add: sum_def)
+next
+  case (Cons n xs)
+  from Cons show ?case
+    apply (unfold_def sum_def)
+    apply (subst rule: condI2, simp+)
+    apply (subst rule: condI1, simp+)
+    apply (unfold Cons_def, simp+)
+    apply (unfold_def is_cons_def, simp)
+    done
+qed
 
 lemma [simp]: "sum Nil = 0"
 by (unfold_def sum_def, simp)
 
-lemma [simp]: "n N \<Longrightarrow> is_list xs \<Longrightarrow> xs N \<Longrightarrow> sum (Cons n xs) = n + sum xs"
+lemma [simp]: "n N \<Longrightarrow> is_list xs \<Longrightarrow> sum (Cons n xs) = n + sum xs"
 apply (rule eqSym)
 apply (unfold_def sum_def)
 apply (unfold_def is_cons_def)
-apply (unfold Cons_def Nil_def)
-apply (simp)
+apply (unfold Cons_def Nil_def, simp)
 done
 
 lemma "sum (Cons 4 (Cons 3 (Nil))) = 7"
