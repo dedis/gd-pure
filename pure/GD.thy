@@ -3677,4 +3677,43 @@ declaretype list =
   | cons of "num" "list"
 *)
 
+axiomatization
+  ack :: "num \<Rightarrow> num \<Rightarrow> num"
+where
+  ack_def: "ack x y := if x = 0 then y + 1
+                       else if y = 0 then ack (P x) 1
+                       else ack (P x) (ack x (P y))"
+
+lemma [simp]: "ack 0 0 = 1"
+by (unfold_def ack_def, simp)
+
+lemma [simp]: "n N \<Longrightarrow> ack 0 n = n + 1"
+by (unfold_def ack_def, simp)
+
+lemma "n N \<Longrightarrow> m N \<Longrightarrow> ack m n N"
+apply (rule forallE[where a="n"])
+apply (induct m)
+apply (rule forallI, simp)
+apply (rule forallI)
+proof -
+  fix x z
+  show "x N \<Longrightarrow> \<forall>y. ack x y N \<Longrightarrow> z N \<Longrightarrow> ack (S x) z N"
+    apply (induct z)
+    apply (unfold_def ack_def)
+    apply (subst rule: condI2, simp)
+    apply (subst rule: condI1, simp+)
+    apply (rule forallE[where a="1"], simp)
+    apply (rule forallE[where a="1"], simp)
+    apply (subst rule: condI1, simp+)
+    apply (rule forallE[where a="1"], simp)
+    apply (rule forallE[where a="1"], simp)
+    apply (unfold_def ack_def)
+    apply (subst rule: condI2, simp+)
+    apply (subst rule: condI2, simp+)
+    apply (rule forallE, simp)+
+    apply (rule forallI, simp+)
+    apply (rule forallE, simp)
+    done
+qed
+
 end (* End of theory *)
