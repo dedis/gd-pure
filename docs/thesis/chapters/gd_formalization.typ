@@ -10,6 +10,6 @@
 #show: codly-init.with()
 #codly(zebra-fill: none)
 
-= Formalizing GD in Pure
+= Formalizing GA in Pure
 
-We now have all the tools to formalize the GD logic in Isabelle.
+This chapter aims to translate the full formalization of _GA_ in @ga-ref into Isabelle.

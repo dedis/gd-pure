@@ -3,7 +3,8 @@
 // logic and Grounded Arithmetic.
 // =====================================================
 
-#import "../style.typ": definition-box
+#import "@preview/ouset:0.2.0": ouset
+#import "../style.typ": *
 #import "../formalisms.typ": *
 #import "@preview/codly:1.3.0": *
 #import "@preview/codly-languages:0.1.1": *
@@ -13,19 +14,19 @@
 = Background
 
 == Isabelle/Pure
-Isabelle provides a barebones logical framework called _Pure_. It contains a minimal meta-logic, which is a typed lambda calculus with few additional connectives, some keywords to add types and constants to said calculus, and a structured proof language called Isar.
+Isabelle provides a logical framework called _Pure_. It contains a minimal meta-logic, which is a typed lambda calculus with few additional connectives, some keywords to add types and constants to said calculus, and a structured proof language called Isar. Any object logic in Isabelle, for example the highly mature Isabelle/HOL fragment, are formalized atop _Pure_.
 
-Any object logic in Isabelle, for example the highly mature Isabelle/HOL fragment, are formalized atop Pure.
+Isabelle itself is implemented in the Standard ML (SML) programming language, and implementing an object logic _Pure_ almost always requires writing SML for things like proof automation, providing keywords, methods, or definitional mechanisms for users, and various other tooling such as code extraction.
 
-Isabelle is implemented in Standard ML (SML), and implementing an object logic directly in Pure almost always requires writing SML for things like proof automation, providing keywords or definitional mechanisms for users, or various other tooling such as code extraction.
+This subsection provides a formalization of the _Pure_ calculus.
 
-Unfortunately, there is no single document that lays out the syntax, axioms, and derivation rules of the Pure calculus in their entirety. The following is an attempt at providing such a characterization, combining information from two Isabelle papers @isabelle00 @isabelle89 and the Isabelle reference manual @isabelle_ref.
+Unfortunately, there is no single document that lays out the syntax, axioms, and derivation rules of the _Pure_ calculus in their entirety. The following is an attempt at providing such a characterization, combining information from two Isabelle papers @isabelle00 @isabelle89 and the Isabelle reference manual @isabelle_ref.
 
 === Syntax of Pure
 
-The core syntax of Pure is a typed lambda calculus, augmented with type variables, universal quantification, equality, and implication.
+The core syntax of _Pure_ is a typed lambda calculus, augmented with type variables, universal quantification, equality, and implication.
 
-Propositions are terms of the distinct type `prop`. Propositions in Pure are thus terms and not types, like they are in type-theory based provers like Rocq or Lean.
+Propositions are terms of the distinct type `prop`. Propositions in _Pure_ are thus terms and not types, like they are in type-theory based provers like Rocq or Lean.
 
 #definition-box("Type Syntax")[
   #pure-types
@@ -37,7 +38,7 @@ Propositions are terms of the distinct type `prop`. Propositions in Pure are thu
 
 The symbols used for implication, equality, and universal quantification are non-standard to leave the standard symbols free for object logics.
 
-Even though Pure has type variables, it provides no construct to capture them as an argument, and thus also has no for-all type like the polymorphic lambda calculus System F.
+Even though _Pure_ has type variables, it provides no construct to capture them as an argument, and thus also has no for-all type like the polymorphic lambda calculus System F.
 
 === Equality, Implication, and Quantification as Type Constructors
 
@@ -53,9 +54,9 @@ Since type variables denote only a single, albeit arbitrary, type, there is tech
 
 === Deduction Rules
 
-The operational semantics of the underlying lamdba calculus and its typing rules are standard and thus omitted. The following discusses the more interesting deduction rules, which make Pure a logical framework.
+The operational semantics of the underlying lamdba calculus and its typing rules are standard and thus omitted. The following discusses the more interesting deduction rules, which make _Pure_ a logical framework.
 
-Relative to an object logic with a set of defined axioms $Omega$, any axiom $omega in Omega$ can always be derived, as can any assumption $gamma in Gamma$.
+Relative to an object logic with a set of defined axioms $Alpha$ any axiom $alpha in Alpha$ can always be derived, as can any assumption $gamma in Gamma$.
 
 #definition-box("Basic Rules")[
   #pure-basic-rules
@@ -91,11 +92,11 @@ Finally, the equivalence substitution rule:
 
 === Formalizing Object Logics in Pure
 
-An object logic in Pure is created by adding new types, constants and axioms. That is, the Pure logic is extended.
+An object logic in _Pure_ is created by adding new types, constants and axioms. That is, the _Pure_ logic is extended.
 
-It is convention to define a new propositional type in an object logic, which is used as the type of propositions in the _object_ logic, as opposed to the _meta_ logic, which is Pure.
+It is convention to define a new propositional type in an object logic, which is used as the type of propositions in the _object_ logic, as opposed to the _meta_ logic, which is _Pure_.
 
-This is achieved using the $"typedecl"$ keyword, which declares a syntactic type in the Pure calculus. This type has no known inhabitants or any other information yet.
+This is achieved using the $"typedecl"$ keyword, which declares a syntactic type in the _Pure_ calculus. This type has no known inhabitants or any other information yet.
 
 $ "typedecl" o $
 
@@ -112,7 +113,7 @@ where
 ```
 
 The axiomatized rules here simply state that $"True"$ holds and that from either $P$ or $Q$, $P or Q$ can be derived. Here, $P$ and $Q$ are implicitly universally quantified, ranging over all terms of type `prop`. That is, $P$ and $Q$ can be substituted for any term of the correct type (which is `o` for both $P$ and $Q$ here).
-Now, the type `o` has knows inhabitants and structure. However, Isabelle (or rather, Pure) cannot reason about it, because it cannot connect the type `o` meaningfully with its meta-theory. To resolve this, a judgment must translate from the object-level proposition type `o` to the meta-level type `prop`.
+Now, the type `o` has knows inhabitants and structure. However, Isabelle (or rather, _Pure_) cannot reason about it, because it cannot connect the type `o` meaningfully with its meta-theory. To resolve this, a judgment must translate from the object-level proposition type `o` to the meta-level type `prop`.
 
 ```Isabelle
 judgment
@@ -135,7 +136,7 @@ done
 
 Applying $"disjI2"$ 'selects' the second disjunct to prove, which results in the subgoal $"True"$, which in turn we can solve using the $"true"$ axiom.
 
-This short introduction suffices for now, as we will later implement a much richer logic, Grounded Deduction, using these same basic constructs. We can clearly see that implementing an object logic in Pure actually extends Pure, in the sense that it adds new types and deduction rules. For example, our extension added a type and three symbols to the existing syntax of Pure. If we call the tiny logic formalized above Pure', the following is its type and term syntax:
+This short introduction suffices for now, as we will later implement a much richer logic, Grounded Deduction, using these same basic constructs. We can clearly see that implementing an object logic in _Pure_ actually extends _Pure_, in the sense that it adds new types and deduction rules. For example, our extension added a type and three symbols to the existing syntax of _Pure_. If we call the tiny logic formalized above _Pure'_, the following is its type and term syntax:
 
 #definition-box("Type Syntax of Pure'")[
   #pure-prime-types
@@ -159,10 +160,108 @@ It is technically possible to avoid declaring a new proposition type for an obje
 
 Such a structure reduces the control one has over the logic and keeps many reasoning principles implicit.
 
-== Grounded Deduction (GD)
+== Grounded Arithmetic (GA)
+<ga-ref>
 
-This subsection provides a full characterization of the GD logic that is later formalized.
+This subsection provides a full characterization of GA, a first-order formalization of arithmetic based on the principles of GD. This is the fragment that is later formalized in Isabelle.
 
-GD makes definitions first-class objects in the logic and allows arbitrary references of the symbol currently being defined or other, previously defined symbols, in the expanded term.
+GA makes definitions first-class objects in the logic and allows arbitrary references of the symbol currently being defined or other, previously defined symbols, in the expanded term.
 
-To prevent immediate inconsistency, GD must weaken other deduction rules commonly seen in classical logic. Specifically, GD adds a so-called _habeas quid_ sequent to many inference rules. Intuitively, this means that in certain inference rules, a (sub)term must first be shown to terminate. The following formalization is based on the GD formalization in @GD.
+To prevent immediate inconsistency, GA must weaken other deduction rules commonly seen in classical logic. Specifically, GA adds a so-called _habeas quid_ sequent to many inference rules. Intuitively, this means that in certain inference rules, a (sub)term must first be shown to terminate.
+
+=== BGA Formalization
+
+We start by formalizing the syntax and axioms of _Basic Grounded Arithmetic_ (_BGA_), the quantifier-free fragment of GA, based on the formalization in @GD. This formulation later adds quantifiers by encoding them as unbounded computations in _BGA_, yielding full _GA_. This however requires a sophisticated encoding using Gödel-style reflection, i.e. encoding its own term syntax into natural numbers, which is out of scope for a formalization in _Pure_. Thus, we will later add quantifiers by simply axiomatizing them.
+
+The primitive term syntax of BGA is the following.
+
+#definition-box("BGA Primitive Term Syntax")[
+  #bga-term-syntax
+]
+
+It is noteworthy that the GA term syntax mixes expressions that are natural numbers and expressions that are formulas into the same syntactic category. For example, the expression $S(x) = x or x$ is a valid term according to the syntax, despite the left-hand side shape clearly indicating a natural number, while the right hand side shape indicates a truth value.
+
+Besides the primitives, other constants and logical connectives are defined as notational shorthands using the primitives.
+
+#definition-box("Notational Shorthands")[
+  #ga-definitional-shorthands
+]
+
+The surprising shorthands are $a #nat$ and $p #bool$. The latter is a predicate over $p$ deciding whether it is a binary truth value. In a logic with the law of excluded middle, $p #bool$ would be a tautology for any $p$, but in a logic without it, it can be interpreted as a termination certificate for truth values. Similarly, $a #nat$ can be interpreted as a termination certificate for natural number expressions. The shorthand itself is surprising, because if equality is reflexive, $a = a$ is true for any $a$. In GA however, equality is not reflexive as we will soon see, and a proof of $a = a$ is equivalent to a termination proof of the expression.
+
+The syntax does not mean much without a set of axioms giving them meaning. We start with listing the propositional logic axioms.
+
+In the following, $Gamma$ denotes a set of background assumptions. For completeness sake, the explicit structural rules governing this set of assumptions is listed here. Since $Gamma$ is a set, the usually explicit rules for permuting and duplicating assumptions are not needed.
+
+#definition-box("Structural Rules")[
+  #structural-rules
+]
+
+#definition-box("Propositional Logic Axioms")[
+  #bga-prop-logic-axioms
+]
+
+Rules such as $not not "IE"$ with a double-line are bidirectional, i.e. they serve as both an introduction and elimination rule.
+
+The propositional axioms are fairly standard, but inclusion of double negation elimination is notable, as this is common in classical logics, but omitted in computational logics.
+
+#definition-box("Equality Axioms")[
+  #bga-eq-axioms
+]
+
+The equality axioms notably omit reflexivity. Symmetry of equality is an axiom, as is equality substitution in an arbitrary context $K$. Transitivity of equality can be deduced using equality substitution.
+
+#definition-box("Natural Number Axioms", font_size: 0.9em)[
+  #bga-nat-axioms
+]
+
+The natural number axioms are fairly close to the standard Peano axioms, with some notable exceptions.
+
+The _grounding_ equality is the $0I$ axiom, postulating that $0 nat$, or, by unfolding the definition, $0 = 0$. Using the $S=I E$ axiom, $suc(a) nat$ can be deduced for any $a$ for which $a nat$ is already known. The induction axiom $"ind"$ has an additional premise of $a nat$, i.e. it requires proof that the expression induction is performed over is indeed a (terminating) natural number.
+
+Conditional evaluation is a primitive in _GA_ and its behavior must thus be axiomatized. The two inference rules correspond to the positive and negative evaluation of the condition, and they both require that the expression from the corresponding branch is shown to be terminating (i.e. $a nat$ and $b nat$ respectively). This additional premise prevents equalities of potentially non-terminating expressions to be deduced.
+
+==== Grounded Contradiction
+Although _GA_ is not classical, a contradiction rule can be derived. The resulting inference rule has an additional $p bool$ premise not present in the classical version, which demands $p$ is first shown to have a truth value. To get a feeling for the logic, we construct the proof explicitly in a natural deduction style derivation tree.
+
+#theorem("Grounded Contradiction")[
+  #grounded-contradiction
+]
+#proof(tree(grounded-contradiction-deriv))
+
+==== Grounded Implication
+Impliciation is not a primitive in _GA_, but rather the shorthand $a arrow.r b equiv not a or b$. From this definition, the classical elimination rule _modus ponens_ can be derived. However, only a weakened introduction rule, with the now familiar additional _habeas quid_ premise, can be derived.
+
+#theorem("Modus Ponens")[
+  #modus-ponens
+]
+#proof(tree(modus-ponens-deriv))
+
+#theorem("Implication Introduction")[
+  #implI
+]
+#proof(tree(implI-deriv))
+
+==== Definitional Axioms
+Finally, the axioms for definitions allow arbitrary substitution of a symbol with its definition body (and the other way around) in any context. The vector notation $vec(a)$ denotes an argument vector for the defined function symbol.
+
+#definition-box("Definition Axioms")[
+  #bga-def-axioms
+]
+
+=== GA with Axiomatized Quantifiers
+As already mentioned, the creators of _GA_ claim that quantifiers can be encoded into BGA using the powerful definitional mechanism @GD, yielding full _GA_ "for free". However, as this will not be feasible in the formalization within _Pure_, the following axiomatizes the quantifiers instead.
+
+#definition-box("Quantifier Axioms")[
+  #bga-quantifier-axioms
+]
+
+Besides the additional _habeas quid_ premises, the quantifier axioms are standard.
+
+Since the quantifiers are primitive here, they must be added to the primitive term syntax, yielding the full _GA_ primitive term syntax.
+
+#definition-box("GA Primitive Term Syntax")[
+  #ga-term-syntax
+]
+
+This set of axioms is now a full formalization of a grounded flavor of first-order arithmetic, which we just refer to as _GA_ from now on.

@@ -3,18 +3,71 @@
 // formulae and tables to clean up the main thesis.typ
 // file.
 // =====================================================
+
+#import "@preview/ouset:0.2.0": ouset
+#import "@preview/curryst:0.5.1": rule, prooftree
+ 
+#let prems(sep: h(1.3em), ..premises) = {
+  $
+    #premises.pos().join(sep)
+  $
+}
+
+#let prem(premise, ..assm) = {
+  if (assm.pos().len() == 0) {
+    $Gamma tack.r #premise$
+  } else {
+    $Gamma union {#assm.pos().join(", ")} tack.r #premise$
+  }
+}
+
 #let deduction-rule(
   premise,
   conclusion,
-  name
-) = {
+  name,
+  sym: false,
+  spacing: 0.4em,
+  line-sep: 2pt,
+  thickness: 0.5pt,
+) = context {
+  let premise-width = measure(premise).width
+  let conclusion-width = measure(conclusion).width
+  let max-width = calc.max(premise-width, conclusion-width)
+  let div = if sym {
+    stack(
+      spacing: line-sep,
+      line(length: max-width, stroke: thickness),
+      line(length: max-width, stroke: thickness)
+    )
+  } else {
+    line(length: max-width, stroke: thickness)
+  }
+  let name-tag = if name == none {$$} else {$#h(1em) (#name)$}
   $
-  frac(
+  #stack(
+    spacing: spacing,
     premise,
+    box(
+      width: auto,
+      div
+    ),
     conclusion
-  ) #h(1em) (name)
+  ) #name-tag
   $
 }
+
+#let pred(n) = $#math.bold(math.upright("P"))\(#n\)$
+#let suc(n) = $#math.bold(math.upright("S"))\(#n\)$
+#let predf = $#math.bold(math.upright("P"))$
+#let sucf = $#math.bold(math.upright("S"))$
+#let judgment(body, font: "Roboto") = {
+  text(font: font)[#body]
+}
+#let nat = { judgment("N") }
+#let bool = { judgment("B") }
+#let cond(c,a,b) = { $"if" #c "then" #a "else" #b$ }
+#let ctxt(a) = { $K #h(0.3em) #a$ }
+#let vec(a) = $accent(#a, arrow)$
 
 #let pure-types = {
   $ tau ::= &alpha "(type variable)" \
@@ -66,7 +119,7 @@
 
 #let pure-implication-rules = {
   let implication-intro = deduction-rule(
-      $Gamma union A tack.r B$,
+      $Gamma union {A} tack.r B$,
       $Gamma tack.r A arrow.double.long B$,
       $arrow.double.long I$
     )
@@ -246,3 +299,471 @@
   $Gamma tack.r "Trueprop True"$,
   $"true"$
 )
+
+#let bga-term-syntax = {
+  grid(
+    columns: (1fr, 1fr),
+    align(left)[
+      $ t ::= & x          \
+          |   & 0          \
+          |   & suc(t)       \
+          |   & pred(t)       \
+          |   & not t      \
+          |   & t or t     \
+          |   & t = t      \
+          |   & cond(t,t,t)\
+          |   & d(t,...,t) \
+      $
+    ],
+    align(left)[
+      #set par(leading: 0.94em)
+      variable \
+      natural-number constant zero \
+      natural-number successor \
+      natural-number predecessor \
+      logical negation \
+      logical disjunction \
+      natural-number equality \
+      conditional evaluation \
+      application of recursive definition \
+    ]
+  )
+}
+
+#let ga-term-syntax = {
+  grid(
+    columns: (1fr, 1fr),
+    align(left)[
+      $ t ::= & x          \
+          |   & 0          \
+          |   & suc(t)     \
+          |   & pred(t)    \
+          |   & not t      \
+          |   & t or t     \
+          |   & t = t      \
+          |   & cond(t,t,t)\
+          |   & d(t,...,t) \
+          |   & forall x. t\
+          |   & exists x. t\
+      $
+    ],
+    align(left)[
+      #set par(leading: 0.94em)
+      variable \
+      natural-number constant zero \
+      natural-number successor \
+      natural-number predecessor \
+      logical negation \
+      logical disjunction \
+      natural-number equality \
+      conditional evaluation \
+      application of recursive definition \
+      universal quantifier \
+      existential quantifier \
+    ]
+  )
+}
+
+#let ga-definitional-shorthands = {
+  grid(
+    columns: (1.7fr, 1fr),
+    align(center)[
+      $
+       "True"        &equiv 0 = 0                           \
+       "False"       &equiv 0 = S(0)                        \
+       a nat         &equiv a = a                           \
+       p bool        &equiv p or not p                      \
+       p and q       &equiv not (not p or not q)            \
+       p arrow.r q   &equiv not p or q                      \
+       p arrow.l.r q &equiv (p arrow.r q) and (q arrow.r p) \
+       a eq.not b    &equiv not (a = b)                     \
+      $
+    ],
+    align(left)[
+      #set par(leading: 0.86em)
+      true constant \
+      false constant \
+      number type    \
+      boolean type \
+      logical conjunction \
+      implication \
+      biconditional \
+      inequality \
+    ]
+  )
+}
+
+#let bga-prop-logic-axioms = {
+  let disjI1 = deduction-rule(
+    prem($p$),
+    prem($p or q$),
+    $or "I1"$
+  )
+  let disjI2 = deduction-rule(
+    prem($q$),
+    prem($p or q$),
+    $or "I2"$
+  )
+  let disjI3 = deduction-rule(
+    prems(
+      prem($not p$),
+      prem($not q$),
+    ),
+    prem($not (p or q)$),
+    $or "I3"$
+  )
+  let dNegIE = deduction-rule(
+    prem($p$),
+    prem($not not p$),
+    $not not "IE"$,
+    sym: true
+  )
+  let exF = deduction-rule(
+    prems(
+      prem($p$),
+      prem($not p$),
+    ),
+    prem($q$),
+    $not E$
+  )
+  let disjE1 = deduction-rule(
+    prem($not (p or q)$),
+    prem($not p$),
+    $or "E1"$
+  )
+  let disjE2 = deduction-rule(
+    prem($not (p or q)$),
+    prem($not q$),
+    $or "E2"$
+  )
+  let disjE3 = deduction-rule(
+    prems(
+      prem($p or q$),
+      prem($r$, $p$),
+      prem($r$, $q$)
+    ),
+    prem($r$),
+    $or "E3"$
+  )
+
+  grid(
+    columns: (1fr, 1fr, 1fr),
+    row-gutter: 2em,
+    disjI1,
+    disjI2,
+    disjI3,
+    dNegIE,
+    exF,
+    disjE1,
+    disjE2,
+    grid.cell(
+      colspan: 2,
+      disjE3
+    ),
+  )
+}
+
+#let bga-nat-axioms = {
+  let zeroI = deduction-rule(
+    $$,
+    prem($0 nat$),
+    $0 I$
+  )
+  let sucIE = deduction-rule(
+    prem($a=b$),
+    prem($suc(a) = suc(b)$),
+    $sucf=I E$,
+    sym: true
+  )
+  let predI = deduction-rule(
+    prem($a=b$),
+    prem($pred(a) = pred(b)$),
+    $predf=I$,
+  )
+  let sucNz = deduction-rule(
+    prem($a nat$),
+    prem($suc(a) eq.not 0$),
+    $sucf eq.not 0I$
+  )
+  let predSucInv = deduction-rule(
+    prem($a nat$),
+    prem($pred(suc(a)) = a$),
+    $predf=I 2$
+  )
+  let condI1 = deduction-rule(
+    prems(
+      prem($c$),
+      prem($a nat$)
+    ),
+    prem($(cond(c,a,b)) = a$),
+    $?I 1$
+  )
+  let condI2 = deduction-rule(
+    prems(
+      prem($not c$),
+      prem($b nat$)
+    ),
+    prem($(cond(c,a,b)) = b$),
+    $?I 2$
+  )
+  let induct = deduction-rule(
+    prems(
+      prem($ctxt(0)$),
+      prem($ctxt(suc(x))$,
+           $x nat$,
+           $ctxt(x)$
+      ),
+      prem($a nat$)
+    ),
+    prem($ctxt(a)$),
+    $"Ind"$
+  )
+  let eqNat = deduction-rule(
+    prems(
+      prem($a nat$),
+      prem($b nat$),
+    ),
+    prem($a = b nat$),
+    $="TI"$
+  )
+  let condT = deduction-rule(
+    prems(
+      prem($c bool$),
+      prem($a nat$),
+      prem($b nat$),
+    ),
+    prem($cond(c,a,b) nat$),
+    $?"TI"$
+  )
+
+  grid(
+    columns: (1fr, 0.9fr, 1fr),
+    row-gutter: 2em,
+    zeroI,
+    sucIE,
+    predI,
+    predSucInv,
+    sucNz,
+    condI1,
+    condI2,
+    grid.cell(
+      colspan: 2,
+      induct
+    ),
+    eqNat,
+    grid.cell(
+      colspan: 2,
+      condT
+    ),
+  )
+}
+
+#let bga-eq-axioms = {
+  let eqSym = deduction-rule(
+    prem($a = b$),
+    prem($b = a$),
+    $=S$
+  )
+  let eqSubst = deduction-rule(
+    prems(
+      prem($a = b$),
+      prem($ctxt(a)$)
+    ),
+    prem($ctxt(b)$),
+    $=E$ 
+  )
+
+  grid(
+    columns: (1fr, 1fr),
+    row-gutter: 2em,
+    eqSym,
+    eqSubst,
+  )
+}
+
+#let bga-def-axioms = {
+  let defE = deduction-rule(
+    prems(
+      prem($s(vec(x)) equiv d(vec(x))$),
+      prem($ctxt(d(vec(a)))$)
+    ),
+    prem($ctxt(s(vec(a)))$),
+    $equiv E$
+  )
+  let defI = deduction-rule(
+    prems(
+      prem($s(vec(x)) equiv d(vec(x))$),
+      prem($ctxt(s(vec(a)))$)
+    ),
+    prem($ctxt(d(vec(a)))$),
+    $equiv I$
+  )
+
+  grid(
+    columns: (1fr, 1fr),
+    row-gutter: 2em,
+    defE,
+    defI,
+  )
+}
+
+#let structural-rules = {
+  let H = deduction-rule(
+    $$,
+    prem($p$, $p$),
+    "H"
+  )
+  let W = deduction-rule(
+    prem($q$),
+    prem($q$, $p$),
+    "W"
+  )
+  grid(
+    columns: (1fr, 1fr),
+    row-gutter: 2em,
+    H, W
+  )
+}
+
+#let grounded-contradiction = deduction-rule(
+  prems(
+    prem($p bool$),
+    prem($q$, $not p$),
+    prem($not q$, $not p$),
+  ),
+  prem($p$),
+  none
+)
+
+#let grounded-contradiction-deriv = rule(
+  name: $or "E3"$,
+  prem($p$),
+  rule(
+    name: $bool "def"$,
+    prem($p or not p$),
+    prem($p bool$)
+  ),
+  rule(
+    name: "H",
+    prem($p$, $p$)
+  ),
+  rule(
+    name: $not E$,
+    prem($p$, $not p$),
+    prem($q$, $not p$),
+    prem($not q$, $not p$),
+  )
+)
+
+#let modus-ponens = deduction-rule(
+  prems(
+    prem($p$),
+    prem($p arrow.r q$)
+  ),
+  prem($q$),
+  $arrow.r E$
+)
+
+#let modus-ponens-deriv = rule(
+  name: $or "E3"$,
+  prem($q$),
+  rule(
+    name: "H",
+    prem($q$, $q$)
+  ),
+  rule(
+    name: $not E$,
+    prem($q$, $not p$),
+    rule(
+      name: "H",
+      prem($not p$, $not p$),
+    ),
+    rule(
+      name: "W",
+      prem($p$, $not p$),
+      prem($p$),
+    )
+  ),
+  rule(
+    name: $arrow.r "def"$,
+    prem($not p or q$),
+    prem($p arrow.r q$)
+  )
+)
+
+#let implI = deduction-rule(
+  prems(
+    prem($p bool$),
+    prem($q$, $p$),
+  ),
+  prem($p arrow.r q$),
+  $arrow.r I$
+)
+
+#let implI-deriv = rule(
+  name: $arrow.r "def"$,
+  prem($p arrow.r q$),
+  rule(
+    name: $or "E3"$,
+    prem($not p or q$),
+    rule(
+      name: $bool "def"$,
+      prem($p or not p$),
+      prem($p bool$)
+    ),
+    rule(
+      name: $or "E2"$,
+      prem($not p or q$, $p$),
+      prem($q$, $p$)
+    ),
+    rule(
+      name: $or "I1"$,
+      prem($not p or q$, $not p$),
+      rule(
+        name: "H",
+        prem($not p$, $not p$)
+      )
+    )
+  )
+)
+
+#let bga-quantifier-axioms = {
+  let forallI = deduction-rule(
+    prem($ctxt(x)$, $x nat$),
+    prem($forall x. ctxt(x)$),
+    $forall I$
+  )
+  let forallE = deduction-rule(
+    prems(
+      prem($forall x. ctxt(x)$),
+      prem($a nat$),
+    ),
+    prem($ctxt(a)$),
+    $forall E$
+  )
+  let existsI = deduction-rule(
+    prems(
+      prem($a nat$),
+      prem($ctxt(a)$)
+    ),
+    prem($exists x. ctxt(x)$),
+    $exists I$
+  )
+  let existsE = deduction-rule(
+    prems(
+      prem($exists x. ctxt(x)$),
+      prem($q$, $x nat$, $ctxt(x)$)
+    ),
+    prem($q$),
+    $exists E$
+  )
+
+  grid(
+    columns: (1fr, 1fr),
+    row-gutter: 2em,
+    forallI,
+    forallE,
+    existsI,
+    existsE,
+  )
+}
