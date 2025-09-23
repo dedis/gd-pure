@@ -36,13 +36,15 @@ Grounded deduction (GD) is a logical framework developed recently at EPFL and wh
 
 In @ga-ref, _Grounded Arithmetic_ (_GA_), a first-order theory of arithmetic based on _grounded_ principles, is fully formalized based on a formalization by the authors of _GD_ @GD.
 
-The definition $L equiv not L$ is perfectly valid in _GA_. However, it is not possible to assign a boolean truth value to $L$ using the _GA_ inference rules. For example the derived contradiction rule in _GA_ provides no help, as opposed to the classical version. The reason for this is an additional premise of $p or not p$, a circular proof obligation, since it asks for the very truth value assignment we are currently trying to prove. The truth value of $L$ is not _grounded_ in anything.
+To get an intuition of the ideas of _GA_, consider again the definition $L equiv not L$ and how it behaves in _GA_, after already having discussed how it behaves in a classical logic. The definition $L equiv not L$ is perfectly valid in _GA_. However, when trying to assign a truth value to it, i.e. to prove either $L$ or $not L$, it is quickly apparent that this is not possible using the _GA_ inference rules. For example, the derived contradiction rule in _GA_ provides no help, as opposed to the classical version. The reason for this is an additional premise of $p or not p$, a circular proof obligation, since it asks for the very truth value assignment we are currently trying to prove. The truth value of $L$ is not _grounded_ in anything.
 
 #definition-box(none)[
   #grounded-contradiction
 ]
 
-There is an ongoing formalization project of _GD_/_GA_ in the proof assistant Isabelle/HOL, which already yielded a consistency proof of the quantifier-free fragment of GD, showing great promise for GD as a reasoning framework. However, the other aim of GD is to show that it is also expressive and importantly, usable as a tool for formalizing mathematics itself. The formalization in the mature HOL logic enables studying meta-logical properties of GD, such as consistency. However, it is not suitable for providing GD as a tool for formal reasoning itself for a few reasons.
+Similarly, many other inference rules in _GA_ demand a _grounding_ of the involved values as additional premises compared to their classical counterparts. The authors refer to these premises as _habeas quid_ conditions.
+
+There is an ongoing formalization project of _GD_/_GA_ in the proof assistant Isabelle/HOL, which already yielded a consistency proof of the quantifier-free fragment of GD, showing great promise for GD as a reasoning framework. However, the other aim of GD is to show that it is also expressive and importantly, usable as a tool for formalizing mathematics itself. It is not clear whether _grounded_ reasoning is feasible when aiming to formalize even basic arithmetic. The _GA_ formalization in the mature HOL logic enables studying meta-logical properties such as consistency. However, it is not suitable for providing _GD_/_GA_ as a tool for formal reasoning itself for a few reasons.
 
 - Formalizing GD within a mature metalogic such as HOL adds the axioms of the metalogic to the trusted base of GD, which is undesirable from a meta-logical perspective.
 - The logical primitives and axioms being embedded within the primitives of another logic (HOL in this case) makes reasoning within it contrived and needlessly complicated.
@@ -52,4 +54,4 @@ It is thus highly desirable to formalize a foundational formal system like GD at
 
 This is exactly what Isabelle provides with the Pure framework: A minimal, generic logical calculus to formalize object logics on top of. Any object logic in Isabelle, including Isabelle/HOL, is formalized atop Pure.
 
-This thesis aims to fully axiomatize GA in Pure, yielding essentially an interactive theorem prover Isabelle/GA, which can be used for formal reasoning based directly on the reasoning principles and axioms of GA.
+This thesis aims to fully axiomatize GA in Pure, yielding essentially an interactive theorem prover Isabelle/GA, which can be used for formal reasoning based directly on the reasoning principles and axioms of GA. The next goal is to formalize large chunks of basic arithmetic to evaluate the feasibility of GA as a foundation of mathematical reasoning and provide tooling and proof automation to try and make _grounded_ reasoning as small of an inconvenience over classical reasoning as possible.

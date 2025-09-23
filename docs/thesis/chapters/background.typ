@@ -14,6 +14,7 @@
 = Background
 
 == Isabelle/Pure
+<pure-ref>
 Isabelle provides a logical framework called _Pure_. It contains a minimal meta-logic, which is a typed lambda calculus with few additional connectives, some keywords to add types and constants to said calculus, and a structured proof language called Isar. Any object logic in Isabelle, for example the highly mature Isabelle/HOL fragment, are formalized atop _Pure_.
 
 Isabelle itself is implemented in the Standard ML (SML) programming language, and implementing an object logic _Pure_ almost always requires writing SML for things like proof automation, providing keywords, methods, or definitional mechanisms for users, and various other tooling such as code extraction.
@@ -91,6 +92,7 @@ Finally, the equivalence substitution rule:
 ]
 
 === Formalizing Object Logics in Pure
+<how-to-pure>
 
 An object logic in _Pure_ is created by adding new types, constants and axioms. That is, the _Pure_ logic is extended.
 
@@ -170,6 +172,7 @@ GA makes definitions first-class objects in the logic and allows arbitrary refer
 To prevent immediate inconsistency, GA must weaken other deduction rules commonly seen in classical logic. Specifically, GA adds a so-called _habeas quid_ sequent to many inference rules. Intuitively, this means that in certain inference rules, a (sub)term must first be shown to terminate.
 
 === BGA Formalization
+<bga-ref>
 
 We start by formalizing the syntax and axioms of _Basic Grounded Arithmetic_ (_BGA_), the quantifier-free fragment of GA, based on the formalization in @GD. This formulation later adds quantifiers by encoding them as unbounded computations in _BGA_, yielding full _GA_. This however requires a sophisticated encoding using Gödel-style reflection, i.e. encoding its own term syntax into natural numbers, which is out of scope for a formalization in _Pure_. Thus, we will later add quantifiers by simply axiomatizing them.
 
@@ -222,6 +225,7 @@ The _grounding_ equality is the $0I$ axiom, postulating that $0 nat$, or, by unf
 Conditional evaluation is a primitive in _GA_ and its behavior must thus be axiomatized. The two inference rules correspond to the positive and negative evaluation of the condition, and they both require that the expression from the corresponding branch is shown to be terminating (i.e. $a nat$ and $b nat$ respectively). This additional premise prevents equalities of potentially non-terminating expressions to be deduced.
 
 ==== Grounded Contradiction
+<contradiction>
 Although _GA_ is not classical, a contradiction rule can be derived. The resulting inference rule has an additional $p bool$ premise not present in the classical version, which demands $p$ is first shown to have a truth value. To get a feeling for the logic, we construct the proof explicitly in a natural deduction style derivation tree.
 
 #theorem("Grounded Contradiction")[
@@ -250,7 +254,8 @@ Finally, the axioms for definitions allow arbitrary substitution of a symbol wit
 ]
 
 === GA with Axiomatized Quantifiers
-As already mentioned, the creators of _GA_ claim that quantifiers can be encoded into BGA using the powerful definitional mechanism @GD, yielding full _GA_ "for free". However, as this will not be feasible in the formalization within _Pure_, the following axiomatizes the quantifiers instead.
+<quantifiers>
+As already mentioned, the creators of _GA_ claim that quantifiers can be encoded into BGA using the powerful definitional mechanism @GD, yielding full _GA_ "for free". However, as this will not be feasible in the formalization within _Pure_, the following axiomatizes the quantifiers instead. The axioms correspond to the inference rules that would be derivable from encoded quantifiers @GD.
 
 #definition-box("Quantifier Axioms")[
   #bga-quantifier-axioms

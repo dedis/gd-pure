@@ -38,7 +38,8 @@
     radius: 4pt,
     width: 100%,
     {
-      text(weight: "bold", [Theorem #context thm_cnt.display(). #title])
+      text(weight: "bold", [Theorem #context thm_cnt.display(). ])
+      text(style: "italic", [#title])
       set text(size: font_size)
       body
     }
@@ -47,5 +48,8 @@
 
 #let proof(body, name: [Proof.]) = {
   text(weight: "bold")[#name]
+  v(0em)
   body
+  h(1fr)
+  $qed$
 }

@@ -7,6 +7,21 @@
 #import "@preview/ouset:0.2.0": ouset
 #import "@preview/curryst:0.5.1": rule, prooftree
  
+#let pred(n) = $#math.bold(math.upright("P"))\(#n\)$
+#let suc(n) = $#math.bold(math.upright("S"))\(#n\)$
+#let predf = $#math.bold(math.upright("P"))$
+#let sucf = $#math.bold(math.upright("S"))$
+#let judgment(body, font: "Roboto") = {
+  text(font: font)[#body]
+}
+#let nat = { judgment("N") }
+#let bool = { judgment("B") }
+#let cond(c,a,b) = { $"if" #c "then" #a "else" #b$ }
+#let ctxt(a) = { $K #h(0.3em) #a$ }
+#let vec(a) = $accent(#a, arrow)$
+#let to = $arrow.r.double$
+#let impl = $arrow.r.double.long$
+
 #let prems(sep: h(1.3em), ..premises) = {
   $
     #premises.pos().join(sep)
@@ -55,19 +70,6 @@
   ) #name-tag
   $
 }
-
-#let pred(n) = $#math.bold(math.upright("P"))\(#n\)$
-#let suc(n) = $#math.bold(math.upright("S"))\(#n\)$
-#let predf = $#math.bold(math.upright("P"))$
-#let sucf = $#math.bold(math.upright("S"))$
-#let judgment(body, font: "Roboto") = {
-  text(font: font)[#body]
-}
-#let nat = { judgment("N") }
-#let bool = { judgment("B") }
-#let cond(c,a,b) = { $"if" #c "then" #a "else" #b$ }
-#let ctxt(a) = { $K #h(0.3em) #a$ }
-#let vec(a) = $accent(#a, arrow)$
 
 #let pure-types = {
   $ tau ::= &alpha "(type variable)" \
@@ -767,3 +769,79 @@
     existsE,
   )
 }
+
+#let nat-deduct-rule = deduction-rule(
+  prems(
+    $Gamma union A_1 tack.r P_1$,
+    $Gamma union A_2 tack.r P_2$,
+    $...$,
+    $Gamma union A_n tack.r P_n$,
+  ),
+  prem($C$),
+  none
+)
+
+#let nat-typing-rules = {
+  let natS = deduction-rule(
+    prem($a nat$),
+    prem($suc(a) nat$),
+    $sucf nat$
+  )
+  let natP = deduction-rule(
+    prem($a nat$),
+    prem($pred(a) nat$),
+    $predf nat$
+  )
+  
+  grid(
+    columns: (1fr, 1fr),
+    row-gutter: 2em,
+    natS,
+    natP
+  )
+}
+
+#let add-def = $"add" x " " y := cond(y = 0, x, suc("add" x pred(y)))$
+
+#let not-less-zero = deduction-rule(
+  none,
+  prem($x < 0 = 0$),
+  none
+)
+
+#let add-term = deduction-rule(
+  prems(
+    prem($x nat$),
+    prem($y nat$),
+  ),
+  prem($x + y nat$),
+  none
+)
+
+#let leq-term = deduction-rule(
+  prems(
+    prem($x nat$),
+    prem($y nat$),
+  ),
+  prem($x <= y nat$),
+  none
+)
+
+#let div-term = deduction-rule(
+  prems(
+    prem($x nat$),
+    prem($y nat$),
+  ),
+  prem($"div" x " " y nat$),
+  none
+)
+
+#let strong-induct = deduction-rule(
+  prems(
+    prem($a nat$),
+    prem($ctxt(0)$),
+    prem($ctxt(suc(x))$, $x nat$, $\{y <= x = 1\} tack.r ctxt(y))$)
+  ),
+  prem($ctxt(a)$),
+  none
+)
