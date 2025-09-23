@@ -35,28 +35,6 @@ struct
     in
       CHANGED (REPEAT (CHANGED (solver_tac ctxt fuel i)))
     end
-
-  fun simp_tac ctxt =
-    Simplifier.asm_full_simp_tac ctxt
-
-  fun get_rewrites _ _: thm list = []
-
-  fun proof_search _    0 _ = no_tac
-    | proof_search ctxt k i =
-    let
-      val rws = get_rewrites ctxt i
-      fun try_solve i th =
-        SOLVED' (resolve_tac ctxt [th] THEN' proof_search ctxt (k-1)) i
-    in
-      (TRY (REPEAT_DETERM (simp_tac ctxt i)))
-      THEN FIRST (map (try_solve i) rws)
-    end
-
-  fun proof_search_tac ctxt i =
-    let val fuel = 30 in
-      proof_search ctxt fuel i
-    end
-
 end
 
 val parse_nat =
