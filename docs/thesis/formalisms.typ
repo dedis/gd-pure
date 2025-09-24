@@ -72,43 +72,97 @@
 }
 
 #let pure-types = {
-  $ tau ::= &alpha "(type variable)" \
-        | &tau => tau "(function type)"\
-        | &"prop" "(type of propositions)"
-  $
+  grid(
+    columns: (1.2fr, 1fr),
+    align(left)[
+      $ tau ::= &alpha \
+            | &tau => tau \
+            | &"prop"
+      $
+  ],
+    align(left)[
+      #set par(leading: 0.94em)
+      type variable \
+      function type \
+      type of propositions \
+    ])
 }
 
 #let pure-terms = { 
-  $ t ::= &x "(variable)" \
-      | &c "(constant)" \
-      | &t " " t "(application)" \
-      | &lambda x:: tau. t "(lambda abstraction)" \
-      | &t arrow.double.long t "(implication)"\ 
-      | &t equiv t "(equality)"\ 
-      | &and.big x:: tau. t "(universal quantification)"
-  $
+  grid(
+    columns: (1.2fr, 1fr),
+    align(left)[
+      $ t ::= &x \
+          | &c \
+          | &t " " t \
+          | &lambda x:: tau. t \
+          | &t arrow.double.long t \ 
+          | &t equiv t \ 
+          | &and.big x:: tau. t \
+      $
+    ],
+    align(left)[
+      #set par(leading: 1em)
+      variable \
+      constant \
+      application \
+      lambda abstraction \
+      implication \
+      equality \
+      universal quantification \
+    ]
+  )
 }
 
 #let pure-prime-types = {
-  $ tau ::= &alpha "(type variable)" \
-        | &tau => tau "(function type)"\
-        | &"prop" "(type of propositions)"\
-        | &"o" "(type of object propositions)"
-  $
+  grid(
+    columns: (1.1fr, 1fr),
+    align(left)[
+      $ tau ::= &alpha \
+            | &tau => tau \
+            | &"prop" \
+            | &o
+      $
+  ],
+    align(left)[
+      #set par(leading: 0.94em)
+      type variable \
+      function type \
+      type of propositions \
+      type of object logic propositions \
+    ])
 }
 
 #let pure-prime-terms = { 
-  $ t ::= &x "(variable)" \
-      | &c "(constant)" \
-      | &t " " t "(application)" \
-      | &lambda x:: tau. t "(lambda abstraction)" \
-      | &t arrow.double.long t "(implication)"\ 
-      | &t equiv t "(equality)"\ 
-      | &and.big x:: tau. t "(universal quantification)"\
-      | &"True" "(o-typed true constant)"\
-      | &t or t "(o-typed logical or connective)"\
-      | &"Trueprop" t "(conversion function o to Prop)"
-  $
+  grid(
+    columns: (1.1fr, 1fr),
+    align(left)[
+      $ t ::= &x \
+          | &c \
+          | &t " " t \
+          | &lambda x:: tau. t \
+          | &t arrow.double.long t \ 
+          | &t equiv t \ 
+          | &and.big x:: tau. t \
+          | &"True" \
+          | &t or t \
+          | &"Trueprop" t 
+      $
+    ],
+    align(left)[
+      #set par(leading: 1em)
+      variable \
+      constant \
+      application \
+      lambda abstraction \
+      implication \
+      equality \
+      universal quantification \
+      `o`-typed true constant \
+      `o`-typed logical or \
+      conversion function `o` to `prop` \
+    ]
+  )
 }
 
 #let pure-type-constructors = {
@@ -125,7 +179,6 @@
       $Gamma tack.r A arrow.double.long B$,
       $arrow.double.long I$
     )
-
   let implication-elim = deduction-rule(
       $Gamma_1 tack.r A arrow.double.long B #h(1.5em) Gamma_2 tack.r A$,
       $Gamma_1 union Gamma_2 tack.r B$,
@@ -133,8 +186,7 @@
   )
 
   grid(
-    columns: (1fr, 1.3fr),
-    column-gutter: 6em,
+    columns: (1fr, 1.1fr),
     align: (left, right),
     implication-intro,
     implication-elim
@@ -148,7 +200,6 @@
       Gamma tack.r and.big x . B(x)
     ) #h(1em) (and.big I)
   $
-
   let universal-elim = $
     frac(
       Gamma tack.r and.big x . B(x),
@@ -157,9 +208,7 @@
   $
 
   grid(
-    columns: (1.6fr, 1fr),
-    column-gutter: 8em,
-    align: left,
+    columns: (1.4fr, 1fr),
     universal-intro,
     universal-elim
   )
@@ -182,7 +231,6 @@
 
   grid(
     columns: (1fr, 1fr),
-    column-gutter: 10em,
     axiom-rule,
     assumption-rule
   )
@@ -195,38 +243,33 @@
       Gamma tack.r a equiv a
     ) #h(1em) (equiv "Refl")
   $
-
   let symmetry = $
     frac(
       Gamma tack.r b equiv a,
       Gamma tack.r a equiv b
     ) #h(1em) (equiv "Sym")
   $
-
   let transitivity = $
     frac(
       Gamma tack.r a equiv b #h(1.5em) Gamma tack.r b equiv c,
       Gamma tack.r a equiv c
     ) #h(1em) (equiv "Trans")
   $
-
   let abstraction = $
     frac(
       Gamma tack.r a equiv b,
       Gamma tack.r (lambda x.a) equiv (lambda x.b)
     ) #h(1em) (equiv "Lam")
   $
-
   let application = deduction-rule(
      $Gamma tack.r a arrow.double.long b #h(1.5em) Gamma tack.r b arrow.double.long a$,
       $Gamma tack.r a equiv b$,
-      $equiv "Prop"$
+      $equiv "prop"$
   )
 
   grid(
-    columns: (1fr, 1fr, 1.6fr),
+    columns: (1fr, 1fr, 1.7fr),
     row-gutter: 3em,
-    column-gutter: 1em,
     reflexivity,
     symmetry,
     transitivity,
@@ -836,12 +879,27 @@
   none
 )
 
+#let ack-term = deduction-rule(
+  prems(
+    prem($x nat$),
+    prem($y nat$),
+  ),
+  prem($"ack" x " " y nat$),
+  none
+)
+
 #let strong-induct = deduction-rule(
   prems(
     prem($a nat$),
     prem($ctxt(0)$),
-    prem($ctxt(suc(x))$, $x nat$, $\{y <= x = 1\} tack.r ctxt(y))$)
+    prem($ctxt(suc(x))$, $x nat$, $\{y nat, " " y <= x = 1\} tack.r ctxt(y))$)
   ),
   prem($ctxt(a)$),
   none
+)
+
+#let eq-reflection-axiom = deduction-rule(
+  prem($a = b$),
+  prem($a equiv b$),
+  none  
 )
