@@ -30,5 +30,5 @@ val _ =
   Theory.setup
     (Method.setup @{binding fold_def}
       (Scan.lift Args.name >> Unfold_Def.fold_def_method)
-      "Unfold a definition using defE"
+      "Fold a definition using defI"
   )

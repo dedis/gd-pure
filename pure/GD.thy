@@ -3580,7 +3580,7 @@ apply (rule exF[where P="is_list 0"], simp)
 apply (rule implI, simp)
 proof -
   fix xa
-  assume hyp: "(⋀y. y N ⟹ y ≤ xa = 1 ⟹ is_list y ⟶ Q y)"
+  assume hyp: "(\<And>y. y N \<Longrightarrow> y \<le> xa = 1 \<Longrightarrow> is_list y \<longrightarrow> Q y)"
   assume cons: "(\<And>x xs. x N \<Longrightarrow> xs N \<Longrightarrow> is_list xs \<Longrightarrow> Q xs \<Longrightarrow> Q (Cons x xs))"
   show "a N \<Longrightarrow> xa N \<Longrightarrow> is_list S xa \<Longrightarrow> Q Nil \<Longrightarrow>
         Q S xa"
@@ -3668,9 +3668,6 @@ where
   ack_def: "ack x y := if x = 0 then y + 1
                        else if y = 0 then ack (P x) 1
                        else ack (P x) (ack x (P y))"
-
-lemma [simp]: "ack 0 0 = 1"
-by (unfold_def ack_def, simp)
 
 lemma [simp]: "n N \<Longrightarrow> ack 0 n = n + 1"
 by (unfold_def ack_def, simp)
