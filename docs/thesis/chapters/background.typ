@@ -125,7 +125,7 @@ judgment
 The syntax annotation $(‹\_› med 5)$ means that any term of type `o` is implicitly augmented with the $"Trueprop"$
  judgment. The very low precedence value of 5 ensures that the $"Trueprop"$ judgment is only applied to top-level terms. For example, the term $x or "True"$ is the same as $"Trueprop" (x or "True")$ and both are of type `prop` due to the $"Trueprop"$ predicate converting the formula to that type.
 
-As you might have noticed, we have made use of this implicit conversion from `o` to `Prop` already in the axiomatization block from earlier. That is, the $"Trueprop"$ judgment must be declared before the axiomatization block, else the latter will just report a typing error.
+As you might have noticed, we have made use of this implicit conversion from `o` to `prop` already in the axiomatization block from earlier. That is, the $"Trueprop"$ judgment must be declared before the axiomatization block, else the latter will just report a typing error.
 
 Now, we can state and prove a first lemma in this tiny object logic, using the previously defined axioms.
 

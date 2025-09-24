@@ -410,7 +410,7 @@ A first property provable about the `less` function is that `x < 0` is always fa
 == Termination Proofs
 Due to the _habeas quid_ premises of so many axioms, an expression like $a + b$ becomes truly useful only if $a + b nat$ is provable. With the interpretation that $a nat$ is a termination certificate for $a$, $a nat ==> b nat ==> a + b nat$ is essentially a termination proof of the `add` function, conditioned on its operands also being terminating natural numbers themselves.
 
-#theorem("Termination of addition")[
+#theorem("Termination of " + `add`)[
   #add-term
 ]
 
@@ -467,14 +467,14 @@ Due to the _habeas quid_ premises of so many axioms, an expression like $a + b$ 
 
 Termination proofs of subtraction and multiplication follow the same structure, as they also recurse to the immediate predecessor in the second argument. This recursive structure exactly mirrors induction over the corresponding argument, which is why these proofs are so straightforward, despite spelling them out at the axiom level at this point.
 
-Things get a bit more interesting with the $<=$ function, as it recurses in both arguments. The solution is to strengthen the induction hypothesis and universally quantify over one argument, while performing induction over the other.
+Things get a bit more interesting with the $<=$ function, as it recurses in both arguments. The solution is to prove a stronger lemma, which universally quantifies over one argument, and then perform induction over the other argument.
 
-#theorem("Termination of" + $quad <=$)[
+#theorem("Termination of " + `leq`)[
   #leq-term
 ]
 
 #proof[
-  By induction over the second argument with a strengthened induction hypothesis.
+  By induction over the second argument in the strengthened proposition $forall x. #h(0.5em) x <= y nat$.
 
   ```Isabelle
   lemma leq_terminates:
@@ -530,7 +530,7 @@ Things get a bit more interesting with the $<=$ function, as it recurses in both
   ```
 ]
 
-Although the key ideas of the proof are straightforward -- the strengthening of the induction hypothesis in line 4 and applying induction over the second argument on line 5 are only one line each -- this is clouded by a lot of effort to discharge the _habeas quid_ premises and other simple things like replacing a $pred(suc(x))$ with $x$ in a subexpression. The latter currently requires an appication of equality substitution, an application of equality symmetry, and then applying the `predSucInv` axiom.
+Although the key ideas of the proof are straightforward -- the strengthening of the proposition in line 4 and applying induction over the second argument on line 5 are only one line each -- this is clouded by a lot of effort to discharge the _habeas quid_ premises and other simple things like replacing a $pred(suc(x))$ with $x$ in a subexpression. The latter currently requires an appication of equality substitution, an application of equality symmetry, and then applying the `predSucInv` axiom.
 
 This issue is tackled in @tooling, where a lot of proof automation and tactics are introduced to simplify reasoning.
 
@@ -543,14 +543,14 @@ The former is solved relatively easily. One option is to add $not y = 0$ as an e
 
 To solve the second problem, a strong induction lemma needs to be proven first. This then allows assuming the induction hypothesis for any $y' <= y$ when proving the statement for $suc(y)$.
 
-The only difference to the induction axiom is that the hypothesis in the induction step is strengthened -- instead of $ctxt(x)$ it is now $and.big y. #h(0.5em) y <= x = 1 ==> ctxt(y)$ (in Isabelle notation) or $y <= x = 1 tack.r ctxt(y)$ (in natural deduction style notation).
+The only difference to the induction axiom is that the hypothesis in the induction step is stronger -- instead of $ctxt(x)$ it is now $and.big y. #h(0.5em) y <= x = 1 ==> ctxt(y)$ (in Isabelle notation) or $y <= x = 1 tack.r ctxt(y)$ (in natural deduction style notation).
 
 #theorem("Strong Induction")[
   #strong-induct
 ]
 
 #proof[
-  By induction over the strengthened object-level proposition $forall x. #h(0.5em) (x <= a = 1 ) --> ctxt(x)$.
+  By induction over $a$ in the strengthened object-level proposition $forall x. #h(0.5em) (x <= a = 1 ) --> ctxt(x)$.
  
   ```Isabelle
   lemma strong_induction:
@@ -634,13 +634,13 @@ The only difference to the induction axiom is that the hypothesis in the inducti
   ```
 ]
 
-It is necessary to use the object level connectives (i.e. $forall$ instead of $and.big$ and $-->$ instead of $==>$) in the strengthened induction hypothesis, since the induction axiom only works over expressions of type `o` (i.e. the object-level truth value type) and not of type `prop` (which the meta-level connectives $==>$ and $and.big$ are defined on).
+It is necessary to use the object level connectives (i.e. $forall$ instead of $and.big$ and $-->$ instead of $==>$) in the stronger proposition induction is performed over, since the induction axiom only works over expressions of type `o` (i.e. the object-level truth value type) and not of type `prop` (which the meta-level connectives $==>$ and $and.big$ are defined on). Thus, applying the _GA_ induction axiom on the corresponding meta-level proposition $and.big x. #h(0.5em) (x <= a = 1) ==> ctxt(x)$ would not work. It is simply a type error.
 
 The idea of this proof is again very straightforward, but spelling it out using the axioms is lengthy and challenging.
 
-Using the strong induction lemma, termination of the defined division function can be proven.
+Using the strong induction lemma, termination of the division function defined earlier can be proven.
 
-#theorem("Termination of division")[
+#theorem("Termination of " + `div`)[
   #div-term
 ]
 
@@ -664,6 +664,60 @@ Using the strong induction lemma, termination of the defined division function c
   ```
 ]
 
-This proof is much shorter than the previous ones despite significantly higher complexity. The magic lies in the `simp` method, which invokes the simplifier. This theorem was proven much later and using much more automation than the previous termination proofs. The simplifier uses numerous previously proven lemmas, for example the base case of $"div" 0 " " suc(y) nat$.
+This proof is much shorter than the previous ones despite significantly higher complexity. The magic lies in the `simp` method, which invokes the simplifier. This theorem was proven much later than the previous termination proofs and using a lot of automation. The simplifier applies numerous previously proven lemmas here, for example to automatically solve the base case of $"div" 0 " " suc(y) nat$.
 
 @tooling goes into how automation is introduced into an axiomatized logic in _Pure_.
+
+The authors of _GA_ place a lot of emphasis on primitive recursion as a 'benchmark' for the expressivitiy of _GA_. Namely, they proved that all primitive recursive functions can be expressed and proven terminating in _GA_. While such a proof is out of reach for this formalization, it is more fitting for this formalization to show that _GA_ can actually go beyond that. The Ackermann function is famously not primitive recursive @ack. With the tooling from @tooling, a termination proof of the Ackermann function is surprisingly simple to spell out in _GA_, using the standard approach of nested induction.
+
+Consider the following standard definition of the Ackermann function in _GA_.
+
+```Isabelle
+axiomatization
+  ack :: "num ⇒ num ⇒ num"
+where
+  ack_def: "ack x y := if x = 0 then y + 1
+                       else if y = 0 then ack (P x) 1
+                       else ack (P x) (ack x (P y))"
+```
+
+#theorem("Termination of " + `ack`)[
+  #ack-term
+]
+
+#proof[
+  By nested induction using a helper lemma.
+
+  The outer induction ranges over the second argument and proves the stronger statement $forall n. #h(0.5em) "ack" m " " n nat$.
+  
+  ```Isabelle
+  lemma [simp]: "n N ⟹ ack 0 n = n + 1"
+  by (unfold_def ack_def, simp)
+
+  lemma "n N ⟹ m N ⟹ ack m n N"
+  apply (rule forallE[where a="n"])
+  apply (induct m)
+  apply (rule forallI, simp)
+  apply (rule forallI)
+  proof -
+    fix x z
+    show "x N ⟹ ∀y. ack x y N ⟹ z N ⟹ ack (S x) z N"
+      apply (induct z)
+      apply (unfold_def ack_def)
+      apply (subst rule: condI2, simp)
+      apply (subst rule: condI1, simp+)
+      apply (rule forallE[where a="1"], simp)
+      apply (rule forallE[where a="1"], simp)
+      apply (subst rule: condI1, simp+)
+      apply (rule forallE[where a="1"], simp)
+      apply (rule forallE[where a="1"], simp)
+      apply (unfold_def ack_def)
+      apply (subst rule: condI2, simp+)
+      apply (subst rule: condI2, simp+)
+      apply (rule forallE, simp)+
+      apply (rule forallI, simp+)
+      apply (rule forallE, simp)
+      done
+  qed
+  ```
+]
