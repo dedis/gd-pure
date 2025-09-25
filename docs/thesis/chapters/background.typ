@@ -15,13 +15,9 @@
 
 == Isabelle/Pure
 <pure-ref>
-Isabelle provides a logical framework called _Pure_. It contains a minimal meta-logic, which is a typed lambda calculus with few additional connectives, some keywords to add types and constants to said calculus, and a structured proof language called Isar. Any object logic in Isabelle, for example the highly mature Isabelle/HOL fragment, are formalized atop _Pure_.
+Isabelle provides a logical framework called _Pure_. It contains a minimal meta-logic, which is a typed lambda calculus with few additional connectives, some keywords to add types and constants to said calculus, and a structured proof language called Isar. Any object logic in Isabelle, for example the highly mature Isabelle/HOL fragment, are formalized atop _Pure_. Isabelle itself is implemented in the Standard ML (SML) programming language.
 
-Isabelle itself is implemented in the Standard ML (SML) programming language, and implementing an object logic _Pure_ almost always requires writing SML for things like proof automation, providing keywords, methods, or definitional mechanisms for users, and various other tooling such as code extraction.
-
-This subsection provides a formalization of the _Pure_ calculus.
-
-Unfortunately, there is no single document that lays out the syntax, axioms, and derivation rules of the _Pure_ calculus in their entirety. The following is an attempt at providing such a characterization, combining information from two Isabelle papers @isabelle00 @isabelle89 and the Isabelle reference manual @isabelle_ref.
+This subsection provides a formalization of the _Pure_ calculus. Unfortunately, there is no single document that lays out the syntax, axioms, and derivation rules of the _Pure_ calculus in their entirety. The following is an attempt at providing such a characterization, combining information from two Isabelle papers @isabelle00 @isabelle89 and the Isabelle reference manual @isabelle_ref.
 
 === Syntax of Pure
 

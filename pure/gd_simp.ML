@@ -1,46 +1,31 @@
 structure GD_Simp =
 struct
-  fun reflect_eq th: thm = th RS @{thm eq_reflection};
-  fun reflect_iff th: thm = th RS @{thm iff_reflection};
+  fun convert_eq_to_meta_eq th: thm = th RS @{thm eq_reflection}
+  fun convert_iff_to_meta_eq th: thm = th RS @{thm iff_reflection}
 
   fun match_object_rule th trm =
     case trm of
-      Const (@{const_name GD.eq},  _) $ _ $ _ =>
-        (case try reflect_eq th of SOME th' => [th'] | NONE => [])
-    | Const (@{const_name GD.iff},  _) $ _ $ _ =>
-        (case try reflect_iff th of SOME th' => [th'] | NONE => [])
+      Const (@{const_name GD.eq},  _) $ _ $ _  => [convert_eq_to_meta_eq th]
+    | Const (@{const_name GD.iff},  _) $ _ $ _ => [convert_iff_to_meta_eq th]
     | _ => []
 
-  fun mksimps _ th =
+  fun th_to_meta_eq_th _ th =
     case Thm.concl_of th of
-       Const (@{const_name "Pure.eq"}, _) $ _ $ _ => [th]
-     | Const (@{const_name "GD.Trueprop"}, _) $ x => match_object_rule th x
+       Const (@{const_name Pure.eq}, _) $ _ $ _ => [th]
+     | Const (@{const_name GD.Trueprop}, _) $ x => match_object_rule th x
      | _ => []
-
-  fun step_tac ctxt i =
-    let
-      val close = reflexive_thm :: Simplifier.prems_of ctxt
-      val tac =
-        assume_tac ctxt
-        ORELSE' resolve_tac ctxt close
-        ORELSE' GDAuto.gd_auto_tac ctxt
-    in
-      REPEAT_DETERM (CHANGED (tac i))
-    end
-
-  val gd_solver =
-    Raw_Simplifier.mk_solver "GD_solver" step_tac
 end;
 
 let
+  val gd_solver =
+    Raw_Simplifier.mk_solver "GD_solver" GDAuto.gd_auto_tac
   fun set_solver ctxt =
-    Raw_Simplifier.setSolver (ctxt, GD_Simp.gd_solver)
+    Raw_Simplifier.setSolver (ctxt, gd_solver)
   fun set_ssolver ctxt =
-    Raw_Simplifier.setSSolver (ctxt, GD_Simp.gd_solver)
+    Raw_Simplifier.setSSolver (ctxt, gd_solver)
   fun configure ctxt =
     ctxt
-    |> Simplifier.set_mksimps GD_Simp.mksimps
-    |> Simplifier.set_subgoaler asm_full_simp_tac
+    |> Simplifier.set_mksimps GD_Simp.th_to_meta_eq_th
     |> set_solver
     |> set_ssolver
 in

@@ -21,6 +21,7 @@
 #let vec(a) = $accent(#a, arrow)$
 #let to = $arrow.r.double$
 #let impl = $arrow.r.double.long$
+#let tag(a) = $\[#a]$
 
 #let prems(sep: h(1.3em), ..premises) = {
   $
@@ -902,4 +903,45 @@
   prem($a = b$),
   prem($a equiv b$),
   none  
+)
+
+#let eq-subst-corollary = deduction-rule(
+  prems(
+    prem($a = b$),
+    prem($ctxt(b)$),
+  ),
+  prem($ctxt(a)$),
+  none  
+)
+
+#let iff-reflection-axiom = deduction-rule(
+  prem($a <-> b$),
+  prem($a equiv b$),
+  none  
+)
+
+#let iff-refl-prop = deduction-rule(
+  prem($a <-> b$),
+  prem($("Trueprop" a) equiv ("Trueprop" b)$),
+  none  
+)
+
+#let cases-bool = deduction-rule(
+  prems(
+    prem($q bool$),
+    prem($p$, $q$),
+    prem($p$, $not q$),
+  ),
+  prem($p$),
+  none
+)
+
+#let cases-nat = deduction-rule(
+  prems(
+    prem($x nat$),
+    prem($ctxt(0)$, $x = 0$),
+    prem($ctxt(suc(y))$, $y nat$, $x = suc(y)$),
+  ),
+  prem($ctxt(x)$),
+  none
 )

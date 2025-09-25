@@ -4,7 +4,7 @@ structure GD_Subst =
 struct
   fun strip_asms t =
     case t of
-      @{term "(\<Longrightarrow>)"} $ _ $ t' => strip_asms t'
+      @{term "(==>)"} $ _ $ t' => strip_asms t'
     | _ => t
 
   fun get_lhs_rhs_of_eq t =
@@ -36,7 +36,8 @@ struct
     let val eqSym = Proof_Context.get_thm ctxt "eqSym" in
       (eq_subst_tac (AsThm thm) ctxt) THEN'
       resolve_tac ctxt [eqSym] THEN'
-      resolve_tac ctxt [thm]
+      resolve_tac ctxt [thm] THEN'
+      (fn i => TRY (SOLVED' (Simplifier.asm_full_simp_tac ctxt) i))
     end
   | gd_subst_tac (AsTrm trm) ctxt =
     (eq_subst_tac (AsTrm trm) ctxt) THEN'

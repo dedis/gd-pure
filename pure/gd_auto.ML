@@ -1,6 +1,8 @@
 val gd_auto_depth_limit =
   Attrib.setup_config_int @{binding gd_auto_depth_limit} (K 6)
 
+fun TRY' tac i = TRY (tac i)
+
 structure GDAuto =
 struct
 
@@ -11,22 +13,19 @@ struct
     | solver_tac ctxt k =
       let
         fun apply_and_solve_subgoal i th =
-          DETERM (
-            match_tac ctxt [th] i
-            THEN SOLVED' (solver_tac ctxt (k-1)) i
-          )
+          match_tac ctxt [th] i
+          THEN SOLVED' (solver_tac ctxt (k-1)) i
         fun cond_tacs i =
           FIRST (map (apply_and_solve_subgoal i)
             (cond_rules ctxt))
         val tac = assume_tac ctxt ORELSE'
-                  cond_tacs ORELSE'
+                  resolve_tac ctxt (Simplifier.prems_of ctxt) ORELSE'
                   resolve_tac ctxt (uncond_rules ctxt) ORELSE'
-                  resolve_tac ctxt (reflexive_thm :: Simplifier.prems_of ctxt)
-        val one_iter = CHANGED o DETERM o tac
+                  cond_tacs
+        val one_iter = CHANGED o tac
         val recurse = solver_tac ctxt (k-1)
-        val succeed' = K all_tac
       in
-        one_iter THEN_ALL_NEW (recurse ORELSE' succeed')
+        REPEAT_ALL_NEW one_iter
     end
 
   fun gd_auto_tac ctxt i =

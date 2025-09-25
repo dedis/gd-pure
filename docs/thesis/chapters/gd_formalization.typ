@@ -408,6 +408,7 @@ A first property provable about the `less` function is that `x < 0` is always fa
 ]
 
 == Termination Proofs
+<term-proofs>
 Due to the _habeas quid_ premises of so many axioms, an expression like $a + b$ becomes truly useful only if $a + b nat$ is provable. With the interpretation that $a nat$ is a termination certificate for $a$, $a nat ==> b nat ==> a + b nat$ is essentially a termination proof of the `add` function, conditioned on its operands also being terminating natural numbers themselves.
 
 #theorem("Termination of " + `add`)[
@@ -664,9 +665,9 @@ Using the strong induction lemma, termination of the division function defined e
   ```
 ]
 
-This proof is much shorter than the previous ones despite significantly higher complexity. The magic lies in the `simp` method, which invokes the simplifier. This theorem was proven much later than the previous termination proofs and using a lot of automation. The simplifier applies numerous previously proven lemmas here, for example to automatically solve the base case of $"div" 0 " " suc(y) nat$.
+This proof is much shorter than the previous ones despite significantly higher complexity. The magic lies in the `simp` method, which invokes the simplifier. This theorem was proven much later than the previous termination proofs and using a lot of automation. The simplifier applies numerous previously proven lemmas (which are omitted from this document) here, for example to automatically solve the base case of $"div" 0 " " suc(y) nat$.
 
-@tooling goes into how automation is introduced into an axiomatized logic in _Pure_.
+@tooling goes into how automation is introduced into an axiomatized logic such as _GA_ in _Pure_.
 
 The authors of _GA_ place a lot of emphasis on primitive recursion as a 'benchmark' for the expressivitiy of _GA_. Namely, they proved that all primitive recursive functions can be expressed and proven terminating in _GA_. While such a proof is out of reach for this formalization, it is more fitting for this formalization to show that _GA_ can actually go beyond that. The Ackermann function is famously not primitive recursive @ack. With the tooling from @tooling, a termination proof of the Ackermann function is surprisingly simple to spell out in _GA_, using the standard approach of nested induction.
 
@@ -686,7 +687,7 @@ where
 ]
 
 #proof[
-  By nested induction using a helper lemma.
+  By nested induction and by using a helper lemma.
 
   The outer induction ranges over the second argument and proves the stronger statement $forall n. #h(0.5em) "ack" m " " n nat$.
   
