@@ -182,6 +182,18 @@ proof (rule disjE1[where P="\<not>a" and Q="b"])
     done
 qed
 
+lemma iffE1: "a \<longleftrightarrow> b \<Longrightarrow> a \<longrightarrow> b"
+apply (rule conjE1)
+apply (unfold iff_def)
+apply (assumption)
+done
+
+lemma iffE2: "a \<longleftrightarrow> b \<Longrightarrow> b \<longrightarrow> a"
+apply (rule conjE2)
+apply (unfold iff_def)
+apply (assumption)
+done
+
 lemma iffI:
   assumes a_bool: "a B"
   assumes b_bool: "b B"
@@ -683,13 +695,13 @@ proof (rule ind[where a=y])
 qed
 
 lemma cases_bool:
-  assumes p_bool: "p B"
-  assumes H: "p \<Longrightarrow> R"
-  assumes H1: "\<not>p \<Longrightarrow> R"
-  shows "R"
-apply (rule disjE1[where P="p" and Q="\<not>p"])
-apply (fold GD.bJudg_def)
-apply (rule p_bool)
+  assumes q_bool: "q B"
+  assumes H: "q \<Longrightarrow> p"
+  assumes H1: "\<not>q \<Longrightarrow> p"
+  shows "p"
+apply (rule disjE1[where P="q" and Q="\<not>q"])
+apply (fold bJudg_def)
+apply (rule q_bool)
 apply (rule H)
 apply (assumption)
 apply (rule H1)
@@ -709,16 +721,12 @@ lemma [auto]: "c B \<Longrightarrow> \<not> (if c then False else False)"
 lemma mult_terminates [auto]:
   shows \<open>x N \<Longrightarrow> y N \<Longrightarrow> mult x y N\<close>
 proof (rule ind[where a=y])
-  show "y N \<Longrightarrow> y N" by (simp)
-  show bc: "x N \<Longrightarrow> mult x 0 N"
+  show "y N \<Longrightarrow> y N" by simp
+  show "x N \<Longrightarrow> mult x 0 N"
     by (unfold_def mult_def, simp)
-  show step: "x N \<Longrightarrow> y N \<Longrightarrow> (\<And>a. a N \<Longrightarrow> ((x * a) N) \<Longrightarrow> ((x * S(a)) N))"
-    proof (unfold_def mult_def)
-      fix a
-      assume hyp: "mult x a N"
-      show "a N \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> if (S(a) = 0) then 0 else (add x (mult x P(S(a)))) N"
-        by (rule condT, simp+, rule hyp)
-    qed
+  fix a
+  show "a N \<Longrightarrow> x N \<Longrightarrow> mult x a N \<Longrightarrow> mult x (S a) N"
+    by (unfold_def mult_def, rule condT, simp+)
 qed
 
 lemma [auto]: "x N \<Longrightarrow> \<not> S(x) = 0"
@@ -1022,7 +1030,8 @@ lemma cases_nat_2:
 apply (rule disjE1[where P="x = 0" and Q="\<not> x = 0"])
 apply (fold bJudg_def, simp)
 apply (subst "0 = x", assumption)
-apply (rule existsE[where Q="\<lambda>c. x = S(c)"], simp)
+apply (rule existsE[where Q="\<lambda>c. x = S(c)"])
+apply (rule num_nonzero)
 proof -
   fix a
   show "(\<And>y. y N \<Longrightarrow> x = S y \<Longrightarrow> Q (S y)) \<Longrightarrow> a N \<Longrightarrow> x = S a \<Longrightarrow> Q x"
@@ -1074,30 +1083,20 @@ proof (rule cases_nat[where x="x"])
         apply (simp)
         apply (rule y_nat)
         done
-      have H2: "P x \<le> P y = x \<le> y"
-        apply (rule eqSubst[where a="S P x" and b="x"])
-        apply (simp)
-        apply (rule x_nat)
+      have H2: "x N \<Longrightarrow> y N \<Longrightarrow> P x \<le> P y = x \<le> y"
+        apply (subst "S P x = x", simp)
         apply (rule x_nz)
-        apply (rule eqSubst[where a="S P y" and b="y"])
-        apply (simp)
-        apply (rule y_nat)
+        apply (subst "S P y = y", simp)
         apply (rule y_nz)
-        apply (rule eqSubst[where a="P x" and b="P S P x"])
-        apply (rule eqSym)
-        apply (simp+)
-        apply (rule x_nat)
-        apply (rule eqSubst[where a="P y" and b="P S P y"])
-        apply (rule eqSym)
-        apply (rule predSucInv)
-        apply (auto)
-        apply (rule y_nat)
+        apply (subst "P x = P S P x", simp)
         apply (rule H1)
         done
       show ?thesis
-        apply (rule eqSubst[where a="x \<le> y" and b="1"])
+        apply (subst "x \<le> y = 1")
         apply (rule H)
         apply (rule H2)
+        apply (rule x_nat)
+        apply (rule y_nat)
         done
     qed
   qed
@@ -1119,12 +1118,12 @@ lemma [auto]:
   assumes q_bool: "q B"
   shows "p \<or> q B"
 apply (unfold bJudg_def)
-apply (rule cases_bool[where p="p"])
+apply (rule cases_bool[where q="p"])
 apply (rule p_bool)
 apply (rule disjI1)
 apply (rule disjI1)
 apply (assumption)
-apply (rule cases_bool[where p="q"])
+apply (rule cases_bool[where q="q"])
 apply (rule q_bool)
 apply (rule disjI1)
 apply (rule disjI2)
@@ -1348,7 +1347,7 @@ proof -
               done
             have pxa_neq_x: "x N \<Longrightarrow> xa N \<Longrightarrow> \<not> P xa = x"
               apply (rule eqSubst[where a="P S x" and b="x"])
-              apply (rule predSucInv, simp)
+              apply (simp)
               apply (rule H2, simp)
               done
             have "xa N \<Longrightarrow> P xa \<le> x = 1 \<longrightarrow> \<not> P xa = x \<longrightarrow> P xa < x = 1"
@@ -1795,7 +1794,7 @@ by (unfold_def cpy_def, simp)
 lemma cpx_cpy_terminate: "x N \<Longrightarrow> (cpx x N) \<and> (cpy x N)"
 apply (induct x, simp)
 apply (unfold_def cpx_def, simp)
-apply (subst rule: condI2, simp)
+apply (subst rule: condI2)
 apply (rule condT, simp)
 apply (rule conjE1, simp)
 apply (rule conjE2, simp)
@@ -2353,11 +2352,9 @@ proof -
                       done
                     have H: "x N \<Longrightarrow> ya N \<Longrightarrow> P(ya) < P(S x) = 1"
                       apply (rule less_monotone_pred)
-                      apply (rule natP, assumption)
-                      apply (subst rule: predSucInv, assumption+)
+                      apply (rule natP, assumption, simp+)
                       apply (rule eqSubst[where a="ya" and b="S P ya"])
-                      apply (rule eqSym)
-                      apply (simp)
+                      apply (rule eqSym, simp)
                       apply (rule ya_nz, simp+)
                       apply (rule ya_le_sx)
                       done
@@ -2632,24 +2629,6 @@ lemma neg_conjI1: "\<not>a \<Longrightarrow> \<not>(a \<and> b)"
 lemma neg_conjI2: "\<not>b \<Longrightarrow> \<not>(a \<and> b)"
   unfolding conj_def by (rule dNegI, rule disjI2, simp)
 
-lemma [cond]: "(if c then a else b) = True \<Longrightarrow> (if c then a else b) B"
-  by simp
-
-lemma [cond]: "(if c then a else b) = False \<Longrightarrow> (if c then a else b) B"
-  by simp
-
-lemma [cond]: "c \<and> (a N) \<Longrightarrow> (if c then a else b) N"
-apply (subst rule: condI1)
-apply (rule conjE1, simp)
-apply (rule conjE2, simp)+
-done
-
-lemma [cond]: "\<not>c \<and> (b N) \<Longrightarrow> (if c then a else b) N"
-apply (subst rule: condI2)
-apply (rule conjE1, simp)
-apply (rule conjE2, simp)+
-done
-
 lemma [cond]: "((c B) \<and> (a N) \<and> (b N)) \<Longrightarrow> if c then a else b N"
 apply (rule condT)
 apply (rule conjE1, rule conjE1, simp)
@@ -2767,7 +2746,7 @@ proof -
   fix xa
   show "x N \<Longrightarrow> y N \<Longrightarrow> xa N \<Longrightarrow> P(S x + xa) = x + xa \<Longrightarrow> S x + xa = S(x + xa)"
   apply (subst "P(S x + xa) = x+xa")
-  apply (subst rule: suc_pred_inv, simp+)
+  apply (subst rule: suc_pred_inv, simp)
   done
 qed
 
@@ -3269,7 +3248,7 @@ qed
 lemma cpy_strict_mono [simp]: "x N \<Longrightarrow> cpy (S x) < (S x) = 1"
 proof (induct strong x)
   case Base
-    show "x N \<Longrightarrow> cpy 1 < 1 = 1"
+    from Base show ?case
       by (unfold_def cpy_def, simp)
 next
   case (Step xa)
@@ -3330,7 +3309,7 @@ proof -
   show "x N \<Longrightarrow> a N \<Longrightarrow> x = \<langle>cpx x,a\<rangle> \<Longrightarrow> x = \<langle>cpx x,cpy x\<rangle>"
     apply (subst "a = cpy x")
     apply (subst "\<langle>cpx x,a\<rangle> = x")
-    apply (subst rule: cpy_proj, simp)
+    apply (subst rule: cpy_proj)
     done
 qed
 
@@ -3468,8 +3447,8 @@ lemma cons_decode [auto]:
 apply (rule existsI[where a="cpi 3 x"], simp+)
 apply (rule existsI[where a="cpi' 4 x"], simp+)
 apply (unfold Cons_def)
-apply (subst rule: cons_1_tag, simp)
-apply (subst rule: cons_2_2, simp)
+apply (subst rule: cons_1_tag)
+apply (subst rule: cons_2_2)
 apply (rule cp4_proj, simp+)
 done
 
@@ -3625,8 +3604,8 @@ next
   case (Cons n xs)
   from Cons show ?case
     apply (unfold_def sum_def)
-    apply (subst rule: condI2, simp+)
-    apply (subst rule: condI1, simp+)
+    apply (subst rule: condI2)
+    apply (subst rule: condI1)
     apply (unfold Cons_def, simp+)
     apply (unfold_def is_cons_def, simp)
     done
@@ -3682,20 +3661,33 @@ proof -
   show "x N \<Longrightarrow> \<forall>y. ack x y N \<Longrightarrow> z N \<Longrightarrow> ack (S x) z N"
     apply (induct z)
     apply (unfold_def ack_def)
-    apply (subst rule: condI2, simp)
-    apply (subst rule: condI1, simp+)
+    apply (subst rule: condI2)
+    apply (subst rule: condI1)
     apply (rule forallE[where a="1"], simp)
     apply (rule forallE[where a="1"], simp)
-    apply (subst rule: condI1, simp+)
+    apply (subst rule: condI1)
     apply (rule forallE[where a="1"], simp)
     apply (rule forallE[where a="1"], simp)
     apply (unfold_def ack_def)
-    apply (subst rule: condI2, simp+)
-    apply (subst rule: condI2, simp+)
+    apply (subst rule: condI2, simp)
+    apply (subst rule: condI2)
     apply (rule forallE, simp)+
     apply (rule forallI, simp+)
     apply (rule forallE, simp)
     done
 qed
+
+lemma "a \<longleftrightarrow> b \<Longrightarrow> (Trueprop a) \<equiv> (Trueprop b)"
+apply (rule Pure.equal_intr_rule)
+apply (unfold iff_def)
+apply (rule implE, rule conjE1, assumption+)
+apply (rule implE, rule conjE2, assumption+)
+done
+
+lemma "a = b \<Longrightarrow> Q b \<Longrightarrow> Q a"
+apply (rule eqSubst[where a="b" and b="a"])
+apply (rule eqSym)
+apply (assumption+)
+done
 
 end (* End of theory *)
