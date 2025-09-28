@@ -83,7 +83,7 @@ where
   eqSym: ‹a = b ⟹ b = a›
 ```
 
-Transitivity can be proven using the substitution axiom.
+Transitivity can be proved using the substitution axiom.
 
 ```Isabelle
 lemma eq_trans: "a = b ⟹ b = c ⟹ a = c"
@@ -108,7 +108,7 @@ definition iff :: ‹o ⇒ o ⇒ o› (infixl ‹⟷› 25)
   where ‹p ⟷ q ≡ (p ⟶ q) ∧ (q ⟶ p)›
 ```
 
-As an example, all the introduction and elimination rules for conjunction $and$ can be proven now:
+As an example, all the introduction and elimination rules for conjunction $and$ can be proved now:
 
 ```Isabelle
 lemma conjE1:
@@ -162,7 +162,7 @@ where
   ind: ‹⟦a N; Q zero; ⋀x. x N ⟹ Q x ⟹ Q S(x)⟧ ⟹ Q a›
 ```
 
-The following two crucial inference rules can be proven from these axioms, whose proof is given directly in the Isabelle formalization.
+The following two crucial inference rules can be proved from these axioms, whose proof is given directly in the Isabelle formalization.
 
 #theorem("Natural Number Typing Rules")[
   #nat-typing-rules
@@ -289,7 +289,7 @@ Conditional evaluation cannot seem to be derived from primitives axiomatized so 
 
 The syntax of the conditional operator, with the desired shape of the application $"cond" a " " b " " c$ being $cond(a,b,c)$, seems complicated, but Isabelle is well-equipped to handle syntax like this, with the ability to specify the 'holes' in a syntax expression like in the following declaration. This type of notation is called mixfix in Isabelle, as it mixes infix and prefix notation.
 
-Notably, the two branches of the operator and the return type are typed at the generic $'a$, indicating that the conditional operator in this formalization is polymorphic. Contrary to the pen-and-paper formalization in @bga-ref, this allows for returning truth values in a conditional evaluator (or any other type at that, for example functions of type $"num" to "num"$), for example the constants `True` and `False`. Although these could be encoded with natural numbers just as well, this requires equality checks of a result and is less elegant. Due to the _habeas quid_ premises of the two branching axioms, making the arguments of the syntactic construct generic is not sufficient, it just means that the parser won't reject a term such as $cond(c, "True","False")$. Since neither $"True" nat$ nor $"False" nat$ can be proven, this term cannot be 'reduced' using either `condI1` or `condI2`. Thus, there are three additional axioms for conditional evaluation over values of type `o`, mirroring the ones for conditional evaluation over `num`, but with the _habeas quid_ premise of $bool$ instead of $nat$. Now, $cond("True","True","False") = "True"$ can be proven using the axiom `condI1B`.
+Notably, the two branches of the operator and the return type are typed at the generic $'a$, indicating that the conditional operator in this formalization is polymorphic. Contrary to the pen-and-paper formalization in @bga-ref, this allows for returning truth values in a conditional evaluator (or any other type at that, for example functions of type $"num" to "num"$), for example the constants `True` and `False`. Although these could be encoded with natural numbers just as well, this requires equality checks of a result and is less elegant. Due to the _habeas quid_ premises of the two branching axioms, making the arguments of the syntactic construct generic is not sufficient, it just means that the parser won't reject a term such as $cond(c, "True","False")$. Since neither $"True" nat$ nor $"False" nat$ can be proved, this term cannot be 'reduced' using either `condI1` or `condI2`. Thus, there are three additional axioms for conditional evaluation over values of type `o`, mirroring the ones for conditional evaluation over `num`, but with the _habeas quid_ premise of $bool$ instead of $nat$. Now, $cond("True","True","False") = "True"$ can be proved using the axiom `condI1B`.
 
 ```Isabelle
 consts
@@ -337,7 +337,7 @@ apply (rule nat0)
 done
 ```
 
-The proof first unfolds the definition of `l` using the `defE` axiom, yielding the goal state $0 = 0$, which can be proven by folding the definition of $nat$, resulting in $0 nat$, whose truth is postulated by the `nat0` axiom.
+The proof first unfolds the definition of `l` using the `defE` axiom, yielding the goal state $0 = 0$, which can be proved by folding the definition of $nat$, resulting in $0 nat$, whose truth is postulated by the `nat0` axiom.
 
 To get a 'globally visible' definition, the definition must be axiomatized. This does not axiomatize any properties about the defined symbol, it just axiomatizes the 'equivalence' of the left-hand side with the right-hand side, which, together with the axioms `defE` and `defI` means they can be substituted for each other in any context. The formalization of _GA_ in Isabelle/HOL by the authors includes a consistency proof of the axioms given any fixed finite set of definitions @GD. Thus, axiomatizing definitions maintains consistency, as long as there is only a single definition per symbol.
 
@@ -416,7 +416,7 @@ Due to the _habeas quid_ premises of so many axioms, an expression like $a + b$ 
 ]
 
 #proof[
-  By induction over the second argument.
+  By induction on the second argument.
 
   ```Isabelle
   lemma add_terminates:
@@ -466,16 +466,16 @@ Due to the _habeas quid_ premises of so many axioms, an expression like $a + b$ 
   ```
 ]
 
-Termination proofs of subtraction and multiplication follow the same structure, as they also recurse to the immediate predecessor in the second argument. This recursive structure exactly mirrors induction over the corresponding argument, which is why these proofs are so straightforward, despite spelling them out at the axiom level at this point.
+Termination proofs of subtraction and multiplication follow the same structure, as they also recurse to the immediate predecessor in the second argument. This recursive structure exactly mirrors induction on the corresponding argument, which is why these proofs are so straightforward, despite spelling them out at the axiom level at this point.
 
-Things get a bit more interesting with the $<=$ function, as it recurses in both arguments. The solution is to prove a stronger lemma, which universally quantifies over one argument, and then perform induction over the other argument.
+Things get a bit more interesting with the $<=$ function, as it recurses in both arguments. The solution is to prove a stronger lemma, which universally quantifies over one argument, and then perform induction on the other argument.
 
 #theorem("Termination of " + `leq`)[
   #leq-term
 ]
 
 #proof[
-  By induction over the second argument in the strengthened proposition $forall x. #h(0.5em) x <= y nat$.
+  By induction on the second argument in the strengthened proposition $forall x. #h(0.5em) x <= y nat$.
 
   ```Isabelle
   lemma leq_terminates:
@@ -531,7 +531,7 @@ Things get a bit more interesting with the $<=$ function, as it recurses in both
   ```
 ]
 
-Although the key ideas of the proof are straightforward -- the strengthening of the proposition in line 4 and applying induction over the second argument on line 5 are only one line each -- this is clouded by a lot of effort to discharge the _habeas quid_ premises and other simple things like replacing a $pred(suc(x))$ with $x$ in a subexpression. The latter currently requires an appication of equality substitution, an application of equality symmetry, and then applying the `predSucInv` axiom.
+Although the key ideas of the proof are straightforward -- the strengthening of the proposition in line 4 and applying induction on the second argument on line 5 are only one line each -- this is clouded by a lot of effort to discharge the _habeas quid_ premises and other simple things like replacing a $pred(suc(x))$ with $x$ in a subexpression. The latter currently requires an appication of equality substitution, an application of equality symmetry, and then applying the `predSucInv` axiom.
 
 This issue is tackled in @tooling, where a lot of proof automation and tactics are introduced to simplify reasoning.
 
@@ -551,7 +551,7 @@ The only difference to the induction axiom is that the hypothesis in the inducti
 ]
 
 #proof[
-  By induction over $a$ in the strengthened object-level proposition $forall x. #h(0.5em) (x <= a = 1 ) --> ctxt(x)$.
+  By induction on $a$ in the strengthened object-level proposition $forall x. #h(0.5em) (x <= a = 1 ) --> ctxt(x)$.
  
   ```Isabelle
   lemma strong_induction:
@@ -639,14 +639,14 @@ It is necessary to use the object level connectives (i.e. $forall$ instead of $a
 
 The idea of this proof is again very straightforward, but spelling it out using the axioms is lengthy and challenging.
 
-Using the strong induction lemma, termination of the division function defined earlier can be proven.
+Using the strong induction lemma, termination of the division function defined earlier can be proved.
 
 #theorem("Termination of " + `div`)[
   #div-term
 ]
 
 #proof[
-  By strong induction over the second argument.
+  By strong induction on the second argument.
 
   ```Isabelle
   lemma div_terminates:

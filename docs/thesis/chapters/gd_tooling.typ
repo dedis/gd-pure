@@ -116,7 +116,7 @@ That is, the following lemma is provable in _GA_, and thus the axiom is admissib
   ```
 ]
 
-If the simplifier proves a theorem, having substituted a term $b$ for $a$ (due to a meta-equality theorem), the proof of the original theorem (with no substitution) can be constructed using the above theorem and the equality $a = b$. Since the simplifier constructs the meta-equality from exactly such an equality $a = b$, no new theorems of type `o` can be proven from this axiom.
+If the simplifier proves a theorem, having substituted a term $b$ for $a$ (due to a meta-equality theorem), the proof of the original theorem (with no substitution) can be constructed using the above theorem and the equality $a = b$. Since the simplifier constructs the meta-equality from exactly such an equality $a = b$, no new theorems of type `o` can be proved from this axiom.
 
 If a rewrite theorem (that is, a theorem tagged with $tag("simp")$) has any premises, the simplifier only rewrites if it can discharge all its premises. Thus, a key step in configuring the simplifier for _GA_ is to provide a competent solver that can discharge a wide range of commonly occuring premises such that the simplifier can apply more rewrites. Precisely such a solver is engineered in @subgoaler. For now, we already assume its existence at `GDAuto.gd_auto_tac` and use it in the following SML structure that configures the simplifier for _GA_. It achieves two main objectives:
 
@@ -473,7 +473,7 @@ If-and-only-if ($<->$) is effectively an equality for propositions of type `o`, 
 
 The same proof does not work when trying to prove `iff_reflection`, since the _Pure_ `equal_intr_rule` only works for meta equalities ($equiv$) where both sides are of type `prop`, whereas in `iff_reflection`, the two sides are of type `o`.
 
-The proof of the theorem shows that the `iff_reflection` axiom is essentially an object-level version of the meta level `equal_intr_rule`, which allows deriving equality $equiv$ when $a ==> b$ and $b ==> a$ can be derived. While the simplifier could in principle work with lemmas of the shape $"Trueprop" a equiv "Trueprop" b$, the left-hand side never matches any subterm in a _GA_ expression, as it is of type `prop`, while _GA_ terms are of type `o` or `num`. The admissibility of the axiom might be provable meta-logically by induction over the inference rules of _GA_, but _Pure_ is not sufficiently strong as a meta-logic to do so, as it does not have an (meta-level) induction scheme.
+The proof of the theorem shows that the `iff_reflection` axiom is essentially an object-level version of the meta level `equal_intr_rule`, which allows deriving equality $equiv$ when $a ==> b$ and $b ==> a$ can be derived. While the simplifier could in principle work with lemmas of the shape $"Trueprop" a equiv "Trueprop" b$, the left-hand side never matches any subterm in a _GA_ expression, as it is of type `prop`, while _GA_ terms are of type `o` or `num`. The admissibility of the axiom might be provable meta-logically by induction on the inference rules of _GA_, but _Pure_ is not sufficiently strong as a meta-logic to do so, as it does not have an (meta-level) induction scheme.
 
 The new axiom allows restating most of the lemmas previously tagged with $tag("cond")$, such that the simplifier can rewrite them. An example is the following lemma:
 

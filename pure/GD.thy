@@ -2058,12 +2058,14 @@ proof (auto)
     done
 qed
 
-lemma leq_monotone_add_r [simp]: "x \<le> y = 1 \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> z N \<Longrightarrow> x \<le> y + z = 1"
+lemma leq_monotone_add_r [simp]:
+  "x \<le> y = 1 \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> z N \<Longrightarrow> x \<le> y + z = 1"
 apply (rule leq_trans[where y="y"], simp)
 apply (rule eqSubst[where a="z + y" and b="y + z"], simp)
 done
 
-lemma leq_monotone_add_l [simp]: "x \<le> z = 1 \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> z N \<Longrightarrow> x \<le> y + z = 1"
+lemma leq_monotone_add_l [simp]:
+  "x \<le> z = 1 \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> z N \<Longrightarrow> x \<le> y + z = 1"
 apply (rule leq_trans[where y="z"], simp)
 done
 
@@ -2609,7 +2611,8 @@ apply (rule dNegE)
 apply (simp+)
 done
 
-lemma le_less_trans: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a \<le> b = 1 \<Longrightarrow> b < c = 1 \<Longrightarrow> a < c = 1"
+lemma le_less_trans:
+  "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a \<le> b = 1 \<Longrightarrow> b < c = 1 \<Longrightarrow> a < c = 1"
 apply (cases bool: "a=b", simp)
 apply (subst "b=a")
 apply (rule less_trans[where y="b"], simp)
@@ -2665,12 +2668,14 @@ apply (rule conjE2, rule conjE1, simp)
 apply (rule conjE2, rule conjE2, simp)
 done
 
-lemma gr_mono_pred: "a N \<Longrightarrow> b N \<Longrightarrow> \<not> a = 0 \<Longrightarrow> \<not> b = 0 \<Longrightarrow> P a > P b = 1 \<Longrightarrow> a > b = 1"
+lemma gr_mono_pred:
+  "a N \<Longrightarrow> b N \<Longrightarrow> \<not> a = 0 \<Longrightarrow> \<not> b = 0 \<Longrightarrow> P a > P b = 1 \<Longrightarrow> a > b = 1"
 apply (rule suc_nz[where x="a"], simp)
 apply (rule suc_nz[where x="b"], simp)
 done
 
-lemma not_le_mono_suc [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> a < b = 0 \<Longrightarrow> S a < S b = 0"
+lemma not_le_mono_suc [simp]:
+  "a N \<Longrightarrow> b N \<Longrightarrow> a < b = 0 \<Longrightarrow> S a < S b = 0"
 by (unfold_def less_def, simp)
 
 lemma geq_mono_suc [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> a \<ge> b = 1 \<Longrightarrow> S a \<ge> S b = 1"
@@ -2679,13 +2684,15 @@ apply (rule not_le_mono_suc, simp)
 apply (rule sub_eq_self_imp_zero[where y="0"], simp)
 done
 
-lemma geq_mono_pred: "a N \<Longrightarrow> b N \<Longrightarrow> \<not> a = 0 \<Longrightarrow> \<not> b = 0 \<Longrightarrow> P a \<ge> P b = 1 \<Longrightarrow> a \<ge> b = 1"
+lemma geq_mono_pred:
+  "a N \<Longrightarrow> b N \<Longrightarrow> \<not> a = 0 \<Longrightarrow> \<not> b = 0 \<Longrightarrow> P a \<ge> P b = 1 \<Longrightarrow> a \<ge> b = 1"
 apply (rule suc_nz[where x="a"], simp)
 apply (rule suc_nz[where x="b"], simp)
 apply (rule geq_mono_suc, simp)
 done
 
-lemma cpair_strict_mono_r [simp]: "x N \<Longrightarrow> y N \<Longrightarrow> (S y) < \<langle>x, (S y)\<rangle> = 1"
+lemma cpair_strict_mono_r [simp]:
+  "x N \<Longrightarrow> y N \<Longrightarrow> (S y) < \<langle>x, (S y)\<rangle> = 1"
 proof (induct y)
   case Base
     show "x N \<Longrightarrow> y N \<Longrightarrow> 1 < \<langle>x,1\<rangle> = 1"
@@ -3359,10 +3366,10 @@ where
                               \<and> (cpi 2 x = list_cons_tag)
                               \<and> ((cpi 3 x) N)
                               \<and> (is_list (cpi' 4 x))" and
-  is_list_def: "is_list x := if x = Nil
-                               then True
-                             else if x = 0
+  is_list_def: "is_list x := if x = 0
                                then False
+                             else if x = Nil
+                               then True
                              else if is_cons x
                                then True
                              else False"
@@ -3410,6 +3417,15 @@ by (rule conjE1, rule list_cons_term, simp)
 lemma is_cons_terminates [auto]: "x N \<Longrightarrow> is_cons x B"
 by (rule conjE2, rule list_cons_term, simp)
 
+lemma [auto]: "\<not> 0 = Nil"
+unfolding Nil_def by simp
+
+lemma [auto]: "\<not> Nil = 0"
+unfolding Nil_def by simp
+
+lemma [auto]: "\<not> is_list 0"
+by (unfold_def is_list_def, simp)
+
 lemma [auto]: "is_list Nil"
 by (unfold_def is_list_def, simp)
 
@@ -3451,12 +3467,6 @@ apply (subst rule: cons_1_tag)
 apply (subst rule: cons_2_2)
 apply (rule cp4_proj, simp+)
 done
-
-lemma [auto]: "\<not> 0 = Nil"
-unfolding Nil_def by simp
-
-lemma [auto]: "\<not> is_list 0"
-by (unfold_def is_list_def, simp)
 
 lemma [auto]: "n N \<Longrightarrow> xs N \<Longrightarrow> \<not> 0 = Cons n xs"
 unfolding Nil_def Cons_def by simp

@@ -22,6 +22,7 @@
 #let to = $arrow.r.double$
 #let impl = $arrow.r.double.long$
 #let tag(a) = $\[#a]$
+#let gap = " "
 
 #let prems(sep: h(1.3em), ..premises) = {
   $
@@ -943,5 +944,112 @@
     prem($ctxt(suc(y))$, $y nat$, $x = suc(y)$),
   ),
   prem($ctxt(x)$),
+  none
+)
+
+#let cpair = $angle.l x, y angle.r = frac(((x + y)^2 + 3x + y), 2)$
+
+#let cpair-term = deduction-rule(
+  prems(
+    prem($x nat$),
+    prem($y nat$),
+  ),
+  prem($angle.l x, y angle.r nat$),
+  none
+)
+
+#let cpx-cpy-term = {
+  let cpx-term = deduction-rule(
+    prem($x nat$),
+    prem($"cpy" x nat$),
+    none
+  )
+  let cpy-term = deduction-rule(
+    prem($x nat$),
+    prem($"cpy" x nat$),
+    none
+  )
+  
+  grid(
+    columns: (1fr, 1fr),
+    row-gutter: 2em,
+    cpx-term,
+    cpy-term
+  )
+}
+
+#let cpx-cpy-proj = {
+  let cpx-proj = deduction-rule(
+    prems(
+      prem($x nat$),
+      prem($y nat$),
+    ),
+    prem($"cpx" angle.l x, y angle.r = x$),
+    none
+  )
+  let cpy-proj = deduction-rule(
+    prems(
+      prem($x nat$),
+      prem($y nat$),
+    ),
+    prem($"cpy" angle.l x, y angle.r = y$),
+    none
+  )
+  
+  grid(
+    columns: (1fr, 1fr),
+    row-gutter: 2em,
+    cpx-proj,
+    cpy-proj
+  )
+}
+
+#let cpair-strict-mono-l-r = {
+  let cpair-strict-mono-l = deduction-rule(
+    prems(
+      prem($x nat$),
+      prem($y nat$),
+    ),
+    prem($suc(y) < angle.l x, suc(y) angle.r = x$),
+    none
+  )
+  let cpair-strict-mono-r = deduction-rule(
+    prems(
+      prem($x nat$),
+      prem($y nat$),
+    ),
+    prem($suc(suc(x)) < angle.l suc(suc(x)), y angle.r = x$),
+    none
+  )
+  
+  grid(
+    columns: (1fr, 1fr),
+    row-gutter: 2em,
+    cpair-strict-mono-l,
+    cpair-strict-mono-r,
+  )
+}
+
+#let cpair-inj = deduction-rule(
+  prems(
+    prem($a nat$),
+    prem($b nat$),
+    prem($c nat$),
+    prem($d nat$),
+    prem($angle.l a, b angle.r = angle.l c, d angle.r$),
+  ),
+  prem($a = c and b = d$),
+  none
+)
+
+#let reconstr-lemma = deduction-rule(
+  prem($z nat$),
+  prem($z = angle.l "cpx" z, "cpy" z angle.r$),
+  none
+)
+
+#let cpair-surj = deduction-rule(
+  prem($z nat$),
+  prem($exists x gap y. gap z = angle.l x, y angle.r $),
   none
 )
