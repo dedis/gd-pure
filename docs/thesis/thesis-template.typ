@@ -104,7 +104,7 @@
 
   // ---------- ToC (Outline) ----------------------------
   show outline.entry.where(level: 1): it => {
-    set block(above: page-grid)
+    set block(above: page-grid, below: page-grid)
     set text(font: heading-font, weight: "semibold", size: body-size)
     link(
       it.element.location(),    // make entry linkable

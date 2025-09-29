@@ -3323,7 +3323,7 @@ qed
 lemma cpair_eq_I: "x N \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> cpx x = a \<Longrightarrow> cpy x = b \<Longrightarrow> x = \<langle>a,b\<rangle>"
 by (subst "cpx x = a", subst "cpy x = b")
 
-lemma cp4_proj: "x N \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> cpi 1 x = a \<Longrightarrow> cpi 2 x = b \<Longrightarrow>
+lemma cp4_reconstr: "x N \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> cpi 1 x = a \<Longrightarrow> cpi 2 x = b \<Longrightarrow>
        cpi 3 x = c \<Longrightarrow> cpi' 4 x = d \<Longrightarrow>
        x = \<langle>a,b,c,d\<rangle>"
 apply (rule cpair_eq_I, simp)
@@ -3417,9 +3417,6 @@ by (rule conjE1, rule list_cons_term, simp)
 lemma is_cons_terminates [auto]: "x N \<Longrightarrow> is_cons x B"
 by (rule conjE2, rule list_cons_term, simp)
 
-lemma [auto]: "\<not> 0 = Nil"
-unfolding Nil_def by simp
-
 lemma [auto]: "\<not> Nil = 0"
 unfolding Nil_def by simp
 
@@ -3465,7 +3462,7 @@ apply (rule existsI[where a="cpi' 4 x"], simp+)
 apply (unfold Cons_def)
 apply (subst rule: cons_1_tag)
 apply (subst rule: cons_2_2)
-apply (rule cp4_proj, simp+)
+apply (rule cp4_reconstr, simp+)
 done
 
 lemma [auto]: "n N \<Longrightarrow> xs N \<Longrightarrow> \<not> 0 = Cons n xs"

@@ -71,7 +71,7 @@ Where the notation $angle.l dot,dot angle.r$ is the well-known Cantor pairing fu
 ]
 
 == Encoding: Type Membership Predicates
-Since the values of the inductive datatypes are encoded as natural numbers (`num`), they must be of the syntactic Isabelle type `num` themselves. Thus, to determine 'type membership', e.g. whether a given `num` is considered an encoded `List`, there has to be a predicate that decides this. For `List`, such a type membership predicate shall be called `is_list`, and the idea is that $"is_list" a$ is a proposition-level (`o`) type membership certificate, similar to how $x nat$ is a certificate for a terminating natural number. Thus, _GA_ can be viewed as having a 'dynamic' type system embedded within the propositional syntax itself, where the types are $bool$, $nat$, and now also inductive types such as `List`.
+Since the values of the inductive datatypes are encoded as natural numbers (`num`), they must be of the syntactic Isabelle type `num` themselves. Thus, to determine 'type membership', e.g. whether a given `num` is considered an encoded `List`, there has to be a predicate that decides this. For `List`, such a type membership predicate shall be called `is_list`, and the idea is that $"is_list" a$ is a proposition-level (`o`) type membership certificate, similar to how $x nat$ is a certificate for a terminating natural number. Thus, _GA_ can be viewed as having a 'dynamic' type system embedded within the propositional syntax itself, where the types are $bool$, $nat$, and now also inductive datatypes such as `List`.
 
 Since the type membership predicate effectively determines the inhabitants of the type, it is responsible for the first two properties, *closure* and *exhaustiveness*. Formally, the type membership predicate, which is called $"is_"tau$ for a given coded type $tau$, should fulfill the following properties. For each $tau$ constructor $C_i$ and its arguments $a_(i,1),...,a_(i,n_i)$ with their respective type constraints $tau_(i,1),...,tau_(i,n_i)$:
 
@@ -336,19 +336,466 @@ lemma cpair_surjective [auto]: "a N ⟹ ∃b c. a = ⟨b,c⟩"
 sorry
 ```
 
-To generalize the projection of an 'argument' of a Cantor k-tuple, we define the following function `cpi'` returning the i'th element of a Cantor i-tuple.
+To project the $i$-th component of a Cantor $k$-tuple, we first define $"cpi'" i$ to return the $i$-th element of a right-associated Cantor $i$-tuple.
 
 ```Isabelle
-cpi'_def: "cpi' n x := if n = 0 then 0
-                       else if n = 1 then x
-                       else cpy (cpi' (n-1) x)"
+cpi'_def: "cpi' n z := if n = 0 then 0
+                       else if n = 1 then z
+                       else cpy (cpi' (n-1) z)"
 ```
 
-== Next
-- version for cantor 4-tuple (since cons has that many)
-- actual `List` encoding/theorems
+Intuitively, `cpi' i` performs $i$ successive selections of the second component (`cpy`) of the outermost Cantor pair. If the value is a Cantor $i$-tuple, the result is exactly the $i$-th element. In the other case where the value is a Cantor $k$-tuple with $k > i$, the term $"cpi'" i gap z$ yields the suffix Cantor $k-i+1$-tuple beginning at the $i$-th position and thus an additional `cpx` application is required to extract the $i$-th position. This is what the `cpi` function does:
 
-- add some key theorems for arithmetic that were proven, or at least give a number to get an idea.
-- abstract
-- fix contents
-- selbststandigkeitserklarung
+```Isabelle
+definition cpi :: "num ⇒ num ⇒ num" where
+  "cpi i x ≡ cpx (cpi' i x)"
+```
+
+The termination proof of `cpi'` is by induction over the first argument and omitted here, although it is included in the Isabelle formalization. The next interesting lemma is a version of the reconstruction lemma for Cantor 4-tuples. The lemma is stated for 4-tuples specifically, since the `Cons` constructor of the `List` datatype is encoded as a Cantor 4-tuple.
+
+#theorem("Reconstruction lemma for Cantor 4-tuples")[
+  #reconstr-4-tuple
+]
+
+#proof[
+  Stated in a slightly different way for ease of application. Using the reconstruction lemmas for `cpx` and `cpy`.
+
+  ```Isabelle
+  lemma cp4_reconstr: "x N ⟹ a N ⟹ b N ⟹ c N ⟹ d N ⟹ cpi 1 x = a ⟹ cpi 2 x = b ⟹
+         cpi 3 x = c ⟹ cpi' 4 x = d ⟹
+         x = ⟨a,b,c,d⟩"
+  apply (rule cpair_eq_I, simp)
+  apply (subst "cpi 1 x = cpx x", auto)
+  apply (rule cpair_eq_I, simp)
+  apply (subst "cpi 2 x = cpx (cpy x)", auto)
+  apply (rule cpair_eq_I, simp)
+  apply (subst "cpi 3 x = cpx (cpy (cpy x))", auto)
+  apply (subst "cpi' 4 x = cpy (cpy (cpy x))", auto)
+  done
+  ```
+]
+
+== The Encoded List Datatype
+With the Cantor pairing infrastructure, everything is ready for defining the full `List` datatype and proving all the properties required for an inductive datatype in @inductive-general.
+
+`List` is introduced as a type synonym for the `num` type. This means Isabelle treats `List` as `num` internally, but it can still be written as a type by the user. The definition of the constructors and the `is_list` predicate were already given previously and are restated here for completeness sake.
+
+```Isabelle
+type_synonym List = num
+
+definition list_type_tag where
+  "list_type_tag ≡ 1"
+
+definition list_nil_tag where
+  "list_nil_tag ≡ 1"
+
+definition list_cons_tag where
+  "list_cons_tag ≡ 2"
+
+definition Nil :: "List" where
+  "Nil ≡ ⟨list_type_tag,list_nil_tag⟩"
+
+definition Cons :: "num ⇒ List ⇒ List" where
+  "Cons n xs ≡ ⟨list_type_tag,list_cons_tag,n,xs⟩"
+
+axiomatization
+  is_list :: "num ⇒ o" and
+  is_cons :: "num ⇒ o"
+where
+  is_cons_def: "is_cons x := (cpi 1 x = list_type_tag)
+                              ∧ (cpi 2 x = list_cons_tag)
+                              ∧ ((cpi 3 x) N)
+                              ∧ (is_list (cpi' 4 x))" and
+  is_list_def: "is_list x := if x = 0
+                               then False
+                             else if x = Nil
+                               then True
+                             else if is_cons x
+                               then True
+                             else False"
+```
+
+The first important lemma states termination of the `is_list` predicate, which essentially means that type membership checking is decidable.
+
+#theorem("Termination of " + `is_list` + " and " + `is_cons`)[
+  #is-list-cons-term
+]
+
+#proof[
+  First, prove that `Nil` and `Cons` are terminating natural numbers for any arguments (`nil_nat` and `cons_nat`). Then, prove termination of `is_list` and `is_cons` mutually inductively using the strong induction lemma.
+  
+  ```Isabelle
+  lemma nil_nat [auto]: "Nil N"
+  unfolding Nil_def list_type_tag_def by simp
+
+  lemma cons_nat [auto]: "n N ⟹ xs N ⟹ Cons n xs N"
+  unfolding Cons_def list_type_tag_def by simp
+
+  lemma list_cons_term [auto]: "x N ⟹ (is_list x B) ∧ (is_cons x B)"
+  proof (induct strong x)
+    case Base
+      show "x N ⟹ (is_list 0 B) ∧ (is_cons 0 B)"
+        apply (unfold_def is_list_def)
+        apply (unfold_def is_cons_def)
+        apply (unfold_def is_list_def)
+        apply (simp)
+        done
+  next
+    case (Step xa)
+      fix y
+      assume hyp: "(⋀y. y N ⟹ y ≤ xa = 1 ⟹ (is_list y B) ∧ (is_cons y B))"
+      from Step show ?case
+        apply (unfold_def is_list_def)
+        apply (unfold_def is_cons_def)
+        apply (simp)
+        apply (rule condTB, simp)+
+        apply (rule conjE1, rule hyp, simp, rule le_suc_implies_leq, simp)+
+        done
+  qed
+
+  ``` 
+]
+
+=== Proving Constructor Distinctness
+
+Distinctness follows immediately from disjoint constructor tags in the encoding.
+
+#theorem("List constructor distinctness")[
+  #list-cons-distinct
+]
+
+#proof[
+  ```Isabelle
+  lemma [auto]: "n N ⟹ xs N ⟹ ¬ Nil = Cons n xs"
+  unfolding Nil_def Cons_def by simp
+
+  lemma [auto]: "n N ⟹ xs N ⟹ ¬ Cons n xs = Nil"
+  unfolding Nil_def Cons_def by simp
+  ```
+]
+
+=== Proving Injectivity of `Cons`
+
+Injectivity reduces to injectivity of the Cantor pairing at each nesting level.
+
+#theorem("Injectivity of Cons")[
+  #cons-injectivity
+]
+
+#proof[
+  ```Isabelle
+  lemma
+    "n N ⟹ m N ⟹ xs N ⟹ ys N ⟹ Cons n xs = Cons m ys ⟹ n = m ∧ xs = ys"
+  unfolding Cons_def
+  apply (rule cpair_inj)
+  apply (rule cpair_inj_r, rule cpair_inj_r, simp)
+  done
+  ```
+]
+
+=== Proving Exhaustiveness
+
+Exhaustiveness is essentially a case-distinction lemma and states that every element recognized by `is_list` is either `Nil` or has `Cons`-shape with well-typed arguments. We first prove a decoding lemma for `Cons`-shapes, then a decoding lemma for `List` in general, and finally the full case distinction rule.
+
+#theorem("List exhaustiveness")[
+  #list-exhaustiveness
+]
+
+#proof[
+  ```Isabelle
+  lemma cons_decode [auto]:
+    "is_cons x ⟹ x N ⟹ ∃n xs. ((n N) ∧ is_list xs ∧ x = Cons n xs)"
+  apply (rule existsI[where a="cpi 3 x"], simp+)
+  apply (rule existsI[where a="cpi' 4 x"], simp+)
+  apply (unfold Cons_def)
+  apply (subst rule: cons_1_tag)
+  apply (subst rule: cons_2_2)
+  apply (rule cp4_reconstr, simp+)
+  done
+
+  lemma list_decode: "x N ⟹ is_list x ⟹ (x = Nil) ∨ (∃n xs. (n N) ∧ is_list xs ∧ (x = Cons n xs))"
+  apply (rule implE[where a="is_list x"])
+  apply (unfold_def is_list_def)
+  apply (cases bool: "x=Nil", simp+)
+  apply (rule implI, simp)
+  apply (rule disjI1, simp)
+  apply (cases bool: "is_cons x", simp+)
+  apply (rule implI)
+  apply (rule condTB, simp)+
+  apply (simp+)
+  apply (rule implI, simp)
+  apply (rule exF[where P="False"], simp)
+  done
+  ```
+]
+
+#theorem("List cases", font_size: 0.9em)[
+  #list-cases 
+]
+
+#proof[
+  ```Isabelle
+  lemma cases_list [case_names _ HQ Nil Cons, cases]: "is_list x ⟹
+         (x N) ⟹
+         (x = Nil ⟹ Q) ⟹
+         (⋀n xs. n N ⟹ xs N ⟹ is_list xs ⟹ x = Cons n xs ⟹ Q)
+         ⟹ Q"
+  apply (rule disjE1[OF list_cases], simp, assumption)
+  apply (rule existsE[where Q="λn. ∃xs. (n N) ∧ is_list xs ∧ x = Cons n xs"])
+  apply (assumption)
+  proof -
+    fix a
+    show "is_list x ⟹
+       (x = Nil ⟹ Q) ⟹
+       (⋀n xs. n N ⟹ xs N ⟹ is_list xs ⟹ x = Cons n xs ⟹ Q) ⟹
+       ∃n xs. (n N) ∧ is_list xs ∧ x = Cons n xs ⟹
+       a N ⟹ ∃xs. (a N) ∧ is_list xs ∧ x = Cons a xs ⟹ Q"
+      apply (rule existsE[where Q="λxs. (a N) ∧ is_list xs ∧ x = Cons a xs"])
+      apply (assumption)
+      proof -
+        fix aa
+        show "
+        (⋀n xs. n N ⟹ xs N ⟹ is_list xs ⟹ x = Cons n xs ⟹ Q) ⟹
+          aa N ⟹ (a N) ∧ is_list aa ∧ x = Cons a aa ⟹ Q"
+          apply (rule Pure.meta_mp[where P="a N"])
+          apply (rule Pure.meta_mp[where P="is_list aa"])
+          apply (rule Pure.meta_mp[where P="x = Cons a aa"])
+          apply (assumption)
+          apply (rule conjE2, simp)
+          apply (rule conjE2, rule conjE1, simp)
+          apply (rule conjE1, rule conjE1, simp)
+          done
+      qed
+  qed
+  ```
+]
+
+=== Proving Closure
+
+Closure states that every constructor application yields an element of the encoded datatype. For `List`, this is immediate from the definition of `is_list` and the `Cons`-shape predicate.
+
+#theorem("List closure")[
+  #list-closure
+]
+
+#proof[
+  ```Isabelle
+  lemma [auto]: "¬ Nil = 0"
+  unfolding Nil_def by simp
+
+  lemma [auto]: "is_list Nil"
+  by (unfold_def is_list_def, simp)
+  ```
+
+  ```Isabelle
+  lemma [auto]: "n N ⟹ xs N ⟹ is_list xs ⟹ is_cons (Cons n xs)"
+  unfolding Cons_def by (unfold_def is_cons_def, simp)
+
+  lemma cons_is_list [auto]:
+    "n N ⟹ xs N ⟹ is_list xs ⟹ is_list (Cons n xs)"
+  apply (unfold_def is_list_def)
+  apply (unfold_def is_cons_def)
+  apply (unfold Cons_def)
+  apply (simp)
+  done
+  ```
+]
+
+=== Proving `List` Induction
+
+We derive an induction principle for `List` by strong induction on the `num` code, using the growth property $"xs" < "Cons" n "xs" = 1$ to justify the recursive call.
+
+#theorem("List induction")[
+  #list-induction
+]
+
+#proof[
+  ```Isabelle
+  lemma [simp]: "xs N ⟹ is_list xs ⟹ n N ⟹ xs < Cons n xs = 1"
+  unfolding Cons_def by simp
+  ```
+
+  ```Isabelle
+  lemma [case_names _ HQ Nil Cons, induct]:
+    "is_list a ⟹ a N ⟹ Q Nil ⟹ (⋀x xs. x N ⟹ xs N ⟹ is_list xs ⟹ Q xs ⟹ Q (Cons x xs))
+     ⟹ Q a"
+  apply (rule implE[where a="is_list a"])
+  apply (induct strong a)
+  apply (rule implI, simp)
+  apply (rule exF[where P="is_list 0"], simp)
+  apply (rule implI, simp)
+  proof -
+    fix xa
+    assume hyp: "(⋀y. y N ⟹ y ≤ xa = 1 ⟹ is_list y ⟶ Q y)"
+    assume cons: "(⋀x xs. x N ⟹ xs N ⟹ is_list xs ⟹ Q xs ⟹ Q (Cons x xs))"
+    show "a N ⟹ xa N ⟹ is_list S xa ⟹ Q Nil ⟹
+          Q S xa"
+      proof (cases "S xa", simp)
+        case Nil
+          from Nil show ?case
+            by (simp+)
+      next
+        case (Cons n xs)
+          from Cons and cons show ?case
+            apply (simp)
+            apply (rule cons, simp)
+            apply (rule obj_impl)
+            apply (rule hyp, simp)
+            apply (rule le_suc_implies_leq, simp+)
+            done
+      qed
+  qed
+  ```
+]
+
+== Tooling for Inductive Datatypes
+To make the induction and case distinction mechanisms of `List` useful, they are integrated with the existing `induct` and `cases` tactics.
+
+The idea is that the induction lemma of an inductive type is annotated with the $tag("induct")$ tag, and the corresponding case distinction lemma is annotated with $tag("cases")$. To accommodate the new inductive types, the `induct` and `cases` tactics are extended accordingly. The behavior of the `induct` tactic is now as follows:
+
+- If the argument `strong` is supplied, the strong induction lemma is applied.  
+- Otherwise, the tactic iterates over all theorems annotated with the $tag("induct")$ attribute and proceeds as follows for each candidate theorem:  
+  - Attempt to instantiate the theorem with the given term $x$.  
+  - Check whether the first subgoal resulting from the instantiation can be discharged using only the assumptions currently available in the proof context (this check is performed without committing to the application).  
+  - If this succeeds, the theorem is selected, applied to the goal, and the first subgoal is solved.  
+  - Finally, the corresponding cases are generated from the theorem definition, making use of the `case_names` annotation.  
+
+The following is the final code for the `induct` method, implementing the logic described above:
+
+```SML
+structure GD_Induct =
+struct
+  val induct_thm = @{thm ind}
+  val strong_induct_thm = @{thm strong_induction}
+
+  fun try_inst_thm ctxt t th =
+    let val ct = Thm.cterm_of ctxt t in
+      try (fn th => Drule.infer_instantiate' ctxt [SOME ct] th) th
+    end
+
+  fun closes_first_prem ctxt i th st =
+    let
+      val tac =
+      DETERM (
+        resolve_tac ctxt [th] i
+        THEN ((SOLVED' (assume_tac ctxt)) i)
+      )
+    in
+      Option.isSome (Seq.pull (tac st))
+    end
+
+  fun select_induct_thm ctxt t i st =
+    let
+      val induct_thms = Named_Theorems.get ctxt @{named_theorems induct}
+      fun is_instantiable th =
+        case (try_inst_thm ctxt t th) of
+          NONE     => NONE
+        | SOME th' => if (closes_first_prem ctxt i th' st) then SOME th else NONE
+    in
+      case (get_first is_instantiable induct_thms) of
+        SOME th => th
+      | NONE    => induct_thm
+    end
+
+  fun apply_tac tac st =
+    let
+      val res = DETERM tac st
+    in
+      case Seq.pull res of
+        SOME (st', _) => st'
+      | NONE => raise THM ("tactic failed", 0, [st])
+    end
+
+  fun induct_tac strong t =
+    CONTEXT_SUBGOAL (fn (_, i) => fn (ctxt, st) =>
+    let
+      val th  = if strong then strong_induct_thm else (select_induct_thm ctxt t i st)
+      val th' = try_inst_thm ctxt t th
+      val tac =
+        case th' of
+          SOME th'' => DETERM (match_tac ctxt [th''] i)
+        | NONE      => no_tac
+      val st' = apply_tac tac st
+      val (spec, _) = Rule_Cases.get th
+      val cases_prop = Thm.prop_of (Rule_Cases.internalize_params st')
+      val cases = Rule_Cases.make_common ctxt cases_prop spec
+      val post_tac = TRY (SOLVED' (assume_tac ctxt) i)
+    in
+      CONTEXT_CASES cases post_tac (ctxt, st')
+    end)
+
+  fun gd_induct_method (strong, t) _ =
+    Method.CONTEXT_METHOD (K (induct_tac strong t 1))
+end
+
+val parse_induct_args =
+  Scan.lift (Scan.optional ((Args.$$$ "strong") >> K true) false)
+  -- Args.term
+
+val _ =
+  Theory.setup
+    (Method.setup @{binding induct}
+    (parse_induct_args >> GD_Induct.gd_induct_method)
+    "Apply rule ind with where a = <term>"
+  )
+```
+
+== Future Work
+This concludes the proof of all the required properties stated in @inductive-general. Thus, the encoding of `Nil` and `Cons` together with the `is_list` predicate constitute a full inductive datatype in _GA_. Since most of the steps undertaken to get there followed a clear template, in the future, an inductive datatype should be able to be compiled from a simple description of the constructors:
+
+```Isabelle
+declaretype List =
+  Nil
+  | Cons of "num" "List"
+```
+
+To make inductive datatypes truly practical in _GA_, it would be desirable to provide an accompanying definitional mechanism, accepting high-level specifications such as the following:
+
+```Isabelle
+fun sum :: "List ⇒ num" where
+ sum_nil: "sum Nil = 0" and
+ sum_cons: "sum (Cons n xs) = n + sum xs"
+```
+
+That is then compiled into the following encoding-aware recursive _GA_ definition:
+
+```Isabelle
+axiomatization
+  sum :: "List ⇒ num"
+where
+  sum_def: "sum x := if x = Nil then 0
+                     else if (is_cons x) then (cpi 3 x) + (sum (cpi' 4 x))
+                     else omega"
+```
+
+From which a termination proof and the defining equations can be derived:
+
+```Isabelle
+lemma [auto]: "x N ⟹ is_list x ⟹ sum x N"
+proof (induct x, simp)
+  case Nil
+  show ?case
+    by (unfold_def sum_def, simp add: sum_def)
+next
+  case (Cons n xs)
+  from Cons show ?case
+    apply (unfold_def sum_def)
+    apply (subst rule: condI2)
+    apply (subst rule: condI1)
+    apply (unfold Cons_def, simp+)
+    apply (unfold_def is_cons_def, simp)
+    done
+qed
+
+lemma [simp]: "sum Nil = 0"
+by (unfold_def sum_def, simp)
+
+lemma [simp]: "n N ⟹ xs N ⟹ is_list xs ⟹ sum (Cons n xs) = n + sum xs"
+apply (rule eqSym)
+apply (unfold_def sum_def)
+apply (unfold_def is_cons_def)
+apply (unfold Cons_def Nil_def, simp)
+done
+```
+
+While a full implementation of these mechanisms is outside the scope of this thesis, the foundations have been developed, and what remains is largely an engineering task left for future work.

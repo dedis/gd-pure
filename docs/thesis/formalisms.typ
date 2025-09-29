@@ -1048,8 +1048,147 @@
   none
 )
 
+#let reconstr-4-tuple = deduction-rule(
+  prems(
+    prem($z nat$),
+    prem($a nat$),
+    prem($b nat$),
+    prem($c nat$),
+    prem($d nat$),
+  ),
+  prem($z = angle.l "cpi" 1 gap z, "cpi" 2 gap z, "cpi" 3 gap z, "cpi'" 4 gap z angle.r$),
+  none
+)
+
 #let cpair-surj = deduction-rule(
   prem($z nat$),
   prem($exists x gap y. gap z = angle.l x, y angle.r $),
+  none
+)
+
+#let is-list-cons-term = {
+  let is-list-term = deduction-rule(
+    prem($x nat$),
+    prem($"is_list" x bool$),
+    none
+  )
+  let is-cons-term = deduction-rule(
+    prem($x nat$),
+    prem($"is_cons" x bool$),
+    none
+  )
+  grid(
+    columns: (1fr, 1fr),
+    row-gutter: 2em,
+    is-list-term,
+    is-cons-term,
+  )
+}
+
+#let list-cons-distinct = {
+  let distinct1 = deduction-rule(
+    prems(
+      prem($n nat$),
+      prem($"xs" nat$),
+    ),
+    prem($not "Nil" = "Cons" n "xs"$),
+    none
+  )
+  let distinct2 = deduction-rule(
+    prems(
+      prem($n nat$),
+      prem($"xs" nat$),
+    ),
+    prem($not "Cons" n "xs" = "Nil"$),
+    none
+  )
+  grid(
+    columns: (1fr, 1fr),
+    row-gutter: 2em,
+    distinct1,
+    distinct2,
+  )
+}
+
+#let list-closure = {
+  let nil-list = deduction-rule(
+    $$,
+    prem($"is_list" "Nil"$),
+    none
+  )
+  let cons-list = deduction-rule(
+    prems(
+      prem($n nat$),
+      prem($"xs" nat$),
+      prem($"is_list" "xs"$),
+    ),
+    prem($"is_list" ("Cons" n "xs")$),
+    none
+  )
+  grid(
+    columns: (1fr, 1fr),
+    row-gutter: 2em,
+    nil-list,
+    cons-list,
+  )
+}
+
+#let cons-injectivity = deduction-rule(
+  prems(
+    prem($n nat$),
+    prem($m nat$),
+    prem($"xs" nat$),
+    prem($"ys" nat$),
+    prem($"Cons" n "xs" = "Cons" m "ys"$),
+  ),
+  prem($n = m and "xs" = "ys"$),
+  none
+)
+
+#let list-exhaustiveness = {
+  let cons-decode = deduction-rule(
+    prems(
+      prem($"is_cons" "x"$),
+      prem($x nat$),
+    ),
+    prem($exists n "xs". gap (n nat) and ("is_list" "xs") and x = ("Cons" n "xs")$),
+    none
+  )
+  let list-decode = deduction-rule(
+    prems(
+      prem($"is_list" "x"$),
+      prem($x nat$),
+    ),
+    prem($x = "Nil" or exists n "xs". gap (n nat) and ("is_list" "xs") and x = ("Cons" n "xs")$),
+    none
+  )
+
+  grid(
+    columns: (1fr),
+    row-gutter: 2em,
+    cons-decode,
+    list-decode,
+  )
+}
+
+#let list-cases = deduction-rule(
+  prems(
+    prem($"is_list" x$),
+    prem($x nat$),
+    prem($p$, $x = "Nil"$),
+    prem($p$, $n nat$, $"xs" nat$, $"is_list" "xs"$, $x = "Cons" n "xs"$),
+  ),
+  $p$,
+  none
+)
+
+#let list-induction = deduction-rule(
+  prems(
+    prem($"is_list" a$),
+    prem($a nat$),
+    prem($ctxt("Nil")$),
+    prem($ctxt("(Cons x xs)")$, $x nat$, $"xs" nat$, $"is_list" "xs"$, $ctxt("xs")$),
+  ),
+  $ctxt("a")$,
   none
 )
