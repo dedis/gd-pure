@@ -52,7 +52,7 @@ An inductive datatype defined in this way satisfies the following properties:
 The goal now is to find an encoding of an inductive datatype into the natural numbers such that all these properties are fulfilled and can be proved in _GA_ itself without adding any axioms.
 
 == Encoding: Constructors
-The constructor encoding is responsible for ensuring the latter three properties *distinctness*, *injectivity*, and the *induction principle*. The first two can be ensured by an injective encoding function, and the third is ensured by an encoding function that is strictly monotonous in all recursive arguments (i.e. the ones of the same type).
+The constructor encoding is responsible for ensuring the latter three properties *distinctness*, *injectivity*, and the *induction principle*. The first two can be ensured by an injective encoding function, and the third is ensured by an encoding function that is strictly increasing in all recursive arguments (i.e. the ones of the same type).
 
 The encoding of choice is a right-associative extension to the Cantor pairing function to Cantor tuples, where each constructor with arguments $a_1,...,a_n$ is encoded as follows:
 
@@ -62,7 +62,7 @@ Due to right-associativity, this is equivalent to :
 
 $ angle.l "type_tag", angle.l "constructor_tag",  angle.l a_1, angle.l ..., angle.l a_(n-1), a_n angle.r ... angle.r angle.r angle.r angle.r $
 
-Where the notation $angle.l dot,dot angle.r$ is the well-known Cantor pairing function, which is a bijection on the natural numbers and strictly monotonous in both arguments for $n >= 2$. It is defined as follows @cpair:
+Where the notation $angle.l dot,dot angle.r$ is the well-known Cantor pairing function, which is a bijection on the natural numbers and strictly increasing in both arguments for $n >= 2$. It is defined as follows @cpair:
 
 #definition-box("Cantor Pairing Function")[
   #align(center)[
@@ -257,7 +257,7 @@ Now, injectivity can be proved:
   ```
 ]
 
-The next key property is that a Cantor pair is strictly larger than both its argument (for $x >= 2$ and $y >= 1$). This is critical for proving the induction lemma for `List`s later.
+The next key property is that a Cantor pair is strictly larger than both its arguments (for $x >= 2$ and $y >= 1$). This is critical for proving the induction lemma for `List`s later.
 
 #theorem("Cantor pairing strictly dominates components")[
   #cpair-strict-mono-l-r
@@ -376,9 +376,9 @@ The termination proof of `cpi'` is by induction over the first argument and omit
 ]
 
 == The Encoded List Datatype
-With the Cantor pairing infrastructure, everything is ready for defining the full `List` datatype and proving all the properties required for an inductive datatype in @inductive-general.
+With the Cantor pairing infrastructure, everything is ready for defining the full `List` datatype and proving all the properties required for an inductive datatype listed in @inductive-general.
 
-`List` is introduced as a type synonym for the `num` type. This means Isabelle treats `List` as `num` internally, but it can still be written as a type by the user. The definition of the constructors and the `is_list` predicate were already given previously and are restated here for completeness sake.
+`List` is introduced as a type synonym for the `num` type. This means Isabelle treats `List` as `num` internally, but it can still be written as a type by the user. The definition of the constructors and the `is_list` predicate were already given previously and are restated here for completeness' sake.
 
 ```Isabelle
 type_synonym List = num
@@ -476,7 +476,7 @@ Distinctness follows immediately from disjoint constructor tags in the encoding.
 
 === Proving Injectivity of `Cons`
 
-Injectivity reduces to injectivity of the Cantor pairing at each nesting level.
+Injectivity reduces to injectivity of the Cantor pairing function.
 
 #theorem("Injectivity of Cons")[
   #cons-injectivity
@@ -603,7 +603,7 @@ Closure states that every constructor application yields an element of the encod
 
 === Proving `List` Induction
 
-We derive an induction principle for `List` by strong induction on the `num` code, using the growth property $"xs" < "Cons" n "xs" = 1$ to justify the recursive call.
+The key for deriving an induction principle for `List` is that recursive calls (in the `Cons` constructor) can be justified using the growth property $"xs" < "Cons" n "xs" = 1$. The proof is then by strong induction on the `num` code.
 
 #theorem("List induction")[
   #list-induction
@@ -654,13 +654,13 @@ To make the induction and case distinction mechanisms of `List` useful, they are
 The idea is that the induction lemma of an inductive type is annotated with the $tag("induct")$ tag, and the corresponding case distinction lemma is annotated with $tag("cases")$. To accommodate the new inductive types, the `induct` and `cases` tactics are extended accordingly. The behavior of the `induct` tactic is now as follows:
 
 - If the argument `strong` is supplied, the strong induction lemma is applied.  
-- Otherwise, the tactic iterates over all theorems annotated with the $tag("induct")$ attribute and proceeds as follows for each candidate theorem:  
-  - Attempt to instantiate the theorem with the given term $x$.  
-  - Check whether the first subgoal resulting from the instantiation can be discharged using only the assumptions currently available in the proof context (this check is performed without committing to the application).  
+- Otherwise, the method iterates over all theorems annotated with the $tag("induct")$ tag and proceeds as follows for each candidate theorem:  
+  - Instantiate the theorem with the given term $x$.  
+  - Check whether the first subgoal resulting from the instantiation can be discharged using only the assumptions currently available in the proof context (this check is performed without committing to the application). For `List` induction, this would for example be `is_list x`. If it can be discharged from only the assumptions, `induct` decides that `x` is a `List` and applies `List` induction.
   - If this succeeds, the theorem is selected, applied to the goal, and the first subgoal is solved.  
   - Finally, the corresponding cases are generated from the theorem definition, making use of the `case_names` annotation.  
 
-The following is the final code for the `induct` method, implementing the logic described above:
+The following is the final implementation of the `induct` method, implementing the logic described above. The `cases` method is adapted using an analogous logic.
 
 ```SML
 structure GD_Induct =
@@ -740,7 +740,7 @@ val _ =
   )
 ```
 
-== Future Work
+== Towards An Inductive Datatype Compiler
 This concludes the proof of all the required properties stated in @inductive-general. Thus, the encoding of `Nil` and `Cons` together with the `is_list` predicate constitute a full inductive datatype in _GA_. Since most of the steps undertaken to get there followed a clear template, in the future, an inductive datatype should be able to be compiled from a simple description of the constructors:
 
 ```Isabelle

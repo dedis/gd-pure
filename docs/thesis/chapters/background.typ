@@ -23,7 +23,7 @@ This subsection provides a formalization of the _Pure_ calculus. Unfortunately, 
 
 The core syntax of _Pure_ is a typed lambda calculus, augmented with type variables, universal quantification, equality, and implication.
 
-Propositions are terms of the distinct type `prop`. Propositions in _Pure_ are thus terms and not types, like they are in type-theory based provers like Rocq or Lean.
+Propositions are terms of the distinct type `prop`. Propositions in _Pure_ are thus terms and not types, like they are in type-theory based provers like Rocq or Lean @rocq @lean.
 
 #definition-box("Type Syntax")[
   #pure-types
@@ -81,7 +81,7 @@ The $lambda$-conversion rules facilitate equivalence reasoning for lambda abstra
   #pure-lambda-conversion-rules
 ]
 
-Finally, the equivalence substitution rule:
+Finally, the equivalence substitution rule allows substituting a value $b$ for $a$ if $a equiv b$.
 
 #definition-box("Equivalence Elimination")[
   #equiv-elimination-rule
@@ -111,7 +111,7 @@ where
 ```
 
 The axiomatized rules here simply state that $"True"$ holds and that from either $P$ or $Q$, $P or Q$ can be derived. Here, $P$ and $Q$ are implicitly universally quantified, ranging over all terms of type `prop`. That is, $P$ and $Q$ can be substituted for any term of the correct type (which is `o` for both $P$ and $Q$ here).
-Now, the type `o` has knows inhabitants and structure. However, Isabelle (or rather, _Pure_) cannot reason about it, because it cannot connect the type `o` meaningfully with its meta-theory. To resolve this, a judgment must translate from the object-level proposition type `o` to the meta-level type `prop`.
+Now, the type `o` has known inhabitants and structure. However, Isabelle (or rather, _Pure_) cannot reason about it, because it cannot connect the type `o` meaningfully with its meta-theory. To resolve this, a judgment must translate from the object-level proposition type `o` to the meta-level type `prop`.
 
 ```Isabelle
 judgment
@@ -216,7 +216,7 @@ The equality axioms notably omit reflexivity. Symmetry of equality is an axiom, 
 
 The natural number axioms are fairly close to the standard Peano axioms, with some notable exceptions.
 
-The _grounding_ equality is the $0I$ axiom, postulating that $0 nat$, or, by unfolding the definition, $0 = 0$. Using the $S=I E$ axiom, $suc(a) nat$ can be deduced for any $a$ for which $a nat$ is already known. The induction axiom $"ind"$ has an additional premise of $a nat$, i.e. it requires proof that the expression induction is performed over is indeed a (terminating) natural number.
+The _grounding_ equality is the $0I$ axiom, postulating that $0 nat$, or, by unfolding the definition, $0 = 0$. Using the $S=I E$ axiom, $suc(a) nat$ can be deduced for any $a$ for which $a nat$ is already known. The induction axiom $"ind"$ has an additional premise of $a nat$, i.e. it requires proof that the expression induction is performed over indeed terminates and denotes a natural number.
 
 Conditional evaluation is a primitive in _GA_ and its behavior must thus be axiomatized. The two inference rules correspond to the positive and negative evaluation of the condition, and they both require that the expression from the corresponding branch is shown to be terminating (i.e. $a nat$ and $b nat$ respectively). This additional premise prevents equalities of potentially non-terminating expressions to be deduced.
 

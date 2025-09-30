@@ -7,17 +7,16 @@
 #import "titlepage.typ": title-page
 
 #let abstract-thesis = text[
-  
-This thesis presents a foundational formalization of Grounded Arithmetic (GA), a first-order arithmetic based on the principles of Grounded Deduction (GD), directly within the Isabelle/Pure framework. Unlike classical and constructive logics, which impose strict termination requirements on definitions to preserve consistency, GD admits arbitrary recursion at the definitional level while weakening other inference rules to preserve its own consistency. The goal of this thesis is to investigate the feasibility of GA as a basis for mathematical reasoning by fully axiomatizing it in Pure.
+  This thesis presents a foundational formalization of Grounded Arithmetic (GA), a first-order arithmetic based on the principles of Grounded Deduction (GD), directly within the Isabelle/Pure framework. Unlike classical and constructive logics, which impose strict termination requirements on definitions to preserve consistency, GD admits arbitrary recursion at the definitional level. To remain consistent, GA weakens other inference rules, many of which demand explicit _habeas quid_ termination proofs of subexpressions as premises. The goal of this thesis is to investigate the feasibility of GA as a practical basis for mathematical and computational reasoning by fully axiomatizing it in Pure.
 
-The contributions of this thesis are the following. First, GA is fully axomatized in Pure, including axioms for propositional reasoning, natural numbers, quantifiers, conditional evaluation, and unrestricted definitional mechanisms. Second, core arithmetic functions are defined, their termination properties established, and many basic properties about them proved, supported by tooling written in Standard ML (SML), such as a subgoal solver, syntactic extensions, and methods for case analysis and induction. Third, the expressive power of GA is demonstrated by introducing a general framework for encoding inductive datatypes via Cantor tuples, and by establishing their fundamental properties (distinctness, injectivity, exhaustiveness, closure, and induction), which are explicitly stated and proved for the List datatype.
+  The formalization, Isabelle/GA, achieves three main contributions. It provides a complete axiomatization of GA in Pure, together with definitions of core arithmetic functions using the native recursive definitional mechanism of GA, and proofs of their fundamental properties. It develops a suite of reasoning tools, such as subgoal solvers, syntactic extensions, and methods for case analysis and induction, automating many of GA’s _habeas quid_ proof obligations and moving away from axiom-level proofs. Finally, it shows GA’s expressive power by encoding inductive datatypes via Cantor tuples and proving their essential properties, demonstrated by a fully verified List datatype.
 
-The resulting system, Isabelle/GA, enables interactive reasoning directly in GA with proof automation adapted to the grounded setting. While the implementation of a fully general definitional mechanism for inductive datatypes remains future work, the foundations laid in this thesis provide a robust platform for further exploration of grounded reasoning as a viable alternative to classical foundations of mathematics.
+  The resulting system demonstrates that GA "works", despite many weakened inference rules: one can reason productively in it, prove termination of functions beyond primitive recursion such as Ackermann’s function, and encode arbitrary inductive datatypes. While the implementation of a fully general definitional mechanism for inductive datatypes remains future work, the foundations developed here provide the necessary basis. Altogether, this thesis shows that grounded reasoning is practical and that _GA_ has the potential to mature into a serious alternative foundation for reasoning about computation.
 ]
 
 #show: thesis-template.with(
   title-page: title-page.with(
-    title: "A Foundational Formalization of Grounded Arithmetic in Isabelle/Pure",
+    title: "Formalizing Grounded Arithmetic atop Isabelle/Pure",
     thesistype: "BSc Thesis",
     author: "Sascha Kehrli",
     email: "skehrli@ethz.ch",
@@ -43,6 +42,7 @@ The resulting system, Isabelle/GA, enables interactive reasoning directly in GA 
 #include "chapters/gd_formalization.typ"
 #include "chapters/gd_tooling.typ"
 #include "chapters/inductive_types.typ"
+#include "chapters/conclusion.typ"
  
 // == Tabellen
 

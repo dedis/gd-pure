@@ -58,6 +58,6 @@
     v(1.5fr),
     supervisor-block,
     v(0.5fr),
-    [#date.display("[day].[month].[year]")],
+    [#date.display("30.09.2025")],
   )
 }

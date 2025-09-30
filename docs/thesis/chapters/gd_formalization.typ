@@ -13,7 +13,9 @@
 = Formalizing GA in Pure
 <ga-in-pure>
 
-This chapter aims to translate the full formalization of _GA_ in @ga-ref into Isabelle/Pure. Formally, this means that _GA_ is embedded into the _Pure_ calculus, using it as a meta-logic. The typed lambda calculus _Pure_ is fully characterized in @pure-ref. In the following, all types mentioned are part of the _Pure_ type system. _GA_ itself has no real (conventional) notion of types, although the 'inherited' types of _Pure_ can also be interpreted as syntactic _GA_ types.
+Having fully formalized _Grounded Arithmetic_ in @ga-ref, this chapter now aims to translate this natural deduction style formalization into Isabelle/Pure. Formally, this means that _GA_ is embedded into the _Pure_ calculus, using it as a meta-logic. The typed lambda calculus _Pure_ is fully characterized in @pure-ref. In the following, all types mentioned are part of the _Pure_ type system. _GA_ itself has no real (conventional) notion of types, although the 'inherited' types of _Pure_ can also be interpreted as syntactic _GA_ types.
+
+The chapter proceeds by introducing the axioms of _GA_ in a structured manner, starting with propositional reasoning, equality, and natural numbers. Particular attention is given to the surprisingly simple definitional mechanism of _GA_ and quantifier axiomatization, which highlights the first-order nature of _GA_. Beyond the axiomatization, the chapter defines core arithmetic functions such as addition and multiplication using the recursive definitional mechanism, along with explicit proofs of their termination and basic properties. Together, these sections establish the formal core of _Isabelle/GA_, laying the groundwork for the tooling and formalizations of later chapters. An explicit termination proof of the famously non-primitive recursive Ackermann function, demonstrating the expressive power of _GA_, concludes the chapter.
 
 == Proposotional Axioms
 We first declare a syntactic Isabelle type for truth values in _GA_ `o` and a function to convert from `o` to the type of truth values of the _Pure_ calculus `prop`, as explained in @how-to-pure.
@@ -243,7 +245,7 @@ parse_translation ‹
   [(@{syntax_const "_gd_num"}, Peano_Syntax.parse_gd_numeral)]
 ›
 ```
-As mentioned before, Isabelle is implemented mostly in (a dialect of) Standard ML (SML). The SML infrastructure of Isabelle is not meant to be completely abstracted away from the (advanced) user, but rather does Isabelle provide a rich API of SML functions and types, which is collectively referred to as Isabelle/ML. A syntax translation is precisely the kind of task that can be implemented in SML, hooking into the Isabelle implementation itself.
+As mentioned before, Isabelle is implemented mostly in (a dialect of) Standard ML (SML). The SML infrastructure of Isabelle is not meant to be completely abstracted away from the (advanced) user, but rather Isabelle provides a rich API of SML functions and types, which is collectively referred to as Isabelle/ML. A syntax translation is precisely the kind of task that can be implemented in SML, hooking into the Isabelle implementation itself.
 
 The following are the contents of the _peano\_numerals.ML_ file, providing the translation logic from a string representation of a base-10 number to a `num` expression.
 

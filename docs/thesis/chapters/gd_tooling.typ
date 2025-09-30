@@ -517,7 +517,7 @@ struct
 ```
 
 === Proof Search
-The initial approach of using the simplifier to handle conditional rewrites maybe unsurprisingly ended up being the most effective solution, although it did take an extension to make better use of it. The reason is its sophistication and efficient implementation, which makes it hard to beat even though it is not designed to be used for even rudimentary proof search. An approach that might provide additional value over the setup constructed in this section is a true proof search (implemented on top of the simplifier, and not as its subgoal solver). However, since a naive implementation is exponential in the number of theorems in the rewrite set, this requires a sophisticated datastructure to search for applicable rules in order to be tractable at the very least. This might be a valuable addition to the tooling of _GA_, but has not been implemented yet for two reasons.
+The initial approach of using the simplifier to handle conditional rewrites maybe unsurprisingly ended up being the most effective solution, although it did take an extension to make better use of it. The reason is its sophistication and efficient implementation, which makes it hard to beat even though it is not designed to be used for even rudimentary proof search. An approach that might provide additional value over the setup constructed in this section is a true proof search (implemented on top of the simplifier, and not as its subgoal solver). However, since a naive implementation is exponential in the number of theorems in the rewrite set, this requires a sophisticated data structure to search for applicable rules in order to be tractable at the very least. This might be a valuable addition to the tooling of _GA_, but has not been implemented yet for two reasons.
 - An efficient implementation is a significant time investment and seemed out of the scope for this thesis.
 - The automation with the existing setup was surprisingly effective and a real proof search for the sake of better proof automation never seemed exceptionally desirable.
 
@@ -576,7 +576,7 @@ The `subst` command thus has two different modes of operating, one accepting a t
 
 This is implemented in the following SML code, which works as follows:
 
-1. Parses either a theorem name or a term, whichever succeeds.
+1. The method parses either a theorem name or a term, whichever succeeds.
 2. If the argument is a theorem name, it fetches the theorem and extracts the left-hand side and right-hand side of its top-level equality (assuming it is of the expected shape), instantiates the `eqSubst` theorem with those extracted terms, and then finally applies it. Then, it applies the `eqSym` axiom to flip the equality from the first subgoal, which can then be resolved by the passed theorem itself.
 3. If the argument is a term, the code extracts the left-hand side and right-hand side of its top-level equality (assuming it is of the expected shape), instantiates the `eqSubst` theorem with those extracted terms, and then finally applies it. Then, it tries to solve the resulting first subgoal (the equality itself) by applying the simplifier.
 
