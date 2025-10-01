@@ -1,11 +1,8 @@
 ﻿theory GD
 imports Pure
-keywords
-  "declaretype" :: diag (* and
-  "recdef" :: thy_decl *)
 begin
 
-text \<open>The following theory development formalizes the Grounded Deduction Logic.\<close>
+text \<open>The following theory development formalizes Grounded Arithmetic.\<close>
 
 named_theorems auto "Unconditionally applied lemmas of shape simp \<Longrightarrow> comp"
 named_theorems cond "Conditionally applied if P can be solved: P \<Longrightarrow> simp \<Longrightarrow> comp"
@@ -609,8 +606,6 @@ section \<open>Definitions of basic arithmetic functions\<close>
  *)
 
 (*
-ML_file "gd_recdef.ML"
-
 recdef add :: "num \<Rightarrow> num \<Rightarrow> num" where
   "add x y := if y = 0 then x else S(add x P(y))"
 *)
@@ -3335,12 +3330,10 @@ apply (subst "cpi 3 x = cpx (cpy (cpy x))", auto)
 apply (subst "cpi' 4 x = cpy (cpy (cpy x))", auto)
 done
 
-ML_file "gd_typeencode.ML"
 text "A manual construction of an inductive datatype.
   Later, we want this to be generated automatically from something
   like \<open>declaretype List = Nil | Cons of \<open>nat\<close> \<open>List\<close>\<close>."
 
-(* What the declaretype compiler should compile: *)
 type_synonym List = num
 
 definition list_type_tag where
@@ -3541,12 +3534,6 @@ done
 
 lemma [simp]: "xs N \<Longrightarrow> is_list xs \<Longrightarrow> n N \<Longrightarrow> xs < Cons n xs = 1"
 unfolding Cons_def by simp
-
-(*
- * TODO: maybe prove this first to simplify structure of list induction proof.
- * The induction 'step' (corresponding to Cons) is probably too weak and needs
- * object level connectives.
- *)
 
 lemma obj_impl: "Q a \<longrightarrow> R a \<Longrightarrow> Q a \<Longrightarrow> R a"
 by (rule implE[where a="Q a"], simp)
