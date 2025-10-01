@@ -9,4 +9,4 @@ It contains a prototype implementation of the [_Grounded Arithmetic_ (_GA_) logi
 
 The `./docs` subdirectory contains the thesis source `.typ` files and compiled pdf, and the `./pure` subdirectory contains the Isabelle `.thy` files and `.ML` files used by the main `./pure/GD.thy` file.
 
-Simply open the `./pure/GD.thy` file in an editor supporting Isabelle interactively to inspect the artifact.
+To go through the Isabelle source file, simply open the [`./pure/GD.thy`](./docs/pure/GD.thy) file in an editor supporting Isabelle interactively. For example, there are great installation instructions for Isabelle and its native IDE on the [Isabelle website](https://isabelle.in.tum.de/installation.html).
