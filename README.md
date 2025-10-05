@@ -1,5 +1,5 @@
 # Grounded Arithmetic Formalized atop Isabelle/Pure
-This is the repository of [_Formalizing Grounded Arithmetic in Isabelle/Pure_](./docs/thesis/thesis.pdf), a B.Sc. thesis submitted by Sascha Kehrli at ETH Zürich in September 2025.
+This is the repository of [_Formalizing Grounded Arithmetic in Isabelle/Pure_](./docs/thesis/thesis.pdf), a B.Sc. thesis submitted by [Sascha Kehrli](skehrli.github.io) at ETH Zürich in September 2025.
 
 It contains a prototype implementation of the [_Grounded Arithmetic_ (_GA_) logic](https://bford.info/pub/lang/gd/) in the minimal metalogical framework [Isabelle/Pure](https://isabelle.in.tum.de/), in the [`GD.thy`](./pure/GD.thy) file. In particular, this file contains the entire formalization described in the thesis [`thesis.pdf`](./docs/thesis/thesis.pdf), that is,
 - a full axiomatization of Grounded Arithmetic (GA)
