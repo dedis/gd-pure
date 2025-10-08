@@ -14,7 +14,7 @@
 
 = Encoding Inductive Datatypes in GA
 <inductive>
-With _Isabelle/GA_ now being a more convenient proof assistant, the next goal is to make it easier to extend the domain of discourse beyond just natural numbers. Modern proof assistants, like _Isabelle/HOL_ or Rocq, contain powerful definitional mechanisms that allow for straightforward specification of things like inductive datatypes, recursive predicates, infinitary sets, and so on.
+With _Isabelle/GA_ now being a more convenient proof assistant, the next goal is to make it easier to extend the domain of discourse beyond just natural numbers. Modern proof assistants, like _Isabelle/HOL_ or _Rocq_,  contain powerful definitional mechanisms that allow for straightforward specification of things like inductive datatypes, recursive predicates, infinitary sets, and so on @HOL @rocq.
 
 These definitional packages are effectively _theory compilers_, as they take a high-level definition, like an inductive datatype declaration, and map it to definitions, axioms, and automatically proven lemmas, encoding the high-level definition in lower-level existing primitives.
 
@@ -46,7 +46,7 @@ An inductive datatype defined in this way satisfies the following properties:
 - *Closure* (generation): applying a constructor to arguments (that are valid elements of their respective types) yields a valid element of the type, e.g. $n nat ==> "is_list xs" ==> "is_list (Cons n xs)"$ and $"is_list Nil"$.
 - *Exhaustiveness*: every element of the datatype must be built from some constructor; there are no “extra” elements beyond the closure.
 - *Distinctness*: different constructors build different elements, e.g. $"Nil" eq.not "Cons" n "xs"$ for any $n$, $"xs"$.
-- *Injectivity*: each constructor is injective in its arguments, e.g. $"Cons" n "xs" eq "Cons" n "xs" ==> n eq m and "xs" eq "ys"$.
+- *Injectivity*: each constructor is injective in its arguments, e.g. $"Cons" n "xs" eq "Cons" m "ys" ==> n eq m and "xs" eq "ys"$.
 - *Induction principle*: properties of elements of the datatype can be proved by showing they hold for each constructor case, assuming the property for recursive arguments.
 
 The goal now is to find an encoding of an inductive datatype into the natural numbers such that all these properties are fulfilled and can be proved in _GA_ itself without adding any axioms.
@@ -77,13 +77,13 @@ Since the type membership predicate effectively determines the inhabitants of th
 
 1. #text[
   *Closure of the type membership predicate*:
-  For each constructor $C_i$, if all its arguments fulfill their corresponding type membership predicates, then $C_i$ applied to these arguments must fulfill its type membership predicate:
-  $ "is_"tau_"i1" gap a_"i1" ==> ... ==> "is_"tau_"in" gap a_"in" ==> "is_"tau gap (C_i gap a_"i1" gap ... gap a_"in") $
+  For each constructor $C_i$, if all its arguments are terminating and fulfill their corresponding type membership predicates, then $C_i$ applied to these arguments must fulfill its type membership predicate:
+  $ a_(i,1) nat ==> ... ==> a_(i,n_i) nat ==> "is_"tau_(i,1) gap a_(i,1) ==> ... ==> "is_"tau_(i,n_i) gap a_(i,n_i) ==> "is_"tau gap (C_i gap a_(i,1) gap ... gap a_(i,n_i)) $
   ]
 
 2. #text[
   *Exhaustiveness of the type membership predicate*:
-  If the type membership predicate $"is_"tau$ is fulfilled by a value $x$, then there must exist a constructor and a set of corresponding arguments fulfilling their type membership predicates, such that $x$ equals the constructor applied to these arguments.
+  If the type membership predicate $"is_"tau$ is fulfilled by a value $x$, then there is some constructor $C_i$ such that $x$ is $C_i$-shaped, i.e. $x$ equals the $C_i$ applied to a set of corresponding arguments fulfilling their respective type membership predicates.
 
   $ &"is_"tau gap x ==> \
    &exists a_(1,1) gap ... gap a_(1,n_1). gap "is_"tau_(1,1) gap a_(1,1) and ... and "is_"tau_(1,n_1) gap a_(1,n_1) and x = (C_1 gap a_(1,1) gap ... gap a_(1,n_1)) &or \
@@ -116,11 +116,11 @@ is_cons_def: "is_cons x := (cpi 1 x = list_type_tag)
                             ∧ (is_list (cpi' 4 x))"
 ```
 
-Where $"cpi" i x$ extracts the i'th element of a Cantor tuple (with at least $i+1$ elements) and $"cpi" i x$ extracts the i'th element of a Cantor tuple with exactly $i$ elements.
+Where $"cpi" i gap x$ extracts the i'th element of a Cantor tuple (with at least $i+1$ elements) and $"cpi'" i gap x$ extracts the i'th element of a Cantor tuple with exactly $i$ elements.
 
 The general idea of the type membership predicate is to check for each constructor, whether the argument matches its encoding shape, and if so, whether all (encoded) arguments recursively fulfill their respective predicates.
 == Cantor Tuples in GA
-So far, we have identified the required properties to make an inductive datatype encoding work and have then identified a scheme for defining constructors and a type membership predicate that are expected to fulfill all these properties. Next, we have to formalize the basis for this encoding, namely Cantor pairings and the associated infrastructure to be able to 'extract' elements from one.
+So far, we have identified the required properties to make an inductive datatype encoding work and have then identified a scheme for defining constructors and a type membership predicate that are expected to fulfill all these properties. Next, we have to formalize the basis for this encoding, namely Cantor pairings and the associated infrastructure e.g. to be able to 'extract' elements from one.
 
 Since the Cantor pairing function is bijective, there is an inverse function mapping each natural number $z$ to the unique pair $(x,y)$ with $z = angle.l x, y angle.r$. In the following, let $"cpx"(z)$ denote the first component of this inverse, i.e. the unique $x$ such that there exists an $x'$ with $z = angle.l x, x' angle.r$. Analogously, let $"cpy"(z)$ denote the second component of the inverse.
 

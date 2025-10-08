@@ -961,7 +961,7 @@
 #let cpx-cpy-term = {
   let cpx-term = deduction-rule(
     prem($x nat$),
-    prem($"cpy" x nat$),
+    prem($"cpx" x nat$),
     none
   )
   let cpy-term = deduction-rule(
