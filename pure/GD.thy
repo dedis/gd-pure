@@ -1,4 +1,4 @@
-theory GD
+﻿theory GD
 imports Pure
 begin
 
