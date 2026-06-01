@@ -1738,6 +1738,10 @@ proof -
     done
 qed
 
+<<<<<<< Updated upstream
+=======
+(*Omar: Fixed the CPair definition*)
+>>>>>>> Stashed changes
 axiomatization cpair :: "num \<Rightarrow> num \<Rightarrow> num" where
   cpair_def: "cpair x y := if y = 0 then div (x * S(x)) 2
                            else cpair x P(y) + x + y + 2"
@@ -1835,6 +1839,7 @@ by simp
 lemma "cpy \<langle>0,0\<rangle> = 0"
 by simp
 
+<<<<<<< Updated upstream
 lemma cpx_proj [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> cpx \<langle>a, b\<rangle> = a"
 sorry
 
@@ -1866,10 +1871,489 @@ proof -
     apply (rule a_eq_c)
     apply (simp)
     apply (rule b_eq_d)
+=======
+(* Omar: behavior of cpx, cpy -- behavior when on the y-axis*)
+lemma cpx_cpy_axis_jump:
+  "K N \<Longrightarrow> Y N \<Longrightarrow> cpx K = 0 \<Longrightarrow> cpy K = Y \<Longrightarrow> cpx (K + 1) = S Y \<and> cpy (K + 1) = 0"
+apply (unfold_def cpx_def)
+apply (unfold_def cpy_def)
+apply simp
+done
+
+(* Omar: few helper lemmas *)
+lemma one_sub_one [simp]: "S zero - S zero = zero"
+  apply (unfold_def sub_def)
+  apply simp
+  done
+ 
+(* Omar: few helper lemmas *)
+lemma gt_zero_not_zero:
+  assumes x_nat: "X N"
+  assumes x_gt: "X > zero = S zero"
+  shows "\<not>(X = zero)"
+proof (rule contradiction)
+
+  show "(\<not>(X = zero)) B" 
+    using x_nat by simp
+
+  assume bad_asm: "\<not> \<not> X = zero"
+  
+  have x_is_zero: "X = zero"
+    using bad_asm by (rule dNegE)
+
+  
+  show "False"
+    using x_nat x_gt x_is_zero
+    apply (simp)
+    apply (unfold greater_def)
+    apply (simp add: leq_def)
+    apply (unfold False_def)
+    apply (rule eqSym)
+    apply assumption
+    done
+qed
+
+(* Omar: behavior of cpx, cpy -- moves up a diagonal when not on the y-axis*)
+lemma cpx_cpy_diag: "K N \<Longrightarrow> Y N \<Longrightarrow> X N \<Longrightarrow> X > 0 = 1 \<Longrightarrow> cpx K = X \<Longrightarrow> cpy K = Y \<Longrightarrow> cpx (K + 1) = P X \<and> cpy (K + 1) = S Y"
+apply (unfold_def cpx_def)
+apply (unfold_def cpy_def)
+  apply simp
+   apply (rule eq_trans)
+    apply (rule condI2)
+     apply simp
+    apply (rule condT)
+  apply simp
+   apply (rule condI2)
+    apply (rule gt_zero_not_zero)
+     apply assumption+
+   apply simp
+
+apply (rule condI2)
+apply (rule gt_zero_not_zero)
+apply assumption+
+  apply simp
+  done
+
+(*Omar: relocating add_assoc *)
+lemma add_assoc: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a + b + c = a + (b + c)"
+apply (induct c, simp+)
+apply (unfold_def add_def, simp)
+apply (rule eqSym)
+apply (unfold_def add_def, simp)
+  done
+
+(*Omar: relocating unfold_sub *)
+lemma unfold_sub: "a N \<Longrightarrow> b N \<Longrightarrow> a - (S b) = P(a - b)"
+apply (rule eqSym, unfold_def sub_def, rule eqSym)
+apply (simp)
+  done
+(*Omar: relocating to fix issues in simp used*)
+lemma sub_suc_pred:
+  assumes H: "x - y = S(z)"
+  shows "x N \<Longrightarrow> y N \<Longrightarrow> z N \<Longrightarrow> x - S(y) = z"
+apply (rule implE[where a="x-y=(S z)"])
+apply (induct y, simp)
+apply (rule implI, simp)
+apply (subst "S(z) = x")
+apply (unfold_def sub_def, simp)
+proof (rule implI, simp)
+  fix xa
+  show "x - y = S(z)" by (rule H)
+  assume h: "x - S xa = S z"
+  show "xa N \<Longrightarrow> x N \<Longrightarrow> z N \<Longrightarrow> x - S(S xa) = z"
+    apply (unfold_def sub_def)
+    apply (simp add: h)
+    done
+qed
+
+(*Omar: relocating to use in the following thms *)
+lemma [simp]: "x N \<Longrightarrow> 0 - x = 0"
+apply (induct x, simp)
+apply (unfold_def sub_def, simp)
+  done
+
+(*Omar: relocating to use in the following thms *)
+lemma [simp]: "a N \<Longrightarrow> a - 1 = P(a)"
+  by (unfold_def sub_def, simp)
+
+(*Omar: relocating to use in the following thms *)
+lemma sub_mono_suc: "a N \<Longrightarrow> b N \<Longrightarrow> S a - S b = a - b"
+apply (induct b, simp+)
+apply (rule eqSym, unfold_def sub_def, rule eqSym, simp)
+apply (simp add: unfold_sub)
+done
+
+(*Omar: relocating to use in the following thms *)
+lemma fold_sub: "a N \<Longrightarrow> b N \<Longrightarrow> P(S(a) - b) = (S a) - (S b)"
+by (rule eqSym, rule unfold_sub, simp)
+
+(*Omar: relocating to use in the following thms *)
+lemma sub_distr_pred: "a N \<Longrightarrow> b N \<Longrightarrow> P(a - b) = P(a) - b"
+apply (induct a, simp+)
+apply (simp add: fold_sub sub_mono_suc)
+done
+(*Omar: relocating*)
+lemma [simp]: "a N \<Longrightarrow> a - a = 0"
+apply (induct a, simp)
+apply (unfold_def sub_def)
+apply (simp add: sub_distr_pred)
+  done
+
+(*Omar: relocating*)
+lemma leq_monotone_add [auto, simp]:
+  assumes x_nat: "x N"
+  assumes y_nat: "y N"
+  shows "x \<le> y + x = 1"
+proof (rule ind[where a="x"])
+  show "x N" by (rule x_nat)
+  show "0 \<le> y + 0 = 1" by (auto, rule y_nat)
+  show "\<And>x. x N \<Longrightarrow> x \<le> y + x = 1 \<Longrightarrow> S x \<le> y + S x = 1"
+    proof -
+      fix xa
+      assume xa_nat: "xa N" and hyp: "xa \<le> y + xa = 1"
+      show "S xa \<le> y + S xa = 1"
+        apply (unfold_def leq_def)
+        apply (rule condI2Eq)
+        apply (fold neq_def)
+        apply (auto)
+        apply (rule xa_nat)
+        apply (auto)
+        apply (rule condI2Eq)
+        apply (fold neq_def)
+        apply (rule eqSubst[where a="S(y + xa)" and b="y + S xa"])
+        apply (unfold_def add_def)
+        apply (rule eqSym)
+        apply (rule condI2Eq)
+        apply (fold neq_def)
+        apply (auto)
+        apply (rule xa_nat)
+        apply (auto)
+        apply (rule y_nat)
+        apply (rule xa_nat)
+        apply (rule eqSubst[where a="xa" and b="P S xa"])
+        apply (rule eqSym)
+        apply (rule predSucInv)
+        apply (rule xa_nat)
+        apply (fold isNat_def)
+        apply (auto)
+        apply (rule y_nat)
+        apply (rule xa_nat)
+        apply (auto)
+        apply (rule y_nat)
+        apply (rule xa_nat)
+        apply (auto)
+        apply (rule eqSubst[where a="xa" and b="P S xa"])
+        apply (rule eqSym)
+        apply (rule predSucInv)
+        apply (rule xa_nat)
+        apply (rule eqSubst[where a="S (y + xa)" and b="y + S xa"])
+        apply (unfold_def add_def)
+        apply (rule eqSym)
+        apply (rule condI2Eq)
+        apply (fold neq_def)
+        apply (auto)
+        apply (rule xa_nat)
+        apply (auto)
+        apply (rule y_nat)
+        apply (rule xa_nat)
+        apply (rule eqSubst[where a="xa" and b="P S xa"])
+        apply (rule eqSym)
+        apply (rule predSucInv)
+        apply (rule xa_nat)
+        apply (fold isNat_def)
+        apply (auto)
+        apply (rule y_nat)
+        apply (rule xa_nat)
+        apply (rule eqSubst[where a="y + xa" and b="P S (y + xa)"])
+        apply (rule eqSym)
+        apply (auto)
+        apply (rule y_nat)
+        apply (rule xa_nat)
+        apply (rule hyp)
+        done
+    qed
+  qed
+
+(* Omar: helper lemma*)
+lemma sub_bound_eval:
+  assumes x_nat: "x N"
+  shows "\<forall>X.(X N)  \<longrightarrow> S x \<le> X = S 0 \<longrightarrow> X - x \<le> 0 = 0"
+  apply (rule ind[where a="x"])
+  using x_nat apply simp
+   apply (rule forallI)
+   apply (rule implI)
+    apply simp
+   apply (rule implI)
+    apply simp+
+   apply (rule contradiction)
+    apply simp
+  
+  subgoal premises prems for X
+  proof -
+    have X_zero: "X = 0" using prems(4) apply (rule dNegE)
+      done
+
+    have bound_eval: " S 0 \<le> 0 = S 0"
+      using prems(3) X_zero apply simp
+      done
+
+      have leq_eval: " 1 \<le> 0 = 0"
+        apply simp
+        done
+   
+    show False
+      using bound_eval leq_eval apply (simp add: False_def )
+      done
+  qed
+
+subgoal premises prems for x
+    apply (rule forallI)
+  apply (rule implI)
+  apply simp
+    apply (rule implI)
+    subgoal premises base_prems for X
+      using base_prems prems apply simp
+      done
+    subgoal premises step_prems for X
+    proof -
+      have px_nat: "P X N"
+        using step_prems(1) apply simp
+        done
+      have ih_inst: "(P X N) \<longrightarrow> S x \<le> P X = S 0 \<longrightarrow> P X - x \<le> 0 = 0"
+        using prems(2) px_nat apply (rule forallE)
+        done
+
+      have step_bound: "S x \<le> P X = S 0"
+      proof -
+        have mono_eval: " P (S S x) \<le> P X = 1"
+          apply (rule leq_monotone_pred)
+            apply simp
+          using prems(1) step_prems(2) apply simp+
+          apply (rule step_prems(3))
+          done
+        show ?thesis
+          using mono_eval prems(1) apply simp
+          done
+      qed
+
+      have px_x_zero: "P X - x \<le> 0 = 0"
+      proof -
+        have step1: "S x \<le> P X = S zero \<longrightarrow> P X - x \<le> zero = zero"
+          using ih_inst px_nat apply (rule implE)
+          done
+        show ?thesis
+          using step1 step_bound apply (rule implE)
+          done 
+      qed
+
+      have eq: "P X - x = X - S x"
+      proof -
+        have right_unfold: "X - S x = P (X - x)"
+          using prems(1) step_prems(1) apply (simp add: unfold_sub)
+          done
+        show ?thesis
+          using right_unfold prems(1) step_prems(1) apply (simp add: sub_distr_pred)
+          done
+      qed
+
+      show ?thesis
+        using px_x_zero eq apply simp
+        done
+      
+    qed
+
+    done
+done
+
+
+
+(* Omar: cummulative behavior of cpx, cpy -- moves up a diagonal when not on the y-axis*)
+lemma cpx_cpy_diag_up:
+  assumes K_nat: "K N" 
+  assumes X_nat: "X N" 
+  assumes cpx_K: "cpx K = X" 
+  assumes cpy_K: "cpy K = zero"
+  assumes n_nat: "n N"
+  assumes boundary: "n \<le> X = S zero"
+  shows "cpx (K + n) = X - n \<and> cpy (K + n) = n"
+proof -
+
+  have ind_statement: "n \<le> X = S zero \<longrightarrow> (cpx (K + n) = X - n \<and> cpy (K + n) = n)"
+  proof (rule ind [where a="n"])
+    
+    show "n N" by (rule n_nat)
+
+    have k0: "K + zero = K"
+      using K_nat
+      apply simp
+      done
+    have x0: "X - zero = X"
+      using X_nat
+      apply simp
+      done
+
+    show "zero \<le> X = S zero \<longrightarrow> cpx (K + zero) = X - zero \<and> cpy (K + zero) = zero"
+      
+      apply (rule implI)
+       using X_nat apply simp
+       using X_nat apply (simp add: k0 x0 cpx_K)
+       apply (simp add: k0 x0 cpy_K)
+       done
+
+    show "\<And>x. x N \<Longrightarrow> 
+          (x \<le> X = S zero \<longrightarrow> cpx (K + x) = X - x \<and> cpy (K + x) = x) \<Longrightarrow> 
+          S x \<le> X = S zero \<longrightarrow> cpx (K + S x) = X - S x \<and> cpy (K + S x) = S x"
+      apply (rule implI)
+      using X_nat apply simp
+      
+    proof -
+      fix x
+      assume x_nat: "x N"
+      assume IH: "x \<le> X = S zero \<longrightarrow> cpx (K + x) = X - x \<and> cpy (K + x) = x"
+      assume Sx_le_X: "S x \<le> X = S zero"
+
+      have x_le_Sx: "x \<le> S x = 1"
+        using x_nat apply simp
+        done
+
+      have x_le_X: "x \<le> X = S zero"
+proof -
+      have Sx_nat: "S x N"
+        using x_nat apply simp
+        done
+     
+
+
+      show "x \<le> X = S zero"
+        apply (rule leq_trans)
+            apply (rule x_nat)
+           apply (rule Sx_nat)
+          apply (rule X_nat)
+         apply (rule x_le_Sx)
+        apply (rule Sx_le_X)
+        done
+    qed
+
+have IH_unlocked: "cpx (K + x) = X - x \<and> cpy (K + x) = x"
+  apply (rule implE [where a="x \<le> X = S zero"])
+       apply (rule IH)
+      apply (rule x_le_X)
+      done
+  
+    have cpx_Kx: "cpx (K + x) = X - x" 
+      using IH_unlocked apply (rule conjE1)
+      done
+      have cpy_Kx: "cpy (K + x) = x"
+        using IH_unlocked apply (rule conjE2)
+        done
+
+      have Kx_nat: "(K + x) N"
+        using x_nat K_nat apply simp
+        done
+
+      have Xx_nat: "(X - x) N"
+
+using X_nat x_nat apply simp
+  done
+
+  have Xx_gt_0: "(X - x) > 0 = 1"
+proof -
+  have bound_eval: "(X - x) \<le> 0 = 0"
+proof -
+      have base_lemma: "\<forall>X. (X N) \<longrightarrow> S x \<le> X = S 0 \<longrightarrow> X - x \<le> 0 = 0"
+        using x_nat apply (rule sub_bound_eval)
+        done
+
+      have strip_forall: "(X N) \<longrightarrow> S x \<le> X = S 0 \<longrightarrow> X - x \<le> 0 = 0"
+        using base_lemma X_nat apply (rule forallE)
+        done
+
+      have strip_typing: "S x \<le> X = S 0 \<longrightarrow> X - x \<le> 0 = 0"
+        using strip_forall X_nat apply (rule implE)
+        done
+
+      show ?thesis
+        using strip_typing Sx_le_X apply (rule implE)
+        done
+    qed
+      thus ?thesis
+        unfolding greater_def by simp
+    qed
+
+  have step_forward: "cpx ((K + x) + 1) = P (X - x) \<and> cpy ((K + x) + 1) = S x"
+      apply (rule cpx_cpy_diag)
+           apply (rule Kx_nat)
+          apply (rule x_nat)
+         apply (rule Xx_nat)
+        apply (rule Xx_gt_0)
+       apply (rule cpx_Kx)
+      apply (rule cpy_Kx)
+    done
+
+have next_cpx: "cpx ((K + x) + 1) = P (X - x)"
+  using step_forward apply (rule conjE1)
+  done
+
+have next_cpy: "cpy ((K + x) + 1) = S x"
+  using step_forward apply (rule conjE2)
+  done
+
+      have kstep1: "(K + x) + 1 = K + (x + 1)"
+        using K_nat x_nat apply (rule add_assoc)
+        apply simp
+        done
+        
+
+      have kstep2: "K + (x + 1) = K + S x"
+        using x_nat K_nat apply simp
+        done
+      have xstep1: " P(X - x) = X - S x"
+        using X_nat x_nat apply (simp add: unfold_sub)
+        done
+
+
+  show "cpx (K + S x) = X - S x"
+    using  kstep1 kstep2 apply simp
+    using next_cpx xstep1 x_nat X_nat apply simp
+    done
+
+  show "cpy (K + S x) = S x"
+proof -
+
+      show ?thesis
+        using next_cpy kstep1 kstep2 x_nat apply simp
+        done
+    qed
+
+qed
+qed
+  show "cpx (K + n) = X - n \<and> cpy (K + n) = n"
+    apply (rule implE [where a="n \<le> X = S zero"])
+    apply (rule ind_statement)
+    apply (rule boundary)
+    done                                                                                
+qed                                                                 
+
+(*Omar: relocate*)
+lemma add_suc_comm:
+  shows "x N \<Longrightarrow> y N \<Longrightarrow> y + S(x) = S(y) + x"
+proof (rule ind[where a="x"], simp+)
+  fix xa
+  assume hyp: "y + S xa = S y + xa"
+  show "x N \<Longrightarrow> y N \<Longrightarrow> xa N \<Longrightarrow> y + S S xa = S y + S xa"
+    apply (rule eqSubst[where a="S(y + S(xa))" and b="y + S S xa"])
+    apply (unfold_def add_def)
+    apply (simp)
+    apply (rule eqSubst[where a="S xa" and b="P S S xa"])
+    apply (rule eqSym)
+    apply (simp add: hyp)+
+    apply (unfold_def add_def)
+>>>>>>> Stashed changes
     apply (simp)
     done
 qed
 
+<<<<<<< Updated upstream
 lemma cpair_inj_l:
   assumes eq: "\<langle>a, b\<rangle> = \<langle>c, d\<rangle>"
   shows "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> a = c"
@@ -1901,6 +2385,176 @@ apply (rule dNegE, simp)
 apply (rule cpair_inj_r[where a="a" and c="c"])
 apply (rule dNegE, simp)
 done
+=======
+(*Omar: relocate*)
+lemma add_comm [auto]:
+  shows "x N \<Longrightarrow> y N \<Longrightarrow> x + y = y + x"
+apply (rule ind[where a="y"], simp)
+apply (rule eqSubst[where a="x" and b="x + 0"])
+apply (rule eqSym)
+apply (auto)
+apply (rule eqSym)
+proof (auto)
+  fix xa
+  assume hyp: "x + xa = xa + x"
+  show "x N \<Longrightarrow> xa N \<Longrightarrow> x + S xa = S xa + x"
+    apply (rule eqSym)
+    apply (unfold_def add_def)
+    apply (rule eqSym)
+    apply (simp add: hyp)
+    apply (rule eqSubst[where a="xa + S x" and b="S xa + x"])
+    apply (rule add_suc_comm, simp)
+    apply (unfold_def add_def)
+    apply (simp)
+    done
+qed
+
+(*Omar: Important Multiplication Lemma*)
+
+lemma mult_suc_r[simp]:
+  assumes x_nat: "x N"
+  assumes y_nat: "y N"
+  shows " x* S y = x + x*y"
+  apply (rule eqSym)
+  apply (unfold_def mult_def)
+  using x_nat y_nat apply simp
+  done
+
+lemma mult_suc_l[simp]:
+  assumes x_nat: "x N"
+  assumes y_nat: "y N"
+  shows "S x * y = y + x * y"
+proof (rule ind[where a = "y"])
+  show "y N"
+    apply (rule y_nat)
+    done
+  show "S x * zero = zero + x * zero"
+    using x_nat apply simp
+    done
+  show "\<And>xa. xa N \<Longrightarrow> S x * xa = xa + x * xa \<Longrightarrow>  S x * S xa = S xa + x * S xa "
+  proof-
+    fix xa
+    assume xa_nat: "xa N"
+    assume IH: "S x * xa = xa + x * xa"
+
+    have lhs1: "S x * S xa = S x + S x * xa"
+      using x_nat xa_nat apply simp
+      done
+
+    have lhs2: " S x * S xa = S x + xa + x * xa"
+      using x_nat xa_nat apply (simp add: IH add_assoc)
+      done
+    have rhs1: " S xa + x * S xa = (S xa + x) + x*xa"
+      using x_nat xa_nat apply (simp add: add_assoc)
+      done
+
+    have rhs2: " S x + xa = x + S xa"
+      using x_nat xa_nat apply (simp add: add_suc_comm)
+      done
+
+    have rhs3: "S xa + x = S x + xa"
+      using x_nat xa_nat apply (simp add: rhs2 add_comm)
+      done
+    have rhs4: " S xa +x * S xa =  S x + xa + x*xa"
+      using x_nat xa_nat apply (simp only: rhs1 rhs3)
+      done
+
+    show " S x * S xa = S xa + x * S xa"
+      using x_nat xa_nat apply (simp only: lhs2 rhs4)
+      done
+  qed
+qed
+
+(* Omar: mult is commutative*)
+lemma mult_comm:
+  assumes x_nat: "x N"
+  assumes y_nat: "y N"
+  shows "x*y = y*x"
+proof (rule ind[where a="x"])
+  show "x N"
+    apply (rule x_nat)
+    done
+
+  show "zero * y = y * zero"
+    using y_nat apply simp
+    done
+
+  show "\<And>x. x N \<Longrightarrow> x * y = y * x \<Longrightarrow> S x * y = y * S x "
+  proof -
+    fix x
+    assume x_nat: "x N"
+    assume IH: "x * y = y * x"
+
+    show " S x * y = y * S x"
+      using x_nat y_nat apply (simp add: IH)
+      done
+  qed
+qed
+
+
+(* Omar: helper lemma to deal with arithmetic. the current implementation desperately needs some lemmas to simplify arithmetic, hopefully leading to some tactics as well*)
+lemma mult_suc_expand: 
+  assumes x_nat: "x N" 
+  shows "S x * S (S x) = x * S x + S x * S (S zero)"
+proof -
+  have lhs1: "S x * S (S x) = S x + S x * S x"
+    using x_nat apply simp
+    done
+
+  have lhs2: "S x * S (S x) = S x + (S x + x* S x)"
+    using x_nat apply (simp add: lhs1)
+    done
+
+  have lhs3: " S x * S (S x) = (S x + S x) + x* S x"
+    using x_nat apply (simp add: add_assoc)
+    done
+
+  have lhs4: " S x + S x = S x * 2"
+    using x_nat apply simp
+    done
+
+  have lhs5: " S x * S (S x) =S x * 2 +  x* S x"
+    using x_nat apply (simp only: lhs3 lhs4)
+    done
+
+  show " S x * S (S x) =  x* S x + S x * 2 "
+    using x_nat apply (simp only: lhs5 add_comm)
+    done
+qed
+
+
+
+(* Omar: important lemma for arithmetic.*)
+lemma add_sub_assoc:
+  assumes a_nat: "a N"
+  assumes b_nat: "b N"
+  shows " a + b - b = a "
+proof (rule ind[where a="b"])
+  show "b N"
+    apply (rule b_nat)
+    done
+  show "a + zero - zero = a"
+    using a_nat apply simp
+    done
+  show "\<And>x. x N \<Longrightarrow> a + x - x = a \<Longrightarrow> a + S x - S x = a "
+  proof- 
+    fix x
+    assume x_nat: "x N"
+    assume IH: " a + x - x = a"
+
+    have step1: " a + S x - S x = S( a + x) - S x"
+      using x_nat a_nat apply (simp add: add_succ)
+      done
+    show " a + S x - S x = a"
+      using x_nat a_nat apply (simp add: step1 IH sub_mono_suc)
+      done
+  qed
+qed
+
+
+(*Omar: many of the below theorems were relocated *)
+
+>>>>>>> Stashed changes
 
 lemma if_leq_not_greater:
   assumes a_le_b: "a \<le> b = 1"
@@ -2471,10 +3125,7 @@ done
 
 lemma div_x_x_1 [auto, simp]:
   shows "x N \<Longrightarrow> div (S x) (S x) = 1"
-by (unfold_def div_def, simp)
-
-lemma cpair_1_0_1 [simp, auto]: "\<langle>1, 0\<rangle> = 1"
-  unfolding cpair_def by (simp)
+  by (unfold_def div_def, simp)
 
 lemma sub_eq_self_imp_zero:
   assumes x_nat: "x N"
@@ -2684,6 +3335,7 @@ lemma geq_mono_pred:
 apply (rule suc_nz[where x="a"], simp)
 apply (rule suc_nz[where x="b"], simp)
 apply (rule geq_mono_suc, simp)
+<<<<<<< Updated upstream
 done
 
 lemma cpair_strict_mono_r [simp]:
@@ -2702,6 +3354,9 @@ next
     apply (simp add: add_assoc)+
     done
 qed
+=======
+  done
+>>>>>>> Stashed changes
 
 lemma sum_0_summands_0: "a N \<Longrightarrow> b N \<Longrightarrow> a + b = 0 \<Longrightarrow> a = 0 \<and> b = 0"
 apply (rule implE[where a="a+b=0"])
@@ -2709,18 +3364,7 @@ apply (unfold_def add_def)
 apply (cases bool: "b = 0", simp+)
 apply (rule implI, simp+)+
 apply (rule exF[where P="S(a + P b) = 0"], simp)+
-done
-
-lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> b = c \<Longrightarrow> \<langle>a,b\<rangle> = \<langle>a,c\<rangle> \<longleftrightarrow> True"
-by (rule iffI, simp+)
-
-lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> \<not> b = c \<Longrightarrow> \<langle>a,b\<rangle> = \<langle>a,c\<rangle> \<longleftrightarrow> False"
-apply (rule iffI, simp)
-apply (rule exF[where P="b=c"])
-apply (rule conjE2[where p="a=a"])
-apply (rule cpair_inj, simp)
-apply (rule contradiction, simp)
-done
+  done
 
 lemma [simp]: "\<not> a = 0 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> \<not> a + b = 0 \<longleftrightarrow> True"
 apply (rule iffI, simp)
@@ -2758,52 +3402,7 @@ by (unfold_def less_def, simp)
 lemma [simp]: "\<not> b = 0 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> a < a + b = 1"
 apply (induct a, simp+)
 apply (unfold_def less_def, simp+)
-done
-
-lemma [simp]:
-  shows "\<not> y = 0 \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> y < \<langle>x, y\<rangle> = 1"
-by (rule suc_nz[where x="y"], simp, rule cpair_strict_mono_r, simp)
-
-lemma less_impl_leq [simp]: "x < y = 1 \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> x \<le> y = 1"
-proof -
-  have H: "y N \<Longrightarrow> \<forall>x. x < y = 1 \<longrightarrow> x \<le> y = 1"
-    proof (induct y)
-      case Base
-        show ?case
-          apply (rule forallI, rule implI, simp+)
-          done
-    next
-      case (Step x)
-        show "y N \<Longrightarrow> x N \<Longrightarrow>
-              \<forall>xa. xa < x = 1 \<longrightarrow> xa \<le> x = 1 \<Longrightarrow>
-              \<forall>xa. xa < S x = 1 \<longrightarrow> xa \<le> S x = 1 "
-          apply (rule forallI)
-          proof -
-            fix xaa
-            show "y N \<Longrightarrow> x N \<Longrightarrow> \<forall>xaa. xaa < x = 1 \<longrightarrow> xaa \<le> x = 1 \<Longrightarrow>
-                  xaa N \<Longrightarrow> xaa < S x = 1 \<longrightarrow> xaa \<le> S x = 1"
-              apply (unfold_def less_def, simp)
-              apply (cases bool: "xaa = 0", simp+)
-              apply (rule implI, simp+)+
-              apply (unfold_def leq_def, simp)
-              apply (rule implE[where a="P xaa < x = 1"])
-              apply (rule forallE[where a="P xaa"], simp)
-              done
-          qed
-    qed
-  show "x N \<Longrightarrow> y N \<Longrightarrow> x < y = 1 \<Longrightarrow> x \<le> y = 1"
-    apply (rule implE[where a="x < y = 1"], rule forallE[where a="x"])
-    apply (rule H, simp)
-    done
-qed
-
-lemma cpair_mono_r [simp]:
-  "x N \<Longrightarrow> y N \<Longrightarrow> y \<le> \<langle>x, y\<rangle> = 1"
-by (cases bool: "y = 0", simp+)
-
-lemma cpair_le_2 [simp]:
-  "a \<le> c = 1 \<Longrightarrow> \<not> c = 0 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a < \<langle>b,c\<rangle> = 1"
-by (rule le_less_trans[where b="c"], simp+)
+  done
 
 lemma leq_mono_add_l [simp]:
   "b \<le> c = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a + b \<le> a + c = 1"
@@ -2962,10 +3561,10 @@ proof -
     done
 qed
 
+(* Omar: Minor fixes to proof after adding some lemmas to simp*)
 lemma leq_mono_mult_r [simp]:
   "a \<le> b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a * c \<le> b * c = 1"
 apply (induct c, simp+)
-apply (unfold_def mult_def, simp)+
 proof -
   fix x
   show "a \<le> b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> x N \<Longrightarrow> a * x \<le> b * x = 1 \<Longrightarrow>
@@ -2973,12 +3572,13 @@ proof -
     by (rule leq_trans[where y="a + b*x"], simp+)
 qed
 
+(* Omar: Minor fixes to proof after adding some lemmas to simp*)
 lemma leq_mono_mult_l [simp]:
   "a \<le> b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> c * a \<le> c * b = 1"
 apply (rule implE[where a="a\<le>b=1"])
 apply (rule forallE[where a="b"])
 apply (induct a, simp)
-apply (rule forallI, rule implI, simp+)
+apply (rule forallI, rule implI, (simp del: mult_suc_l mult_suc_r)+)
 proof (rule forallI)
   fix a b
   show "\<forall>b. a \<le> b = 1 \<longrightarrow> c * a \<le> c * b = 1 \<Longrightarrow>
@@ -2987,14 +3587,591 @@ proof (rule forallI)
     apply (rule implI, simp)
     apply (rule exF[where P="S a = 0"], simp)
     apply (rule leq_0, simp)
-    apply (unfold_def leq_def, simp)
-    apply (rule implI, simp)
-    apply (unfold_def mult_def, simp)+
+    apply (unfold_def leq_def, (simp del: mult_suc_l mult_suc_r))
+    apply (rule implI, (simp del: mult_suc_l mult_suc_r))
+    apply (unfold_def mult_def, (simp del: mult_suc_l mult_suc_r))+
     apply (rule leq_mono_add_l)
     apply (rule implE[where a="a\<le>P b=1"])
     apply (rule forallE[where a="P b"], simp)
     done
 qed
+
+
+(* Omar: helper lemma to deal with arithmetic.*)
+
+lemma div_add_mult_2:
+  assumes a_nat: "a N"
+  assumes b_nat: "b N"
+  shows "div (a + b * S (S zero)) (S (S zero)) = div a (S (S zero)) + b"
+proof (rule ind[where a = "b"])
+  show " b N"
+    apply (rule b_nat)
+    done
+
+  show "div (a + zero * S S zero) S S zero = div a S S zero + zero"
+    using a_nat apply simp
+    done
+
+  show "\<And>x. x N \<Longrightarrow> div (a + x * S S zero) S S zero = div a S S zero + x \<Longrightarrow> div (a + S x * S S zero) S S zero = div a S S zero + S x "
+  proof -
+    fix x
+    assume x_nat: "x N"
+    assume IH: "div (a + x * S S zero)  S S zero = div a S S zero + x"
+
+    have lhs1: "a + S x * S S zero = a + (2 + x*2)"
+      using a_nat x_nat apply (simp only: add_assoc mult_suc_l)
+      done
+    have lhs2: "a + S x * S S zero = a + (x*2 + 2)"
+      using x_nat a_nat apply (simp add: lhs1 add_comm  del: mult_suc_l mult_suc_r)
+      done
+
+    have lhs3: "a + S x * S S zero = a + x*2 +2"
+      using a_nat x_nat apply (simp add: add_assoc lhs2 del: mult_suc_l mult_suc_r)
+      done
+    have step4: "div (a + S x * S S zero) S S zero = div (a + x * S S zero + S S zero) S S zero"
+      using a_nat x_nat apply (simp only: lhs3)
+      done
+
+
+    have leqcond: "2 \<le>  a + x* S S zero + S S zero =1"
+      using x_nat a_nat apply simp
+      done
+    have geqcond: "  a + x* S S zero + S S zero \<ge> 2  =1"
+    proof (rule le_impl_ge)
+      show " 2 N"
+        apply simp
+        done
+
+      show "a + x * S S zero + S S zero N"
+        using x_nat a_nat apply simp
+        done
+
+      show " 2 \<le>  a + x* S S zero + S S zero =1"
+        apply (rule leqcond)
+        done
+    qed
+
+    have lecond: "\<not>( a + x * S S zero + S S zero < S S zero = S zero)"
+    proof -
+
+      have eval_to_zero1: "1 - ((a + x * S S zero + S S zero) < S S zero) = 1"
+        using geqcond apply (simp add: geq_def)
+        done
+        
+      
+      have eval_to_zero2: "(a + x * S S zero + S S zero) < S S zero = 0"
+      proof (rule sub_eq_self_imp_zero[where y="zero"])
+        show "(a + x*2 + S S zero < S S zero) N"
+          using x_nat a_nat apply simp
+          done
+
+        show "0 N"
+          apply simp
+          done
+
+        show " S zero - (a + x * S S zero + S S zero < S S zero) = S zero"
+          apply (rule eval_to_zero1)
+          done
+
+      qed
+      show ?thesis
+        using x_nat a_nat eval_to_zero2  apply simp
+        done
+    qed
+
+have eval_if: "(if a + x * S S zero + S S zero < S S zero = S zero then zero 
+                    else S (div (a + x * S S zero + S S zero - S S zero) S S zero)) = 
+                   S (div (a + x * S S zero + S S zero - S S zero) S S zero)"
+
+  apply (rule condI2)
+   apply (rule lecond)
+  using x_nat a_nat apply simp
+  done
+
+  have assoc: "a + x * S S zero + S S zero - S S zero = a + x * S S zero "
+    using x_nat a_nat apply (simp add: add_sub_assoc)
+    done
+
+    have step5: "div (a + x * S S zero + S S zero) S S zero = S (div (a + x * S S zero) S S zero)"
+      apply (rule eqSym)
+      apply (unfold_def div_def)
+      apply (rule eqSym)
+      apply (simp only: eval_if)
+      using x_nat a_nat apply (simp only: assoc)
+      done
+
+have step6: "S (div (a + x * S S zero) S S zero) = S (div a S S zero + x)"
+      using x_nat a_nat IH apply simp 
+      done
+    have step7: "S (div a S S zero + x) = div a S S zero + S x"
+      using x_nat a_nat apply (simp add: add_succ)
+      done
+show "div (a + S x * S S zero) S S zero = div a S S zero + S x"
+      using x_nat a_nat step4 step5 step6 step7 apply simp 
+      done
+  qed
+qed
+
+(* Omar: CPair closed form proof *)
+lemma cpair_closed_form:
+  assumes a_nat: "a N"
+  assumes b_nat: "b N"
+  shows "\<langle>a, b\<rangle> = div ((a + b) * S(a + b)) (S S zero) + b"
+proof (rule ind[where a = "b"])
+  show "b N"
+    apply (rule b_nat)
+    done
+
+  show "\<langle>a,zero\<rangle> = div ((a + zero) * S(a + zero)) S S zero + zero"
+    using a_nat apply simp
+    done
+
+  fix x
+  assume x_nat: "x N"
+  assume IH: "\<langle>a, x\<rangle> = div ((a + x) * S(a + x)) S S zero + x"
+
+  have step1: "\<langle>a, S x\<rangle> = \<langle>a, x\<rangle> + a + S x + S zero"
+    using x_nat a_nat apply (simp add: cpair_suc)
+    done
+
+  have step2: "\<langle>a, S x\<rangle> = (div ((a + x) * S(a + x)) S S zero + x) + a + S x + S zero"
+    using step1 IH x_nat a_nat apply simp 
+    done
+
+  have step3: "a + S x = S (a+x)"
+    using x_nat a_nat apply simp
+    done
+  have step4: "(a + S x) * S(a + S x) = (a+x) * S (a+x) + S (a+x)*2"
+    using x_nat a_nat apply (simp only: step3 mult_suc_expand)
+    done
+
+  have step5: "div ((a + S x) * S(a + S x)) (S S zero) + S x = div ((a + x) * S(a + x)) (S S zero) + S (a + x) + S x"
+    using x_nat a_nat apply (simp only: step4 div_add_mult_2)
+    done
+
+  have step6: "\<langle>a, S x\<rangle> = (div ((a + x) * S(a + x)) S S zero) + x + a + S x + S zero"
+    using x_nat a_nat apply (simp add: add_assoc step2)
+    done
+
+(*LHS*)
+  have step7: "\<langle>a, S x\<rangle> =  (div ((a + x) * S(a + x)) S S zero) + ( x + a + S x) + S zero"
+    using x_nat a_nat apply (simp add: step6 add_assoc)
+    done
+
+  have step8: "S (a + x) = x + a +1"
+    using x_nat a_nat apply (simp add: add_comm)
+    done
+
+(* RHS*)
+  have step9: "div ((a + S x) * S(a + S x)) (S S zero) + S x =  div ((a + x) * S(a + x)) (S S zero) +( S (a + x) + S x)"
+    using x_nat a_nat apply (simp only: step5 add_assoc)
+    done
+  have step10: " x + a + S x = (a+x)+ S x"
+    using x_nat a_nat apply (simp add: add_comm)
+    done
+  have step11: " x + a + S x = (a+x) + (1 + x)"
+    using x_nat a_nat apply (simp add: step10)
+    done
+
+  have one_nat: " 1 N"
+    apply simp
+    done
+
+  have step12: " x + a + S x = (a+x + 1) + x"
+    using x_nat a_nat one_nat apply (simp only: add_assoc step11)
+
+    done
+  have step13: "x+ a + S x = S(a+x) +x"
+    using x_nat a_nat apply (simp add: step12)
+    done
+
+  have step14: "\<langle>a, S x\<rangle> =  (div ((a + x) * S(a + x)) S S zero) + ( S (a + x) + x) + S zero"
+    using x_nat a_nat apply (simp add: step7 step13)
+    done
+
+    have step15: "\<langle>a, S x\<rangle> =  (div ((a + x) * S(a + x)) S S zero) + ( S (a + x) + (x + S zero))"
+      using x_nat a_nat apply (simp only: add_assoc step14)
+      done
+
+    have step16: "\<langle>a, S x\<rangle> =  div ((a + x) * S(a + x)) (S S zero) +( S (a + x) + S x)"
+      using x_nat a_nat apply (simp add: step15)
+      done
+
+    show "\<langle>a, S x\<rangle> = div ((a + S x) * S(a + S x)) (S S zero) + S x"
+      using x_nat a_nat apply (simp only: step9 step16)
+      done
+  qed
+
+
+(* Omar: base for double induction *)
+lemma cpx_cpy_proj_0:
+  assumes a_nat: "a N"
+  shows "cpx \<langle>a, zero\<rangle> = a \<and> cpy \<langle>a, zero\<rangle> = zero"
+proof (rule ind[where a="a"])
+  show "a N"
+    apply (rule a_nat)
+    done
+  show "cpx \<langle>zero, zero\<rangle> = zero \<and> cpy \<langle>zero, zero\<rangle> = zero"
+    apply simp
+    done
+
+show "\<And>x. x N \<Longrightarrow> 
+        cpx \<langle>x, zero\<rangle> = x \<and> cpy \<langle>x, zero\<rangle> = zero \<Longrightarrow> 
+        cpx \<langle>S x, zero\<rangle> = S x \<and> cpy \<langle>S x, zero\<rangle> = zero"
+proof-
+
+  fix x
+  assume x_nat: "x N"
+  assume IH: "cpx \<langle>x, zero\<rangle> = x \<and> cpy \<langle>x, zero\<rangle> = zero"
+  have cpx_x: "cpx \<langle>x, zero\<rangle> = x" using IH apply (rule conjE1) done
+    have cpy_x: "cpy \<langle>x, zero\<rangle> = zero" using IH apply (rule conjE2) done
+
+    have x_le_x: "x \<le> x = S zero"
+      using x_nat apply simp
+      done
+
+    have diag: "cpx (\<langle>x, zero\<rangle> + x) = zero \<and> cpy (\<langle>x, zero\<rangle> + x) = x"
+    proof -
+      have diag_raw: "cpx (\<langle>x, zero\<rangle> + x) = x - x \<and> cpy (\<langle>x, zero\<rangle> + x) = x"
+        apply (rule cpx_cpy_diag_up)
+        using x_nat cpx_x cpy_x apply simp_all
+        done
+
+      have sub_self: "x-x = 0"
+        using x_nat apply simp
+        done
+
+      show ?thesis
+        using diag_raw sub_self apply simp
+        done
+    qed
+
+have diag_left: "cpx (\<langle>x, zero\<rangle> + x) = zero"
+  using diag apply (rule conjE1)
+  done
+have diag_right: "cpy (\<langle>x, zero\<rangle> + x) = x"
+  using diag apply (rule conjE2)
+  done
+
+
+    have axis: "cpx ((\<langle>x, zero\<rangle> + x) + 1) = S x \<and> cpy ((\<langle>x, zero\<rangle> + x) + 1) = zero"
+      apply (rule cpx_cpy_axis_jump)
+      
+      using x_nat diag_left diag_right apply simp_all
+      done
+
+have cpair_step: "(\<langle>x, zero\<rangle> + x) + 1 = \<langle>S x, zero\<rangle>"
+proof -
+
+  have step1: "(\<langle>x, zero\<rangle> + x) + 1 = \<langle>x, zero\<rangle> + S x"
+  proof -
+    have step1_1:  "(\<langle>x, zero\<rangle> + x) + 1 = \<langle>x, zero\<rangle> + ( x + 1)"
+      apply (rule add_assoc)
+      using x_nat apply simp_all
+      done
+
+    have apply_one: "x + S 0 = S x"
+      using x_nat apply (rule one_plus_suc)
+      done
+    show ?thesis
+      using step1_1 apply_one x_nat apply simp
+      done
+  qed
+
+  have step2: "\<langle>S x, zero\<rangle> = div (x * S x + S x * S (S zero)) (S (S zero))"
+  proof -
+    have div_typing: "div (S x * S S x) S S zero N"
+      using x_nat apply simp
+      done
+    have step2_1: "\<langle>S x, zero\<rangle> = div ( (S x)*(S S x)) (S S 0)"
+      apply (unfold_def cpair_def)
+      using div_typing nat0 apply simp
+      done
+
+    have step2_2: " div ( (S x)*(S S x)) (S S 0) =  div (x * S x + S x * S (S zero)) (S (S zero))"
+      using x_nat apply (simp only: mult_suc_expand)
+      done
+    show ?thesis
+      using step2_1 step2_2 x_nat apply simp
+      done
+  qed
+
+  have div_typing2: " div (x * S x) S S zero N"
+    using x_nat apply simp
+    done
+  have step3: " div (x * S x + S x * S (S zero)) (S (S zero)) = (div( x* S x) ( S S 0) )+ S x"
+  proof -
+    have step3_1: " (x* S x)N"
+      using x_nat apply simp
+      done
+
+    have step3_2: " S x N"
+      using x_nat apply simp
+      done
+    show ?thesis
+      using step3_1 step3_2 apply (simp only: div_add_mult_2)
+      done
+  qed
+  
+  have step4: "\<langle>S x, zero\<rangle> =  \<langle>x, zero\<rangle> + S x"
+    apply (simp add: step2 step3)
+    apply (unfold_def cpair_def)
+    using nat0 div_typing2 x_nat apply simp
+    done
+
+  show ?thesis
+    using step1 step4 x_nat apply simp
+    done
+qed
+
+  show "cpx \<langle>S x, zero\<rangle> = S x \<and> cpy \<langle>S x, zero\<rangle> = zero"
+      using axis cpair_step apply simp
+      done
+  qed
+qed
+
+
+(* Omar: step for double induction *)
+lemma cpx_cpy_proj_step: 
+  assumes a_nat: " a N"
+  assumes x_nat: "x N"
+  assumes ind_step: "cpx \<langle>a, x\<rangle> = a \<and> cpy \<langle>a, x\<rangle> = x"
+  shows " cpx \<langle>a, S x\<rangle> = a \<and> cpy \<langle>a, S x\<rangle> = S x"
+proof -
+
+  have Sx_nat: " S x N"
+    using x_nat apply simp
+    done
+
+  have sum_nat: "a + S x N"
+    using a_nat Sx_nat apply simp
+    done
+  have base_pair: "cpx \<langle>a + S x, zero\<rangle> = a + S x \<and> cpy \<langle>a + S x, zero\<rangle> = zero"
+    using sum_nat apply (rule cpx_cpy_proj_0) done
+
+  have base_cpx: "cpx \<langle>a + S x, zero\<rangle> = a + S x"
+    using base_pair apply (rule conjE1) done
+  have base_cpy: "cpy \<langle>a + S x, zero\<rangle> = zero"
+    using base_pair apply (rule conjE2) done
+
+  have root_pair_nat: "\<langle>a + S x, zero\<rangle> N"
+    using sum_nat nat0 apply simp done
+
+  have jump_bound: "S x \<le> a + S x = S zero"
+    using Sx_nat a_nat apply simp
+    done
+  have diag_jump: "cpx (\<langle>a + S x, zero\<rangle> + S x) = (a + S x) - S x \<and> cpy (\<langle>a + S x, zero\<rangle> + S x) = S x"
+    apply (rule cpx_cpy_diag_up)
+         apply (rule root_pair_nat)
+        apply (rule sum_nat)
+       apply (rule base_cpx)
+      apply (rule base_cpy)
+     apply (rule Sx_nat)
+    apply (rule jump_bound)
+    done
+
+  have sub_cancel: "(a + S x) - S x = a"
+    using a_nat Sx_nat apply (simp add: add_sub_assoc)
+    done
+
+have cpair_equiv: "\<langle>a + S x, zero\<rangle> + S x = \<langle>a, S x\<rangle>"
+  proof -
+    have div_typing: "div ((a + S x) * S(a + S x)) (S S zero) N"
+      using sum_nat apply simp done
+
+    have step_left: "\<langle>a + S x, zero\<rangle> = div ((a + S x) * S(a + S x)) (S S zero)"
+      apply (unfold_def cpair_def)
+      using sum_nat nat0 div_typing apply simp done
+
+    have step_right: "\<langle>a, S x\<rangle> = div ((a + S x) * S(a + S x)) (S S zero) + S x"
+      using a_nat Sx_nat apply (simp add: cpair_closed_form)
+      done
+
+    have step_left2: "\<langle>a + S x, zero\<rangle> + S x =  div ((a + S x) * S(a + S x)) (S S zero) + S x"
+      using step_left x_nat a_nat apply simp done
+    show ?thesis
+      using step_left2 step_right x_nat a_nat apply simp done
+  qed
+
+  have diag_eval: "cpx (\<langle>a + S x, zero\<rangle> + S x) = a \<and> cpy (\<langle>a + S x, zero\<rangle> + S x) = S x"
+    using diag_jump sub_cancel apply simp done
+
+  show ?thesis
+    using diag_eval cpair_equiv apply simp done
+qed
+
+
+(* Omar: cpx and cpy applied on cpair *)
+lemma cpx_cpy_proj: "a N \<Longrightarrow> b N \<Longrightarrow> cpx \<langle>a, b\<rangle> = a \<and> cpy \<langle>a, b\<rangle> = b"
+  apply (induct b)
+  apply (rule cpx_cpy_proj_0)
+   apply assumption
+  apply (rule cpx_cpy_proj_step, assumption+)
+  done
+
+(* Omar: separated lemma for cpx*)
+lemma cpx_proj [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> cpx \<langle>a, b\<rangle> = a"
+apply (rule conjE1)
+apply (rule cpx_cpy_proj)
+apply (assumption)+
+done
+
+(* Omar: separated lemma for cpy*)
+lemma cpy_proj [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> cpy \<langle>a, b\<rangle> = b"
+apply (rule conjE2)
+apply (rule cpx_cpy_proj)
+apply (assumption)+
+done
+
+lemma cpair_inj:
+  assumes eq: "\<langle>a, b\<rangle> = \<langle>c, d\<rangle>"
+  shows "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> a = c \<and> b = d"
+proof -
+  have H: "a N \<Longrightarrow> b N \<Longrightarrow> cpx \<langle>a, b\<rangle> = cpx \<langle>c, d\<rangle>"
+    by (rule eqSubst[OF eq], simp)
+  have a_eq_c: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> a = c"
+    apply (rule eqSubst[where a="cpx \<langle>a, b\<rangle>" and b="a"], simp)
+    apply (rule eqSubst[where a="cpx \<langle>c, d\<rangle>" and b="c"], simp)
+    apply (rule H, simp)
+    done
+  have H2: "a N \<Longrightarrow> b N \<Longrightarrow> cpy \<langle>a, b\<rangle> = cpy \<langle>c, d\<rangle>"
+    by (rule eqSubst[OF eq], simp)
+  have b_eq_d: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> b = d"
+    apply (rule eqSubst[where a="cpy \<langle>a, b\<rangle>" and b="b"])
+    apply (rule cpy_proj, assumption+)
+    apply (rule eqSubst[where a="cpy \<langle>c, d\<rangle>" and b="d"])
+    apply (rule cpy_proj, assumption+)
+    apply (rule H2, assumption+)
+    done
+  show "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> a = c \<and> b = d"
+    apply (rule conjI)
+    apply (rule a_eq_c)
+    apply (simp)
+    apply (rule b_eq_d)
+    apply (simp)
+    done
+qed
+
+lemma cpair_inj_l:
+  assumes eq: "\<langle>a, b\<rangle> = \<langle>c, d\<rangle>"
+  shows "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> a = c"
+apply (rule conjE1[where q="b=d"])
+apply (rule cpair_inj)
+apply (rule eq)
+apply (simp)
+done
+
+lemma cpair_inj_r:
+  assumes eq: "\<langle>a, b\<rangle> = \<langle>c, d\<rangle>"
+  shows "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> b = d"
+apply (rule conjE2[where p="a=c"])
+apply (rule cpair_inj)
+apply (rule eq)
+apply (simp)
+done
+
+lemma [auto]:
+  "\<not>a \<or> \<not>b \<Longrightarrow> \<not> (a \<and> b)"
+unfolding conj_def
+by (rule dNegI, assumption)
+
+lemma [auto]:
+  "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> \<not> a = c \<or> \<not> b = d \<Longrightarrow> \<not> \<langle>a, b\<rangle> = \<langle>c, d\<rangle>"
+apply (rule grounded_contradiction[where q="\<not>(a=c \<and> b=d)"], simp)
+apply (rule cpair_inj_l[where b="b" and d="d"])
+apply (rule dNegE, simp)
+apply (rule cpair_inj_r[where a="a" and c="c"])
+apply (rule dNegE, simp)
+done
+
+
+
+lemma cpair_1_0_1 [simp, auto]: "\<langle>1, 0\<rangle> = 1"
+  unfolding cpair_def by (simp)
+
+
+
+
+
+
+(* Omar: Minor proof fix after change in defn *)
+lemma cpair_strict_mono_r [simp]:
+  "x N \<Longrightarrow> y N \<Longrightarrow> (S y) < \<langle>x, (S y)\<rangle> = 1"
+proof (induct y)
+  case Base
+    show "x N \<Longrightarrow> y N \<Longrightarrow> 1 < \<langle>x,1\<rangle> = 1"
+      apply (rule less_le_trans[where b="2"], simp)
+      apply (unfold_def cpair_def, simp)
+      done
+next
+  case (Step xa)
+  show "x N \<Longrightarrow> y N \<Longrightarrow> xa N \<Longrightarrow> S xa < \<langle>x, (S xa)\<rangle> = 1 \<Longrightarrow> S S xa < \<langle>x, (S S xa)\<rangle> = 1"
+    apply (unfold_def cpair_def, simp)
+    apply (rule less_le_trans[where b="S S xa + 1"])
+    apply (simp add: add_assoc)+
+    done
+qed
+
+
+
+lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> b = c \<Longrightarrow> \<langle>a,b\<rangle> = \<langle>a,c\<rangle> \<longleftrightarrow> True"
+by (rule iffI, simp+)
+
+lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> \<not> b = c \<Longrightarrow> \<langle>a,b\<rangle> = \<langle>a,c\<rangle> \<longleftrightarrow> False"
+apply (rule iffI, simp)
+apply (rule exF[where P="b=c"])
+apply (rule conjE2[where p="a=a"])
+apply (rule cpair_inj, simp)
+apply (rule contradiction, simp)
+done
+
+
+
+lemma [simp]:
+  shows "\<not> y = 0 \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> y < \<langle>x, y\<rangle> = 1"
+by (rule suc_nz[where x="y"], simp, rule cpair_strict_mono_r, simp)
+
+lemma less_impl_leq [simp]: "x < y = 1 \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> x \<le> y = 1"
+proof -
+  have H: "y N \<Longrightarrow> \<forall>x. x < y = 1 \<longrightarrow> x \<le> y = 1"
+    proof (induct y)
+      case Base
+        show ?case
+          apply (rule forallI, rule implI, simp+)
+          done
+    next
+      case (Step x)
+        show "y N \<Longrightarrow> x N \<Longrightarrow>
+              \<forall>xa. xa < x = 1 \<longrightarrow> xa \<le> x = 1 \<Longrightarrow>
+              \<forall>xa. xa < S x = 1 \<longrightarrow> xa \<le> S x = 1 "
+          apply (rule forallI)
+          proof -
+            fix xaa
+            show "y N \<Longrightarrow> x N \<Longrightarrow> \<forall>xaa. xaa < x = 1 \<longrightarrow> xaa \<le> x = 1 \<Longrightarrow>
+                  xaa N \<Longrightarrow> xaa < S x = 1 \<longrightarrow> xaa \<le> S x = 1"
+              apply (unfold_def less_def, simp)
+              apply (cases bool: "xaa = 0", simp+)
+              apply (rule implI, simp+)+
+              apply (unfold_def leq_def, simp)
+              apply (rule implE[where a="P xaa < x = 1"])
+              apply (rule forallE[where a="P xaa"], simp)
+              done
+          qed
+    qed
+  show "x N \<Longrightarrow> y N \<Longrightarrow> x < y = 1 \<Longrightarrow> x \<le> y = 1"
+    apply (rule implE[where a="x < y = 1"], rule forallE[where a="x"])
+    apply (rule H, simp)
+    done
+qed
+
+lemma cpair_mono_r [simp]:
+  "x N \<Longrightarrow> y N \<Longrightarrow> y \<le> \<langle>x, y\<rangle> = 1"
+by (cases bool: "y = 0", simp+)
+
+lemma cpair_le_2 [simp]:
+  "a \<le> c = 1 \<Longrightarrow> \<not> c = 0 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a < \<langle>b,c\<rangle> = 1"
+by (rule le_less_trans[where b="c"], simp+)
+
 
 lemma [simp]:
   "a < b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a < b + c = 1"
@@ -3030,21 +4207,33 @@ done
 lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> a + b - a = b"
 by (rule swap_add, simp+)
 
+(* Omar: Minor fixes to proof after adding some lemmas to simp*)
 lemma mult_div_inv: "a N \<Longrightarrow> b N \<Longrightarrow> div ((S a) * b) (S a) = b"
 apply (induct b, simp+)
 apply (unfold_def div_def, simp)
-apply (unfold_def mult_def, simp)
 done
 
 lemma [simp]:
   "x N \<Longrightarrow> y N \<Longrightarrow> S S x < \<langle>(S S x), y\<rangle> = 1"
 apply (induct y)
+<<<<<<< Updated upstream
 apply (unfold_def cpair_def, simp)
 apply (rule less_le_trans[where b="div (2 * (S S S x)) 2"], simp)
 apply (simp add: mult_div_inv)
 apply (rule leq_mono_div, simp+)
 apply (unfold_def cpair_def, simp)
 done
+=======
+apply (unfold_def cpair_def, (simp del: mult_suc_l mult_suc_r))
+apply (rule less_le_trans[where b="div (2 * (S S S x)) 2"], (simp del: mult_suc_l mult_suc_r))
+apply (simp add: mult_div_inv del: mult_suc_l mult_suc_r)
+apply (rule leq_mono_div, (simp del: mult_suc_l mult_suc_r)+)
+  apply (unfold_def cpair_def, (simp del: mult_suc_l mult_suc_r))
+  apply (rule arith_less_step)
+    apply (simp+)
+  done
+
+>>>>>>> Stashed changes
 
 lemma pred_inj_if_nz:
   "a N \<Longrightarrow> b N \<Longrightarrow> \<not> a = 0 \<Longrightarrow> \<not> b = 0 \<Longrightarrow> P a = P b \<Longrightarrow> a = b"
@@ -3069,15 +4258,16 @@ apply (cases bool: "x=1", simp+)
 apply (induct y, simp+)
 done
 
+(* Omar: fix broken proof after the change in definition *)
 lemma [simp]:
   "a \<le> b = 1 \<Longrightarrow> \<not> b = 0 \<Longrightarrow> \<not> b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a < \<langle>b,c\<rangle> = 1"
 by (rule le_less_trans[where b="b"], simp+)
 
 lemma cpair_of_nz_nz_l: "a N \<Longrightarrow> b N \<Longrightarrow> \<not> a = 0 \<Longrightarrow> \<not> \<langle>a,b\<rangle> = 0"
 apply (unfold_def cpair_def)
-apply (cases bool: "b=0", simp+)
-apply (unfold_def mult_def, simp)
-apply (rule swap_add, simp)
+apply (cases bool: "b=0", (simp del: mult_suc_l mult_suc_r)+)
+apply (unfold_def mult_def, (simp del: mult_suc_l mult_suc_r))
+apply (rule swap_add, (simp del: mult_suc_l mult_suc_r))
 apply (unfold_def mult_def, simp)
 apply (unfold_def div_def)
 apply (rule suc_nz[where x="a"], simp)
@@ -3288,8 +4478,187 @@ next
       done
 qed
 
-lemma cpair_surjective [auto]: "a N \<Longrightarrow> \<exists>b c. a = \<langle>b,c\<rangle>"
-sorry
+
+lemma cpair_axis_jump:
+  assumes y_nat: " y N"
+  shows "\<langle>0, y\<rangle> + 1 = \<langle>S y, 0\<rangle>"
+proof -
+  have lhs1: "\<langle>0, y\<rangle> = div (y * S y) 2 + y"
+    using y_nat apply (simp add: cpair_closed_form)
+    done
+
+  have rhs1: "\<langle>S y, 0\<rangle> = div (S y * S S y) 2"
+    using y_nat apply (simp add: cpair_def)
+    done
+
+  have rhs2:  "\<langle>S y, 0\<rangle> = div (y * S y + S y*2) 2"
+    using y_nat rhs1 apply (simp only: mult_suc_expand)
+    done
+
+  have rhs3:  "\<langle>S y, 0\<rangle> = (div (y * S y) 2 )+ S y"
+    using y_nat rhs2 apply (simp only: div_add_mult_2)
+    done
+
+  have lhs2: "\<langle>0, y\<rangle> + 1 =  div (y * S y) 2 + (y + 1)"
+    using y_nat lhs1 apply (simp only: add_assoc)
+    done
+
+  have lhs3: "\<langle>0, y\<rangle> + 1 =  div (y * S y) 2 + S y"
+    using y_nat lhs2 apply simp
+    done
+
+  show ?thesis
+    using lhs3 rhs3 y_nat apply simp
+    done
+qed
+
+lemma cpair_diag_step:
+  assumes x_nat: "x N"
+  assumes y_nat: " y N"
+  assumes x_pos: "\<not> (x = 0)"
+  shows "\<langle>x, y\<rangle> + 1 = \<langle>P x, S y\<rangle>"
+proof -
+  have lhs1: "\<langle>x, y\<rangle> =  div ((x + y) * S (x + y)) 2 + y"
+    using x_nat y_nat apply (simp add: cpair_closed_form)
+    done
+
+  have sum: " x + y = P x + S y"
+  proof -
+    have loclhs1: " x+y = y+x"
+      using x_nat y_nat apply (rule add_comm)
+      done
+
+    have loclhs2: " y + x = S ( y + P x)"
+      apply (rule eqSym)
+      apply (unfold_def add_def)
+      using x_nat y_nat x_pos  apply simp
+      done
+
+    have loclhs3: "y + x = S (P x + y)"
+      using x_nat y_nat loclhs2 apply (simp add: add_comm)
+      done
+
+    have loclhs4: " y+x = P x + S y"
+      using x_nat y_nat loclhs3 apply (simp add: add_succ)
+      done
+
+    show ?thesis
+      using loclhs1 loclhs4 x_nat y_nat apply simp
+      done
+  qed
+
+  have lhs2: "\<langle>x, y\<rangle> =  div ((P x + S y) * S (P x + S y)) 2 + y"
+    using lhs1 sum x_nat y_nat apply simp
+    done
+
+  have lhs3:  "\<langle>x, y\<rangle> + 1 =  div ((P x + S y) * S (P x + S y)) 2 + (y + 1)"
+    using lhs2 x_nat y_nat apply (simp only: add_assoc)
+    done
+
+  have lhs4:  "\<langle>x, y\<rangle> + 1 =  div ((P x + S y) * S (P x + S y)) 2 + S y"
+    using y_nat lhs3 x_nat apply simp (* Omar: why did simp need x_nat here*)
+    done
+
+  have rhs1: " \<langle>P x, S y\<rangle> =  div ((P x + S y) * S (P x + S y)) 2 + S y"
+    using x_nat y_nat apply (simp add: cpair_closed_form)
+    done
+
+  show ?thesis
+    using lhs4 rhs1 x_nat y_nat apply simp
+    done
+qed
+      
+(*Omar: Proved Surjectivity *)
+lemma cpair_surjective [auto]:
+  assumes a_nat : " a N"
+  shows  "\<exists>b c. a = \<langle>b,c\<rangle>"
+proof (rule ind[where a="a"])
+  show "a N"
+    apply (rule a_nat)
+    done
+
+  show "\<exists>b c. zero = \<langle>b,c\<rangle>"
+    apply (rule existsI[where a =" 0"])
+     apply simp
+    apply (rule existsI[where a =" 0"])
+     apply simp+
+    done
+
+  show "\<And>x. x N \<Longrightarrow> \<exists>b c. x = \<langle>b,c\<rangle> \<Longrightarrow> \<exists>b c. S x = \<langle>b,c\<rangle> "
+  proof -
+    fix x
+    assume x_nat: "x N"
+    assume IH: "\<exists>b c. x = \<langle>b,c\<rangle>"
+
+    show "\<exists>b c. S x = \<langle>b,c\<rangle>"
+      using IH
+    proof (rule existsE)
+      fix n
+      assume n_nat: "n N"
+      assume " \<exists>c. x = \<langle>n,c\<rangle>"
+
+      show "\<exists>b c. S x = \<langle>b,c\<rangle>"
+        using `\<exists>c. x = \<langle>n,c\<rangle>`
+      proof (rule existsE)
+        fix m
+        assume m_nat: "m N"
+        assume x_eq: "x = \<langle>n,m\<rangle>"
+        show "\<exists>b c. S x = \<langle>b,c\<rangle>"
+        proof (rule cases_nat[where x="n"])
+          show " n = zero \<Longrightarrow> \<exists>b c. S x = \<langle>b,c\<rangle>"
+          proof -
+            assume n_0: "n = 0"
+
+            have step1: "x = \<langle>0, m\<rangle>"
+              using x_eq n_0 m_nat apply simp
+              done
+
+            have step2: "S x = \<langle>0, m\<rangle> + 1"
+              using step1 x_nat m_nat apply simp
+              done
+            have step3: "S x = \<langle>S m, 0\<rangle>"
+              using step2 m_nat apply (simp only: cpair_axis_jump)
+              done
+
+            show ?thesis
+              apply (rule existsI[where a = "S m"])
+              using m_nat apply simp
+              apply (rule existsI[where a = "0"])
+               apply simp
+              using step3 m_nat apply simp
+              done
+          qed
+          show " \<not> n = zero \<Longrightarrow> \<exists>b c. S x = \<langle>b,c\<rangle>"
+          proof -
+            assume n_n0: " \<not> n = zero"
+            have step1: "S x =  \<langle>n,m\<rangle> +1"
+              using x_eq n_nat m_nat x_nat apply simp
+              done
+
+            have step2: "S x = \<langle>P n, S m\<rangle>"
+              using step1 n_nat m_nat n_n0 apply (simp only: cpair_diag_step)
+              done
+            show ?thesis
+              apply (rule existsI[where a = "P n"])
+              using n_nat apply simp
+              apply (rule existsI[where a = "S m"])
+              using m_nat apply simp
+              using step2 n_nat m_nat apply simp
+              done
+          qed
+
+          show "n N"
+            apply (rule n_nat)
+            done
+        qed
+      qed
+    qed
+  qed
+qed
+
+   
+
+
 
 lemma "a N \<Longrightarrow> b N \<Longrightarrow> x = \<langle>a,b\<rangle> \<Longrightarrow> cpx x = a"
 by (subst "\<langle>a,b\<rangle> = x", simp)
@@ -3684,4 +5053,10 @@ apply (rule eqSym)
 apply (assumption+)
 done
 
+<<<<<<< Updated upstream
+=======
+
+find_theorems "S (?x + ?y)"
+find_theorems  " \<langle>?x, 0\<rangle>"
+>>>>>>> Stashed changes
 end (* End of theory *)
