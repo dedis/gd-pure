@@ -34,6 +34,7 @@ section \<open>Axiomatization of naturals in GD\<close>
 
 typedecl num
 
+
 axiomatization
   eq :: \<open>'a \<Rightarrow> 'a \<Rightarrow> o\<close>  (infixl \<open>=\<close> 45)
 where
@@ -44,6 +45,7 @@ where
 lemma eq_trans: "a = b \<Longrightarrow> b = c \<Longrightarrow> a = c"
 by (rule eqSubst[where a="b" and b="c"], assumption)
 
+(* Omar: should we just leave these as meta-level macros or should also define these using ":=" to be closer to the manuscript*)
 definition neq :: \<open>num \<Rightarrow> num \<Rightarrow> o\<close> (infixl \<open>\<noteq>\<close> 45)
   where \<open>a \<noteq> b \<equiv> \<not> (a = b)\<close>
 definition bJudg :: \<open>o \<Rightarrow> o\<close> (\<open>_ B\<close> [21] 20)
@@ -637,6 +639,7 @@ definition greater :: "num \<Rightarrow> num \<Rightarrow> num" (infix ">" 50) w
 definition geq :: "num \<Rightarrow> num \<Rightarrow> num" (infix "\<ge>" 50) where
   "geq x y \<equiv> 1 - (x < y)"
 
+
 lemma less_0_false [simp, auto]: "(x < 0) = 0"
 apply (rule defE[OF less_def])
 apply (rule condI1)
@@ -734,7 +737,7 @@ apply (unfold_def add_def)
 apply (rule condI1)
 apply (rule zeroRefl)
 apply (rule a_nat)
-done
+  done
 
 lemma zero_add [simp, auto]:
   shows "a N \<Longrightarrow> 0 + a = a"
@@ -1235,7 +1238,8 @@ lemma div_1 [simp, auto]:
 proof (rule ind, simp)
   fix xa
   assume ind_h: "div xa 1 = xa"
-  show "xa N \<Longrightarrow> div S(xa) 1 = S(xa)"
+(* Omar: disambiguated grammar *)
+  show "xa N \<Longrightarrow> div (S xa) 1 = S(xa)"
     apply (unfold_def div_def)
     apply (rule eqSubst[where a="xa" and b="div ((S(xa))-1) 1"])
     apply (rule eqSubst[where a="xa" and b="(S(xa))-1"])
@@ -1738,13 +1742,10 @@ proof -
     done
 qed
 
-<<<<<<< Updated upstream
-=======
 (*Omar: Fixed the CPair definition*)
->>>>>>> Stashed changes
 axiomatization cpair :: "num \<Rightarrow> num \<Rightarrow> num" where
   cpair_def: "cpair x y := if y = 0 then div (x * S(x)) 2
-                           else cpair x P(y) + x + y + 2"
+                           else cpair x P(y) + x + y + 1"
 
 nonterminal cpair_args
 
@@ -1767,7 +1768,8 @@ apply (induct y, simp)
 apply (unfold_def cpair_def, simp)+
 done
 
-lemma cpair_suc [auto]: "x N \<Longrightarrow> y N \<Longrightarrow> \<langle>x, S(y)\<rangle> = \<langle>x, y\<rangle> + x + S(y) + 2"
+(*Omar: fixes after cpair defn change *)
+lemma cpair_suc [auto]: "x N \<Longrightarrow> y N \<Longrightarrow> \<langle>x, S(y)\<rangle> = \<langle>x, y\<rangle> + x + S(y) + 1"
 apply (rule eqSym)
 apply (unfold_def cpair_def)
 apply (rule eqSym)
@@ -1837,41 +1839,8 @@ lemma "cpx \<langle>0,0\<rangle> = 0"
 by simp
 
 lemma "cpy \<langle>0,0\<rangle> = 0"
-by simp
+  by simp
 
-<<<<<<< Updated upstream
-lemma cpx_proj [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> cpx \<langle>a, b\<rangle> = a"
-sorry
-
-lemma cpy_proj [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> cpy \<langle>a, b\<rangle> = b"
-sorry
-
-lemma cpair_inj:
-  assumes eq: "\<langle>a, b\<rangle> = \<langle>c, d\<rangle>"
-  shows "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> a = c \<and> b = d"
-proof -
-  have H: "a N \<Longrightarrow> b N \<Longrightarrow> cpx \<langle>a, b\<rangle> = cpx \<langle>c, d\<rangle>"
-    by (rule eqSubst[OF eq], simp)
-  have a_eq_c: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> a = c"
-    apply (rule eqSubst[where a="cpx \<langle>a, b\<rangle>" and b="a"], simp)
-    apply (rule eqSubst[where a="cpx \<langle>c, d\<rangle>" and b="c"], simp)
-    apply (rule H, simp)
-    done
-  have H2: "a N \<Longrightarrow> b N \<Longrightarrow> cpy \<langle>a, b\<rangle> = cpy \<langle>c, d\<rangle>"
-    by (rule eqSubst[OF eq], simp)
-  have b_eq_d: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> b = d"
-    apply (rule eqSubst[where a="cpy \<langle>a, b\<rangle>" and b="b"])
-    apply (rule cpy_proj, assumption+)
-    apply (rule eqSubst[where a="cpy \<langle>c, d\<rangle>" and b="d"])
-    apply (rule cpy_proj, assumption+)
-    apply (rule H2, assumption+)
-    done
-  show "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> a = c \<and> b = d"
-    apply (rule conjI)
-    apply (rule a_eq_c)
-    apply (simp)
-    apply (rule b_eq_d)
-=======
 (* Omar: behavior of cpx, cpy -- behavior when on the y-axis*)
 lemma cpx_cpy_axis_jump:
   "K N \<Longrightarrow> Y N \<Longrightarrow> cpx K = 0 \<Longrightarrow> cpy K = Y \<Longrightarrow> cpx (K + 1) = S Y \<and> cpy (K + 1) = 0"
@@ -2348,44 +2317,10 @@ proof (rule ind[where a="x"], simp+)
     apply (rule eqSym)
     apply (simp add: hyp)+
     apply (unfold_def add_def)
->>>>>>> Stashed changes
     apply (simp)
     done
 qed
 
-<<<<<<< Updated upstream
-lemma cpair_inj_l:
-  assumes eq: "\<langle>a, b\<rangle> = \<langle>c, d\<rangle>"
-  shows "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> a = c"
-apply (rule conjE1[where q="b=d"])
-apply (rule cpair_inj)
-apply (rule eq)
-apply (simp)
-done
-
-lemma cpair_inj_r:
-  assumes eq: "\<langle>a, b\<rangle> = \<langle>c, d\<rangle>"
-  shows "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> b = d"
-apply (rule conjE2[where p="a=c"])
-apply (rule cpair_inj)
-apply (rule eq)
-apply (simp)
-done
-
-lemma [auto]:
-  "\<not>a \<or> \<not>b \<Longrightarrow> \<not> (a \<and> b)"
-unfolding conj_def
-by (rule dNegI, assumption)
-
-lemma [auto]:
-  "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> d N \<Longrightarrow> \<not> a = c \<or> \<not> b = d \<Longrightarrow> \<not> \<langle>a, b\<rangle> = \<langle>c, d\<rangle>"
-apply (rule grounded_contradiction[where q="\<not>(a=c \<and> b=d)"], simp)
-apply (rule cpair_inj_l[where b="b" and d="d"])
-apply (rule dNegE, simp)
-apply (rule cpair_inj_r[where a="a" and c="c"])
-apply (rule dNegE, simp)
-done
-=======
 (*Omar: relocate*)
 lemma add_comm [auto]:
   shows "x N \<Longrightarrow> y N \<Longrightarrow> x + y = y + x"
@@ -2554,7 +2489,6 @@ qed
 
 (*Omar: many of the below theorems were relocated *)
 
->>>>>>> Stashed changes
 
 lemma if_leq_not_greater:
   assumes a_le_b: "a \<le> b = 1"
@@ -2594,118 +2528,9 @@ apply (rule eqSym)
 apply (auto)
 done
 
-lemma leq_monotone_add [auto, simp]:
-  assumes x_nat: "x N"
-  assumes y_nat: "y N"
-  shows "x \<le> y + x = 1"
-proof (rule ind[where a="x"])
-  show "x N" by (rule x_nat)
-  show "0 \<le> y + 0 = 1" by (auto, rule y_nat)
-  show "\<And>x. x N \<Longrightarrow> x \<le> y + x = 1 \<Longrightarrow> S x \<le> y + S x = 1"
-    proof -
-      fix xa
-      assume xa_nat: "xa N" and hyp: "xa \<le> y + xa = 1"
-      show "S xa \<le> y + S xa = 1"
-        apply (unfold_def leq_def)
-        apply (rule condI2Eq)
-        apply (fold neq_def)
-        apply (auto)
-        apply (rule xa_nat)
-        apply (auto)
-        apply (rule condI2Eq)
-        apply (fold neq_def)
-        apply (rule eqSubst[where a="S(y + xa)" and b="y + S xa"])
-        apply (unfold_def add_def)
-        apply (rule eqSym)
-        apply (rule condI2Eq)
-        apply (fold neq_def)
-        apply (auto)
-        apply (rule xa_nat)
-        apply (auto)
-        apply (rule y_nat)
-        apply (rule xa_nat)
-        apply (rule eqSubst[where a="xa" and b="P S xa"])
-        apply (rule eqSym)
-        apply (rule predSucInv)
-        apply (rule xa_nat)
-        apply (fold isNat_def)
-        apply (auto)
-        apply (rule y_nat)
-        apply (rule xa_nat)
-        apply (auto)
-        apply (rule y_nat)
-        apply (rule xa_nat)
-        apply (auto)
-        apply (rule eqSubst[where a="xa" and b="P S xa"])
-        apply (rule eqSym)
-        apply (rule predSucInv)
-        apply (rule xa_nat)
-        apply (rule eqSubst[where a="S (y + xa)" and b="y + S xa"])
-        apply (unfold_def add_def)
-        apply (rule eqSym)
-        apply (rule condI2Eq)
-        apply (fold neq_def)
-        apply (auto)
-        apply (rule xa_nat)
-        apply (auto)
-        apply (rule y_nat)
-        apply (rule xa_nat)
-        apply (rule eqSubst[where a="xa" and b="P S xa"])
-        apply (rule eqSym)
-        apply (rule predSucInv)
-        apply (rule xa_nat)
-        apply (fold isNat_def)
-        apply (auto)
-        apply (rule y_nat)
-        apply (rule xa_nat)
-        apply (rule eqSubst[where a="y + xa" and b="P S (y + xa)"])
-        apply (rule eqSym)
-        apply (auto)
-        apply (rule y_nat)
-        apply (rule xa_nat)
-        apply (rule hyp)
-        done
-    qed
-qed
 
-lemma add_suc_comm:
-  shows "x N \<Longrightarrow> y N \<Longrightarrow> y + S(x) = S(y) + x"
-proof (rule ind[where a="x"], simp+)
-  fix xa
-  assume hyp: "y + S xa = S y + xa"
-  show "x N \<Longrightarrow> y N \<Longrightarrow> xa N \<Longrightarrow> y + S S xa = S y + S xa"
-    apply (rule eqSubst[where a="S(y + S(xa))" and b="y + S S xa"])
-    apply (unfold_def add_def)
-    apply (simp)
-    apply (rule eqSubst[where a="S xa" and b="P S S xa"])
-    apply (rule eqSym)
-    apply (simp add: hyp)+
-    apply (unfold_def add_def)
-    apply (simp)
-    done
-qed
 
-lemma add_comm [auto]:
-  shows "x N \<Longrightarrow> y N \<Longrightarrow> x + y = y + x"
-apply (rule ind[where a="y"], simp)
-apply (rule eqSubst[where a="x" and b="x + 0"])
-apply (rule eqSym)
-apply (auto)
-apply (rule eqSym)
-proof (auto)
-  fix xa
-  assume hyp: "x + xa = xa + x"
-  show "x N \<Longrightarrow> xa N \<Longrightarrow> x + S xa = S xa + x"
-    apply (rule eqSym)
-    apply (unfold_def add_def)
-    apply (rule eqSym)
-    apply (simp add: hyp)
-    apply (rule eqSubst[where a="xa + S x" and b="S xa + x"])
-    apply (rule add_suc_comm, simp)
-    apply (unfold_def add_def)
-    apply (simp)
-    done
-qed
+
 
 lemma leq_monotone_add_r [simp]:
   "x \<le> y = 1 \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> z N \<Longrightarrow> x \<le> y + z = 1"
@@ -2805,23 +2630,7 @@ proof -
     done
 qed
 
-lemma sub_suc_pred:
-  assumes H: "x - y = S(z)"
-  shows "x N \<Longrightarrow> y N \<Longrightarrow> z N \<Longrightarrow> x - S(y) = z"
-apply (rule implE[where a="x-y=(S z)"])
-apply (induct y, simp)
-apply (rule implI, simp)
-apply (subst "S(z) = x")
-apply (unfold_def sub_def, simp)
-proof (rule implI, simp)
-  fix xa
-  show "x - y = S(z)" by (rule H)
-  assume h: "x - S xa = S z"
-  show "xa N \<Longrightarrow> x N \<Longrightarrow> z N \<Longrightarrow> x - S(S xa) = z"
-    apply (unfold_def sub_def)
-    apply (simp add: h)
-    done
-qed
+
 
 lemma sub_monotone_lhs:
   assumes H: "S(x) - y = S(z)"
@@ -3090,38 +2899,11 @@ apply (rule ind[where a="x"], simp)
 apply (unfold_def less_def, simp)
 done
 
-lemma [simp]: "x N \<Longrightarrow> 0 - x = 0"
-apply (induct x, simp)
-apply (unfold_def sub_def, simp)
-done
 
-lemma unfold_sub: "a N \<Longrightarrow> b N \<Longrightarrow> a - (S b) = P(a - b)"
-apply (rule eqSym, unfold_def sub_def, rule eqSym)
-apply (simp)
-done
 
-lemma [simp]: "a N \<Longrightarrow> a - 1 = P(a)"
-by (unfold_def sub_def, simp)
 
-lemma sub_mono_suc: "a N \<Longrightarrow> b N \<Longrightarrow> S a - S b = a - b"
-apply (induct b, simp+)
-apply (rule eqSym, unfold_def sub_def, rule eqSym, simp)
-apply (simp add: unfold_sub)
-done
 
-lemma fold_sub: "a N \<Longrightarrow> b N \<Longrightarrow> P(S(a) - b) = (S a) - (S b)"
-by (rule eqSym, rule unfold_sub, simp)
 
-lemma sub_distr_pred: "a N \<Longrightarrow> b N \<Longrightarrow> P(a - b) = P(a) - b"
-apply (induct a, simp+)
-apply (simp add: fold_sub sub_mono_suc)
-done
-
-lemma [simp]: "a N \<Longrightarrow> a - a = 0"
-apply (induct a, simp)
-apply (unfold_def sub_def)
-apply (simp add: sub_distr_pred)
-done
 
 lemma div_x_x_1 [auto, simp]:
   shows "x N \<Longrightarrow> div (S x) (S x) = 1"
@@ -3300,12 +3082,7 @@ apply (unfold_def add_def, simp)
 apply (rule le_less_trans[where b="x+y"], simp+)
 done
 
-lemma add_assoc: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a + b + c = a + (b + c)"
-apply (induct c, simp+)
-apply (unfold_def add_def, simp)
-apply (rule eqSym)
-apply (unfold_def add_def, simp)
-done
+
 
 lemma and_assoc: "(a \<and> b \<and> c) \<Longrightarrow> (a \<and> (b \<and> c))"
 apply (rule conjE1, rule conjE2, simp)
@@ -3335,28 +3112,7 @@ lemma geq_mono_pred:
 apply (rule suc_nz[where x="a"], simp)
 apply (rule suc_nz[where x="b"], simp)
 apply (rule geq_mono_suc, simp)
-<<<<<<< Updated upstream
-done
-
-lemma cpair_strict_mono_r [simp]:
-  "x N \<Longrightarrow> y N \<Longrightarrow> (S y) < \<langle>x, (S y)\<rangle> = 1"
-proof (induct y)
-  case Base
-    show "x N \<Longrightarrow> y N \<Longrightarrow> 1 < \<langle>x,1\<rangle> = 1"
-      apply (rule less_le_trans[where b="2"], simp)
-      apply (unfold_def cpair_def, simp)
-      done
-next
-  case (Step xa)
-  show "x N \<Longrightarrow> y N \<Longrightarrow> xa N \<Longrightarrow> S xa < \<langle>x, (S xa)\<rangle> = 1 \<Longrightarrow> S S xa < \<langle>x, (S S xa)\<rangle> = 1"
-    apply (unfold_def cpair_def, simp)
-    apply (rule less_le_trans[where b="S S xa + 2"])
-    apply (simp add: add_assoc)+
-    done
-qed
-=======
   done
->>>>>>> Stashed changes
 
 lemma sum_0_summands_0: "a N \<Longrightarrow> b N \<Longrightarrow> a + b = 0 \<Longrightarrow> a = 0 \<and> b = 0"
 apply (rule implE[where a="a+b=0"])
@@ -4213,17 +3969,50 @@ apply (induct b, simp+)
 apply (unfold_def div_def, simp)
 done
 
+(* Omar: helper lemma *)
+lemma arith_less_step:
+  assumes x_nat: "X N"
+  assumes k_nat: "K N"
+  assumes y_nat: "Y N"
+  shows "X < S(K + X + Y) = S zero"
+
+proof -
+
+  have step1: "X < S X = 1"
+    using x_nat by simp
+  have step2: "S(X) N" 
+    using x_nat by simp
+  have step3: "(K + Y) N" 
+    using k_nat y_nat by simp
+  have step4: " S X + (K + Y) = K + Y + S X"
+    using step2 step3 add_comm[of "S X" "K + Y"]  by simp
+  have e2: "(K + Y) + S X = S ((K + Y) + X)"
+    using x_nat k_nat y_nat by (simp add: add_succ)
+  have e3: "(K + Y) + X = K + (Y + X)"
+    using x_nat k_nat y_nat by (simp add: add_assoc)
+  have e4: "Y + X = X + Y"
+    using x_nat y_nat by (simp add: add_comm)
+  have e6: "K + (X + Y) = (K + X) + Y"
+    using x_nat k_nat y_nat by (simp add: add_assoc)
+  
+  have step5: "S( K + X +  Y) = S X + (K+Y)"
+    apply (rule eqSym)
+    apply (simp add: step4)
+    apply (simp add: e2)
+    apply (simp add: e3 e4 e6)
+    using x_nat k_nat y_nat apply simp+
+    done
+  
+  show ?thesis
+    apply (simp add: step5)
+    using step1 x_nat k_nat y_nat apply simp
+    done
+qed
+
+(* Omar: fix broken proof after the change in definition *)
 lemma [simp]:
   "x N \<Longrightarrow> y N \<Longrightarrow> S S x < \<langle>(S S x), y\<rangle> = 1"
 apply (induct y)
-<<<<<<< Updated upstream
-apply (unfold_def cpair_def, simp)
-apply (rule less_le_trans[where b="div (2 * (S S S x)) 2"], simp)
-apply (simp add: mult_div_inv)
-apply (rule leq_mono_div, simp+)
-apply (unfold_def cpair_def, simp)
-done
-=======
 apply (unfold_def cpair_def, (simp del: mult_suc_l mult_suc_r))
 apply (rule less_le_trans[where b="div (2 * (S S S x)) 2"], (simp del: mult_suc_l mult_suc_r))
 apply (simp add: mult_div_inv del: mult_suc_l mult_suc_r)
@@ -4233,7 +4022,6 @@ apply (rule leq_mono_div, (simp del: mult_suc_l mult_suc_r)+)
     apply (simp+)
   done
 
->>>>>>> Stashed changes
 
 lemma pred_inj_if_nz:
   "a N \<Longrightarrow> b N \<Longrightarrow> \<not> a = 0 \<Longrightarrow> \<not> b = 0 \<Longrightarrow> P a = P b \<Longrightarrow> a = b"
@@ -4249,7 +4037,7 @@ apply (rule suc_nz[where x="P(x)"])
 apply (rule grounded_contradiction[where q="x=1"], simp)
 apply (rule pred_inj_if_nz, simp+)
 apply (rule dNegE, simp+)
-done
+  done
 
 lemma cpair_mono_l [simp]:
   "x N \<Longrightarrow> y N \<Longrightarrow> x \<le> \<langle>x,y\<rangle> = 1"
@@ -5053,10 +4841,7 @@ apply (rule eqSym)
 apply (assumption+)
 done
 
-<<<<<<< Updated upstream
-=======
 
 find_theorems "S (?x + ?y)"
 find_theorems  " \<langle>?x, 0\<rangle>"
->>>>>>> Stashed changes
 end (* End of theory *)
