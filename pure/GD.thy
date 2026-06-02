@@ -4841,7 +4841,4 @@ apply (rule eqSym)
 apply (assumption+)
 done
 
-
-find_theorems "S (?x + ?y)"
-find_theorems  " \<langle>?x, 0\<rangle>"
 end (* End of theory *)
