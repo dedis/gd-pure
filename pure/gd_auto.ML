@@ -23,7 +23,9 @@ struct
                   resolve_tac ctxt (uncond_rules ctxt) ORELSE'
                   cond_tacs
         val one_iter = CHANGED o tac
+(* Omar: Not being used.
         val recurse = solver_tac ctxt (k-1)
+*)
       in
         REPEAT_ALL_NEW one_iter
     end
