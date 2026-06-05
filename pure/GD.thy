@@ -2,6 +2,10 @@ theory GD
 imports Pure
 begin
 
+\<^marker>\<open>title "Grounded Deduction"\<close>
+\<^marker>\<open>creator "Sascha Kehrli"\<close>
+\<^marker>\<open>contributor "Omar Muhammad"\<close>
+
 text \<open>The following theory development formalizes Grounded Arithmetic.\<close>
 
 named_theorems auto "Unconditionally applied lemmas of shape simp \<Longrightarrow> comp"
@@ -45,7 +49,6 @@ where
 lemma eq_trans: "a = b \<Longrightarrow> b = c \<Longrightarrow> a = c"
 by (rule eqSubst[where a="b" and b="c"], assumption)
 
-(* Omar: should we just leave these as meta-level macros or should also define these using ":=" to be closer to the manuscript*)
 definition neq :: \<open>num \<Rightarrow> num \<Rightarrow> o\<close> (infixl \<open>\<noteq>\<close> 45)
   where \<open>a \<noteq> b \<equiv> \<not> (a = b)\<close>
 definition bJudg :: \<open>o \<Rightarrow> o\<close> (\<open>_ B\<close> [21] 20)
@@ -1238,7 +1241,7 @@ lemma div_1 [simp, auto]:
 proof (rule ind, simp)
   fix xa
   assume ind_h: "div xa 1 = xa"
-(* Omar: disambiguated grammar *)
+
   show "xa N \<Longrightarrow> div (S xa) 1 = S(xa)"
     apply (unfold_def div_def)
     apply (rule eqSubst[where a="xa" and b="div ((S(xa))-1) 1"])
@@ -1742,7 +1745,7 @@ proof -
     done
 qed
 
-(*Omar: Fixed the CPair definition*)
+(*CPair definition*)
 axiomatization cpair :: "num \<Rightarrow> num \<Rightarrow> num" where
   cpair_def: "cpair x y := if y = 0 then div (x * S(x)) 2
                            else cpair x P(y) + x + y + 1"
@@ -1768,7 +1771,7 @@ apply (induct y, simp)
 apply (unfold_def cpair_def, simp)+
 done
 
-(*Omar: fixes after cpair defn change *)
+
 lemma cpair_suc [auto]: "x N \<Longrightarrow> y N \<Longrightarrow> \<langle>x, S(y)\<rangle> = \<langle>x, y\<rangle> + x + S(y) + 1"
 apply (rule eqSym)
 apply (unfold_def cpair_def)
@@ -1841,7 +1844,7 @@ by simp
 lemma "cpy \<langle>0,0\<rangle> = 0"
   by simp
 
-(* Omar: behavior of cpx, cpy -- behavior when on the y-axis*)
+(* Behavior of cpx, cpy -- behavior when on the y-axis*)
 lemma cpx_cpy_axis_jump:
   "K N \<Longrightarrow> Y N \<Longrightarrow> cpx K = 0 \<Longrightarrow> cpy K = Y \<Longrightarrow> cpx (K + 1) = S Y \<and> cpy (K + 1) = 0"
 apply (unfold_def cpx_def)
@@ -1849,13 +1852,11 @@ apply (unfold_def cpy_def)
 apply simp
 done
 
-(* Omar: few helper lemmas *)
 lemma one_sub_one [simp]: "S zero - S zero = zero"
   apply (unfold_def sub_def)
   apply simp
   done
  
-(* Omar: few helper lemmas *)
 lemma gt_zero_not_zero:
   assumes x_nat: "X N"
   assumes x_gt: "X > zero = S zero"
@@ -1882,7 +1883,7 @@ proof (rule contradiction)
     done
 qed
 
-(* Omar: behavior of cpx, cpy -- moves up a diagonal when not on the y-axis*)
+(*Behavior of cpx, cpy -- moves up a diagonal when not on the y-axis*)
 lemma cpx_cpy_diag: "K N \<Longrightarrow> Y N \<Longrightarrow> X N \<Longrightarrow> X > 0 = 1 \<Longrightarrow> cpx K = X \<Longrightarrow> cpy K = Y \<Longrightarrow> cpx (K + 1) = P X \<and> cpy (K + 1) = S Y"
 apply (unfold_def cpx_def)
 apply (unfold_def cpy_def)
@@ -1903,7 +1904,6 @@ apply assumption+
   apply simp
   done
 
-(*Omar: relocating add_assoc *)
 lemma add_assoc: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a + b + c = a + (b + c)"
 apply (induct c, simp+)
 apply (unfold_def add_def, simp)
@@ -1911,12 +1911,11 @@ apply (rule eqSym)
 apply (unfold_def add_def, simp)
   done
 
-(*Omar: relocating unfold_sub *)
 lemma unfold_sub: "a N \<Longrightarrow> b N \<Longrightarrow> a - (S b) = P(a - b)"
 apply (rule eqSym, unfold_def sub_def, rule eqSym)
 apply (simp)
   done
-(*Omar: relocating to fix issues in simp used*)
+
 lemma sub_suc_pred:
   assumes H: "x - y = S(z)"
   shows "x N \<Longrightarrow> y N \<Longrightarrow> z N \<Longrightarrow> x - S(y) = z"
@@ -1935,40 +1934,35 @@ proof (rule implI, simp)
     done
 qed
 
-(*Omar: relocating to use in the following thms *)
+
 lemma [simp]: "x N \<Longrightarrow> 0 - x = 0"
 apply (induct x, simp)
 apply (unfold_def sub_def, simp)
   done
 
-(*Omar: relocating to use in the following thms *)
 lemma [simp]: "a N \<Longrightarrow> a - 1 = P(a)"
   by (unfold_def sub_def, simp)
 
-(*Omar: relocating to use in the following thms *)
 lemma sub_mono_suc: "a N \<Longrightarrow> b N \<Longrightarrow> S a - S b = a - b"
 apply (induct b, simp+)
 apply (rule eqSym, unfold_def sub_def, rule eqSym, simp)
 apply (simp add: unfold_sub)
 done
 
-(*Omar: relocating to use in the following thms *)
 lemma fold_sub: "a N \<Longrightarrow> b N \<Longrightarrow> P(S(a) - b) = (S a) - (S b)"
 by (rule eqSym, rule unfold_sub, simp)
 
-(*Omar: relocating to use in the following thms *)
 lemma sub_distr_pred: "a N \<Longrightarrow> b N \<Longrightarrow> P(a - b) = P(a) - b"
 apply (induct a, simp+)
 apply (simp add: fold_sub sub_mono_suc)
 done
-(*Omar: relocating*)
+
 lemma [simp]: "a N \<Longrightarrow> a - a = 0"
 apply (induct a, simp)
 apply (unfold_def sub_def)
 apply (simp add: sub_distr_pred)
   done
 
-(*Omar: relocating*)
 lemma leq_monotone_add [auto, simp]:
   assumes x_nat: "x N"
   assumes y_nat: "y N"
@@ -2043,7 +2037,6 @@ proof (rule ind[where a="x"])
     qed
   qed
 
-(* Omar: helper lemma*)
 lemma sub_bound_eval:
   assumes x_nat: "x N"
   shows "\<forall>X.(X N)  \<longrightarrow> S x \<le> X = S 0 \<longrightarrow> X - x \<le> 0 = 0"
@@ -2136,7 +2129,7 @@ done
 
 
 
-(* Omar: cummulative behavior of cpx, cpy -- moves up a diagonal when not on the y-axis*)
+(* Cummulative behavior of cpx, cpy -- moves up a diagonal when not on the y-axis*)
 lemma cpx_cpy_diag_up:
   assumes K_nat: "K N" 
   assumes X_nat: "X N" 
@@ -2303,7 +2296,6 @@ qed
     done                                                                                
 qed                                                                 
 
-(*Omar: relocate*)
 lemma add_suc_comm:
   shows "x N \<Longrightarrow> y N \<Longrightarrow> y + S(x) = S(y) + x"
 proof (rule ind[where a="x"], simp+)
@@ -2321,7 +2313,6 @@ proof (rule ind[where a="x"], simp+)
     done
 qed
 
-(*Omar: relocate*)
 lemma add_comm [auto]:
   shows "x N \<Longrightarrow> y N \<Longrightarrow> x + y = y + x"
 apply (rule ind[where a="y"], simp)
@@ -2344,8 +2335,7 @@ proof (auto)
     done
 qed
 
-(*Omar: Important Multiplication Lemma*)
-
+(* Multiplication Lemma*)
 lemma mult_suc_r[simp]:
   assumes x_nat: "x N"
   assumes y_nat: "y N"
@@ -2400,7 +2390,7 @@ proof (rule ind[where a = "y"])
   qed
 qed
 
-(* Omar: mult is commutative*)
+(* Mult is commutative*)
 lemma mult_comm:
   assumes x_nat: "x N"
   assumes y_nat: "y N"
@@ -2426,8 +2416,6 @@ proof (rule ind[where a="x"])
   qed
 qed
 
-
-(* Omar: helper lemma to deal with arithmetic. the current implementation desperately needs some lemmas to simplify arithmetic, hopefully leading to some tactics as well*)
 lemma mult_suc_expand: 
   assumes x_nat: "x N" 
   shows "S x * S (S x) = x * S x + S x * S (S zero)"
@@ -2457,9 +2445,6 @@ proof -
     done
 qed
 
-
-
-(* Omar: important lemma for arithmetic.*)
 lemma add_sub_assoc:
   assumes a_nat: "a N"
   assumes b_nat: "b N"
@@ -2485,10 +2470,6 @@ proof (rule ind[where a="b"])
       done
   qed
 qed
-
-
-(*Omar: many of the below theorems were relocated *)
-
 
 lemma if_leq_not_greater:
   assumes a_le_b: "a \<le> b = 1"
@@ -2527,10 +2508,6 @@ apply (rule eqSubst[where a="1" and b="1 - 0"])
 apply (rule eqSym)
 apply (auto)
 done
-
-
-
-
 
 lemma leq_monotone_add_r [simp]:
   "x \<le> y = 1 \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> z N \<Longrightarrow> x \<le> y + z = 1"
@@ -2629,8 +2606,6 @@ proof -
     apply (simp add: H1)+
     done
 qed
-
-
 
 lemma sub_monotone_lhs:
   assumes H: "S(x) - y = S(z)"
@@ -2898,12 +2873,6 @@ lemma less_not_refl [simp]:
 apply (rule ind[where a="x"], simp)
 apply (unfold_def less_def, simp)
 done
-
-
-
-
-
-
 
 lemma div_x_x_1 [auto, simp]:
   shows "x N \<Longrightarrow> div (S x) (S x) = 1"
@@ -3317,7 +3286,6 @@ proof -
     done
 qed
 
-(* Omar: Minor fixes to proof after adding some lemmas to simp*)
 lemma leq_mono_mult_r [simp]:
   "a \<le> b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a * c \<le> b * c = 1"
 apply (induct c, simp+)
@@ -3328,7 +3296,6 @@ proof -
     by (rule leq_trans[where y="a + b*x"], simp+)
 qed
 
-(* Omar: Minor fixes to proof after adding some lemmas to simp*)
 lemma leq_mono_mult_l [simp]:
   "a \<le> b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> c * a \<le> c * b = 1"
 apply (rule implE[where a="a\<le>b=1"])
@@ -3351,9 +3318,6 @@ proof (rule forallI)
     apply (rule forallE[where a="P b"], simp)
     done
 qed
-
-
-(* Omar: helper lemma to deal with arithmetic.*)
 
 lemma div_add_mult_2:
   assumes a_nat: "a N"
@@ -3468,7 +3432,7 @@ show "div (a + S x * S S zero) S S zero = div a S S zero + S x"
   qed
 qed
 
-(* Omar: CPair closed form proof *)
+(*CPair closed form *)
 lemma cpair_closed_form:
   assumes a_nat: "a N"
   assumes b_nat: "b N"
@@ -3509,7 +3473,6 @@ proof (rule ind[where a = "b"])
     using x_nat a_nat apply (simp add: add_assoc step2)
     done
 
-(*LHS*)
   have step7: "\<langle>a, S x\<rangle> =  (div ((a + x) * S(a + x)) S S zero) + ( x + a + S x) + S zero"
     using x_nat a_nat apply (simp add: step6 add_assoc)
     done
@@ -3518,7 +3481,6 @@ proof (rule ind[where a = "b"])
     using x_nat a_nat apply (simp add: add_comm)
     done
 
-(* RHS*)
   have step9: "div ((a + S x) * S(a + S x)) (S S zero) + S x =  div ((a + x) * S(a + x)) (S S zero) +( S (a + x) + S x)"
     using x_nat a_nat apply (simp only: step5 add_assoc)
     done
@@ -3559,7 +3521,7 @@ proof (rule ind[where a = "b"])
   qed
 
 
-(* Omar: base for double induction *)
+(*Base for double induction *)
 lemma cpx_cpy_proj_0:
   assumes a_nat: "a N"
   shows "cpx \<langle>a, zero\<rangle> = a \<and> cpy \<langle>a, zero\<rangle> = zero"
@@ -3686,8 +3648,7 @@ qed
   qed
 qed
 
-
-(* Omar: step for double induction *)
+(*step for double induction *)
 lemma cpx_cpy_proj_step: 
   assumes a_nat: " a N"
   assumes x_nat: "x N"
@@ -3757,7 +3718,7 @@ have cpair_equiv: "\<langle>a + S x, zero\<rangle> + S x = \<langle>a, S x\<rang
 qed
 
 
-(* Omar: cpx and cpy applied on cpair *)
+(* cpx and cpy applied on cpair *)
 lemma cpx_cpy_proj: "a N \<Longrightarrow> b N \<Longrightarrow> cpx \<langle>a, b\<rangle> = a \<and> cpy \<langle>a, b\<rangle> = b"
   apply (induct b)
   apply (rule cpx_cpy_proj_0)
@@ -3765,14 +3726,14 @@ lemma cpx_cpy_proj: "a N \<Longrightarrow> b N \<Longrightarrow> cpx \<langle>a,
   apply (rule cpx_cpy_proj_step, assumption+)
   done
 
-(* Omar: separated lemma for cpx*)
+(* separated lemma for cpx*)
 lemma cpx_proj [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> cpx \<langle>a, b\<rangle> = a"
 apply (rule conjE1)
 apply (rule cpx_cpy_proj)
 apply (assumption)+
 done
 
-(* Omar: separated lemma for cpy*)
+(* separated lemma for cpy*)
 lemma cpy_proj [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> cpy \<langle>a, b\<rangle> = b"
 apply (rule conjE2)
 apply (rule cpx_cpy_proj)
@@ -3840,17 +3801,9 @@ apply (rule cpair_inj_r[where a="a" and c="c"])
 apply (rule dNegE, simp)
 done
 
-
-
 lemma cpair_1_0_1 [simp, auto]: "\<langle>1, 0\<rangle> = 1"
   unfolding cpair_def by (simp)
 
-
-
-
-
-
-(* Omar: Minor proof fix after change in defn *)
 lemma cpair_strict_mono_r [simp]:
   "x N \<Longrightarrow> y N \<Longrightarrow> (S y) < \<langle>x, (S y)\<rangle> = 1"
 proof (induct y)
@@ -3868,8 +3821,6 @@ next
     done
 qed
 
-
-
 lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> b = c \<Longrightarrow> \<langle>a,b\<rangle> = \<langle>a,c\<rangle> \<longleftrightarrow> True"
 by (rule iffI, simp+)
 
@@ -3880,8 +3831,6 @@ apply (rule conjE2[where p="a=a"])
 apply (rule cpair_inj, simp)
 apply (rule contradiction, simp)
 done
-
-
 
 lemma [simp]:
   shows "\<not> y = 0 \<Longrightarrow> x N \<Longrightarrow> y N \<Longrightarrow> y < \<langle>x, y\<rangle> = 1"
@@ -3928,7 +3877,6 @@ lemma cpair_le_2 [simp]:
   "a \<le> c = 1 \<Longrightarrow> \<not> c = 0 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a < \<langle>b,c\<rangle> = 1"
 by (rule le_less_trans[where b="c"], simp+)
 
-
 lemma [simp]:
   "a < b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a < b + c = 1"
 apply (induct c, simp+)
@@ -3963,13 +3911,11 @@ done
 lemma [simp]: "a N \<Longrightarrow> b N \<Longrightarrow> a + b - a = b"
 by (rule swap_add, simp+)
 
-(* Omar: Minor fixes to proof after adding some lemmas to simp*)
 lemma mult_div_inv: "a N \<Longrightarrow> b N \<Longrightarrow> div ((S a) * b) (S a) = b"
 apply (induct b, simp+)
 apply (unfold_def div_def, simp)
 done
 
-(* Omar: helper lemma *)
 lemma arith_less_step:
   assumes x_nat: "X N"
   assumes k_nat: "K N"
@@ -3977,7 +3923,6 @@ lemma arith_less_step:
   shows "X < S(K + X + Y) = S zero"
 
 proof -
-
   have step1: "X < S X = 1"
     using x_nat by simp
   have step2: "S(X) N" 
@@ -4009,7 +3954,6 @@ proof -
     done
 qed
 
-(* Omar: fix broken proof after the change in definition *)
 lemma [simp]:
   "x N \<Longrightarrow> y N \<Longrightarrow> S S x < \<langle>(S S x), y\<rangle> = 1"
 apply (induct y)
@@ -4021,7 +3965,6 @@ apply (rule leq_mono_div, (simp del: mult_suc_l mult_suc_r)+)
   apply (rule arith_less_step)
     apply (simp+)
   done
-
 
 lemma pred_inj_if_nz:
   "a N \<Longrightarrow> b N \<Longrightarrow> \<not> a = 0 \<Longrightarrow> \<not> b = 0 \<Longrightarrow> P a = P b \<Longrightarrow> a = b"
@@ -4046,7 +3989,6 @@ apply (cases bool: "x=1", simp+)
 apply (induct y, simp+)
 done
 
-(* Omar: fix broken proof after the change in definition *)
 lemma [simp]:
   "a \<le> b = 1 \<Longrightarrow> \<not> b = 0 \<Longrightarrow> \<not> b = 1 \<Longrightarrow> a N \<Longrightarrow> b N \<Longrightarrow> c N \<Longrightarrow> a < \<langle>b,c\<rangle> = 1"
 by (rule le_less_trans[where b="b"], simp+)
@@ -4356,7 +4298,7 @@ proof -
     done
 qed
       
-(*Omar: Proved Surjectivity *)
+(*Surjectivity of cpair*)
 lemma cpair_surjective [auto]:
   assumes a_nat : " a N"
   shows  "\<exists>b c. a = \<langle>b,c\<rangle>"
@@ -4443,10 +4385,6 @@ proof (rule ind[where a="a"])
     qed
   qed
 qed
-
-   
-
-
 
 lemma "a N \<Longrightarrow> b N \<Longrightarrow> x = \<langle>a,b\<rangle> \<Longrightarrow> cpx x = a"
 by (subst "\<langle>a,b\<rangle> = x", simp)
