@@ -22,8 +22,7 @@ judgment
 
 axiomatization
   disj :: \<open>o \<Rightarrow> o \<Rightarrow> o\<close>  (infixr \<open>\<or>\<close> 30) and
-  not :: \<open>o \<Rightarrow> o\<close> (\<open>\<not> _\<close> [40] 40)
-where
+  not :: \<open>o \<Rightarrow> o\<close> (\<open>\<not> _\<close> [40] 40)where
   disjI1: \<open>P \<Longrightarrow> P \<or> Q\<close> and
   disjI2: \<open>Q \<Longrightarrow> P \<or> Q\<close> and
   disjI3: \<open>\<lbrakk>\<not>P; \<not>Q\<rbrakk> \<Longrightarrow> \<not>(P \<or> Q)\<close> and
@@ -40,7 +39,7 @@ typedecl num
 
 
 axiomatization
-  eq :: \<open>'a \<Rightarrow> 'a \<Rightarrow> o\<close>  (infixl \<open>=\<close> 45)
+  eq :: \<open>num \<Rightarrow> num \<Rightarrow> o\<close>  (infixl \<open>=\<close> 45)
 where
   eqSubst: \<open>\<lbrakk>a = b; Q a\<rbrakk> \<Longrightarrow> Q b\<close> and
   eqSym: \<open>a = b \<Longrightarrow> b = a\<close> and
@@ -106,7 +105,7 @@ where
   sucCong: \<open>a = b \<Longrightarrow> S a = S b\<close> and
   predCong: \<open>a = b \<Longrightarrow> P a = P b\<close> and
   eqBool: \<open>\<lbrakk>a N; b N\<rbrakk> \<Longrightarrow> (a = b) B\<close> and
-  eqBoolB: \<open>\<lbrakk>x B; y B\<rbrakk> \<Longrightarrow> (x = y) B\<close> and
+(*eqBoolB: \<open>\<lbrakk>x B; y B\<rbrakk> \<Longrightarrow> (x = y) B\<close> and*)
   sucNonZero: \<open>a N \<Longrightarrow> S a \<noteq> zero\<close> and
   predSucInv: \<open>a N \<Longrightarrow> P(S(a)) = a\<close> and
   pred0: \<open>P(zero) = zero\<close> and
@@ -293,39 +292,39 @@ consts
 axiomatization where
   condI1: \<open>\<lbrakk>c; a N\<rbrakk> \<Longrightarrow> (if c then a else b) = a\<close> and
   condI2: \<open>\<lbrakk>\<not>c; b N\<rbrakk> \<Longrightarrow> (if c then a else b) = b\<close> and
-  condT: \<open>\<lbrakk>c B; a N; b N\<rbrakk> \<Longrightarrow> if c then a else b N\<close> and
-  condI1B: \<open>\<lbrakk>c; d B\<rbrakk> \<Longrightarrow> (if c then d else e) = d\<close> and
-  condI2B: \<open>\<lbrakk>\<not>c; e B\<rbrakk> \<Longrightarrow> (if c then d else e) = e\<close> and
-  condTB: \<open>\<lbrakk>c B; d B; e B\<rbrakk> \<Longrightarrow> if c then d else e B\<close>
+  (*condT: \<open>\<lbrakk>c B; a N; b N\<rbrakk> \<Longrightarrow> if c then a else b N\<close> and*)
+  condI1B: \<open>\<lbrakk>c; d B\<rbrakk> \<Longrightarrow> (if c then d else e) \<longleftrightarrow> d\<close> and
+  condI2B: \<open>\<lbrakk>\<not>c; e B\<rbrakk> \<Longrightarrow> (if c then d else e) \<longleftrightarrow> e\<close>
+  (*condTB: \<open>\<lbrakk>c B; d B; e B\<rbrakk> \<Longrightarrow> if c then d else e B\<close>*)
 
 lemma condI1BEq:
   assumes c_holds: "c"
   assumes d_bool: "d B"
-  assumes a_eq_d: "a = d"
-  shows "(if c then a else b) = d"
-apply (rule eqSubst[where a="d" and b="a"])
-apply (rule eqSym)
-apply (rule a_eq_d)
-apply (rule condI1B)
-apply (rule c_holds)
-apply (rule d_bool)
-done
+  assumes a_eq_d: "a \<longleftrightarrow> d"
+  shows "(if c then a else b) \<longleftrightarrow> d"
+proof -
+  have "a \<equiv> d" 
+    using iff_reflection[OF a_eq_d] .
+  show ?thesis
+    unfolding \<open>a \<equiv> d\<close>
+    using c_holds d_bool by (rule condI1B)
+qed
 
 lemma condI2BEq:
   assumes not_c: "\<not>c"
   assumes d_bool: "d B"
-  assumes a_eq_d: "b = d"
-  shows "(if c then a else b) = d"
-apply (rule eqSubst[where a="d" and b="b"])
-apply (rule eqSym)
-apply (rule a_eq_d)
-apply (rule condI2B)
-apply (rule not_c)
-apply (rule d_bool)
-done
+  assumes a_eq_d: "b \<longleftrightarrow> d"
+  shows "(if c then a else b) \<longleftrightarrow> d"
+proof -
+  have " b  \<equiv> d"
+    using iff_reflection[OF a_eq_d] .
+  show ?thesis
+      unfolding  \<open>b \<equiv> d\<close>
+      using not_c d_bool by (rule condI2B)
+  qed
 
 lemma condI3B:
-  shows "a B \<Longrightarrow> c B \<Longrightarrow> (if c then a else a) = a"
+  shows "a B \<Longrightarrow> c B \<Longrightarrow> (if c then a else a) \<longleftrightarrow> a"
 apply (rule disjE1[where P="c" and Q="\<not>c"])
 apply (fold GD.bJudg_def, simp)
 apply (rule condI1B, simp+)
@@ -335,25 +334,21 @@ done
 lemma condI3BEq:
   assumes a_bool: "a B"
   assumes c_bool: "c B"
-  assumes d_eq_a: "d = a"
-  assumes e_eq_a: "e = a"
-  shows "(if c then d else e) = a"
+  assumes d_eq_a: "d \<longleftrightarrow> a"
+  assumes e_eq_a: "e \<longleftrightarrow> a"
+  shows "(if c then d else e) \<longleftrightarrow> a"
 apply (rule disjE1[where P="c" and Q="\<not>c"])
 apply (fold GD.bJudg_def)
 apply (rule c_bool)
-apply (rule eqSubst[where a="a" and b="d"])
-apply (rule eqSym)
-apply (rule d_eq_a)
-apply (rule condI1B)
-apply (assumption)
-apply (rule a_bool)
-apply (rule eqSubst[where a="a" and b="e"])
-apply (rule eqSym)
-apply (rule e_eq_a)
-apply (rule condI2B)
-apply (assumption)
-apply (rule a_bool)
-done
+   apply (rule condI1BEq)
+     apply simp
+    apply (rule a_bool)
+   apply (rule d_eq_a)
+  apply (rule condI2BEq)
+    apply simp
+   apply (rule a_bool)
+  apply (rule e_eq_a)
+  done
 
 lemma condI1Eq:
   assumes c_holds: "c"
@@ -428,7 +423,7 @@ where
 ML_file "gd_simp.ML"
 
 lemmas [simp] = predSucInv neq_def pred0 condI1 condI1B condI2 condI2B condI3B condI3 
-lemmas [auto] = nat0 sucNonZero predSucInv pred0 eqBool eqBoolB disjI3 dNegI
+lemmas [auto] = nat0 sucNonZero predSucInv pred0 eqBool disjI3 dNegI
 
 lemma [simp]: "(a = a) \<equiv> (a N)"
   unfolding isNat_def by (rule Pure.reflexive)
@@ -443,14 +438,11 @@ lemma true [auto]: "True"
 lemma true_bool [auto]: "True B"
   unfolding bJudg_def by (rule disjI1, rule true)
 
-lemma bool_refl: "a B \<Longrightarrow> a = a"
-apply (rule eqSubst[where a="(if True then a else a)" and b="a"])
-apply (rule condI1B, simp)
-apply (rule condI1BEq, simp)
-apply (rule condTB, simp)
-apply (rule eqSym)
-apply (rule condI1B, simp)
-done
+lemma bool_refl: "a B \<Longrightarrow> a \<longleftrightarrow> a"
+apply (rule iffI[where a="a" and b="a"])
+     apply simp
+  done
+
 
 lemma eq_impl_term: "a = b \<Longrightarrow> a N"
 apply (rule entailsE[where a="a=b"])
@@ -459,8 +451,8 @@ apply (subst "a=b", assumption)
 apply (rule entailsI, simp)
 done
 
-lemma [simp]: "a B \<Longrightarrow> (a = a) \<longleftrightarrow> True"
-by (rule iffI, simp, rule bool_refl)
+
+
 
 lemma [simp]: "\<not>c \<Longrightarrow> b N \<Longrightarrow> d N \<Longrightarrow> (if c then a else b) = d \<longleftrightarrow> b = d"
 by (rule iffI, simp+)
@@ -468,17 +460,6 @@ by (rule iffI, simp+)
 lemma [simp]: "c \<Longrightarrow> a N \<Longrightarrow> d N \<Longrightarrow> (if c then a else b) = d \<longleftrightarrow> a = d"
 by (rule iffI, simp+)
 
-lemma [simp]: "\<not>c \<Longrightarrow> b B \<Longrightarrow> d B \<Longrightarrow> (if c then a else b) = d \<longleftrightarrow> b = d"
-by (rule iffI, simp+)
-
-lemma [simp]: "c \<Longrightarrow> a B \<Longrightarrow> d B \<Longrightarrow> (if c then a else b) = d \<longleftrightarrow> a = d"
-by (rule iffI, simp+)
-
-lemma [simp]: "c \<Longrightarrow> (if c then True else b) = True"
-by simp
-
-lemma [simp]: "\<not>c \<Longrightarrow> (if c then a else True) = True"
-by simp
 
 lemma [cond]: "a \<Longrightarrow> a B"
   unfolding bJudg_def by (rule disjI1, simp)
@@ -487,9 +468,6 @@ lemma [cond]: "\<not>a \<Longrightarrow> a B"
   unfolding bJudg_def by (rule disjI2, simp)
 
 lemma if_trueI [auto]: "c \<Longrightarrow> if c then True else False"
-  by simp
-
-lemma [auto]: "True = True"
   by simp
 
 lemma not_false [auto]: "\<not>False"
@@ -650,6 +628,70 @@ apply (rule zeroRefl)
 apply (rule nat0)
 done
 
+lemma cases_bool:
+  assumes q_bool: "q B"
+  assumes H: "q \<Longrightarrow> p"
+  assumes H1: "\<not>q \<Longrightarrow> p"
+  shows "p"
+apply (rule disjE1[where P="q" and Q="\<not>q"])
+apply (fold bJudg_def)
+apply (rule q_bool)
+apply (rule H)
+apply (assumption)
+apply (rule H1)
+apply (assumption)
+  done
+
+lemma condT:
+  assumes c_bool: "c B"
+  assumes a_nat: "a N"
+  assumes b_nat: "b N"
+  shows " (if c then a else b) N"
+  apply (rule cases_bool[where q = "c"])
+    apply (rule c_bool)
+proof -
+  have case1: "c \<Longrightarrow> ((if c then a else b) = a)"
+    apply (rule condI1)
+    using c_bool a_nat apply simp+
+    done
+  show "c \<Longrightarrow> (if c then a else b) N"
+    using a_nat case1 apply simp
+    done
+
+  have case2:  "\<not>c \<Longrightarrow> ((if c then a else b) = b)"
+    apply (rule condI2)
+    using c_bool b_nat apply simp+
+    done
+  show " \<not> c \<Longrightarrow> if c then a else b N "
+    using b_nat case2 apply simp+
+    done
+qed
+
+lemma condTB:
+  assumes c_bool: "c B"
+  assumes a_nat: "a B"
+  assumes b_nat: "b B"
+  shows " (if c then a else b) B"
+  apply (rule cases_bool[where q = "c"])
+    apply (rule c_bool)
+proof -
+  have case1: "c \<Longrightarrow> ((if c then a else b) \<longleftrightarrow> a)"
+    apply (rule condI1B)
+    using c_bool a_nat apply simp+
+    done
+  show "c \<Longrightarrow> (if c then a else b) B"
+    using a_nat case1 apply simp
+    done
+
+  have case2:  "\<not>c \<Longrightarrow> ((if c then a else b) \<longleftrightarrow> b)"
+    apply (rule condI2B)
+    using c_bool b_nat apply simp+
+    done
+  show " \<not> c \<Longrightarrow> if c then a else b B "
+    using b_nat case2 apply simp+
+    done
+qed
+
 lemma add_terminates [auto]:
   assumes x_nat: \<open>x N\<close>
   assumes y_nat: \<open>y N\<close>
@@ -695,19 +737,7 @@ proof (rule ind[where a=y])
     qed
 qed
 
-lemma cases_bool:
-  assumes q_bool: "q B"
-  assumes H: "q \<Longrightarrow> p"
-  assumes H1: "\<not>q \<Longrightarrow> p"
-  shows "p"
-apply (rule disjE1[where P="q" and Q="\<not>q"])
-apply (fold bJudg_def)
-apply (rule q_bool)
-apply (rule H)
-apply (assumption)
-apply (rule H1)
-apply (assumption)
-done
+
 
 (*
 declare [[simp_trace = true, simp_trace_depth_limit = 8]]
@@ -4286,7 +4316,7 @@ proof -
     done
 
   have lhs4:  "\<langle>x, y\<rangle> + 1 =  div ((P x + S y) * S (P x + S y)) 2 + S y"
-    using y_nat lhs3 x_nat apply simp (* Omar: why did simp need x_nat here*)
+    using y_nat lhs3 x_nat apply simp
     done
 
   have rhs1: " \<langle>P x, S y\<rangle> =  div ((P x + S y) * S (P x + S y)) 2 + S y"
@@ -4778,5 +4808,7 @@ apply (rule eqSubst[where a="b" and b="a"])
 apply (rule eqSym)
 apply (assumption+)
 done
+
+find_theorems "?x \<le> ?y"
 
 end (* End of theory *)
