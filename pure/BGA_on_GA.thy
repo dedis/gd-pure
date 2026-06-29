@@ -498,21 +498,19 @@ assumes find_ind_base_def: "find_ind_base J a rest ptr :=
 fixes find_cut    :: "jdg \<Rightarrow> pf \<Rightarrow> pf \<Rightarrow> o"
 fixes check_cut   :: "jdg \<Rightarrow> pf \<Rightarrow> o"
 
-(* Cut Rule:
-
-\<Gamma> \<turnstile> a \<Longrightarrow> a + \<Gamma> \<turnstile> c \<Longrightarrow> \<Gamma> \<turnstile> c
-*)
-assumes find_cut_def: "find_cut J rest ptr :=
+  (* Cut Rule:
+  \<Gamma> \<turnstile> a \<Longrightarrow> a + \<Gamma> \<turnstile> c \<Longrightarrow> \<Gamma> \<turnstile> c
+  *)
+  assumes find_cut_def: "find_cut J rest ptr :=
     if ptr = 0 then False
     else if ctx_of (cpx ptr) = ctx_of J then
       if list_in ((conc_of (cpx ptr)) \<triangleright> (ctx_of J) \<tturnstile> (conc_of J)) rest then True
       else find_cut J rest (cpy ptr)
     else find_cut J rest (cpy ptr)"
 
-assumes check_cut_def: "check_cut J rest := find_cut J rest rest"
+  assumes check_cut_def: "check_cut J rest := find_cut J rest rest"
 
-fixes check_weakening :: "jdg \<Rightarrow> pf \<Rightarrow> o"
-
+  fixes check_weakening :: "jdg \<Rightarrow> pf \<Rightarrow> o"
   assumes check_weakening_def: "check_weakening J rest :=
     if ctx_of J = 0 then False
     else list_in (cpy (ctx_of J) \<tturnstile> conc_of J) rest"
@@ -525,7 +523,7 @@ fixes check_weakening :: "jdg \<Rightarrow> pf \<Rightarrow> o"
 5. 7 Equality Rules
 6. 4 Not-equality rules
  *)
-  assumes valid_step_def: "valid_step J rest := 
+  assumes valid_step_def: "valid_step J rest :=
     if ctx_in (conc_of J) (ctx_of J) then True
     else if check_cut J rest then True
     else if check_subst J rest then True
@@ -580,7 +578,6 @@ assumes checker_def: "is_valid_proof prf f :=
     else if cpi 3 prf = f then check_list prf
     else False"
 
-
 begin
 
 definition mk_eq :: "num \<Rightarrow> num \<Rightarrow> num" where
@@ -604,40 +601,6 @@ lemma soundness_bridge:
     shows "sat f A D"
   sorry
 
-sublocale bga_consistent mk_eq mk_neq eval sat is_valid_proof
-proof (unfold_locales)
-
-fix a b
-    assume aN: "a N" and bN: "b N"
-    thus "mk_eq a b N"
-      apply (unfold mk_eq_def)
-      apply (rule pack_F_N)
-       apply simp
-      done
-
-  next
-
-fix a b
-    assume aN: "a N" and bN: "b N"
-    thus "mk_neq a b N"
-      apply (unfold mk_neq_def)
-      apply (rule pack_F_N)
-       apply simp
-      done
-
-  next
-
-fix p f
-    assume "p N" and "f N"
-    thus "is_valid_proof p f B"
-      by (rule proof_is_bool)
-
-  next
-
-    show 
-      sorry
-
-  qed
 
 end
 end
