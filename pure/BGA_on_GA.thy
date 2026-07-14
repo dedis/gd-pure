@@ -33,7 +33,8 @@ locale suff_syntax =
   (*Encoding  *)
   fixes mk_eq :: "tm \<Rightarrow> tm \<Rightarrow> fm"
   fixes mk_neq :: "tm \<Rightarrow> tm \<Rightarrow> fm"
-
+  (* Fixed Definition List*)
+  fixes dfns :: "dfn"
   (*Provability. is_valid_proof \<lbrace> p \<rbrace> \<lbrace>\<Gamma> \<turnstile> f \<rbrace> \<equiv> p \<P> \<lbrakk> \<Gamma> \<turnstile> f \<rbrakk>*)
   fixes is_valid_proof :: "pf \<Rightarrow> jdg \<Rightarrow> o"
 
@@ -46,19 +47,19 @@ locale suff_syntax =
 
 locale suff_semantics = suff_syntax +
   (*Semantics. sat checks whether the encoding of a formula is satisfied by an assignment. eval reduces a term under an assignment*)
-  fixes eval :: "tm \<Rightarrow> asn \<Rightarrow> dfn \<Rightarrow> val"
-  fixes sat_fm :: "fm \<Rightarrow> asn \<Rightarrow> dfn \<Rightarrow> o"
-  fixes sat_hyp :: "hyp \<Rightarrow> asn \<Rightarrow> dfn \<Rightarrow> o"
+  fixes eval :: "tm \<Rightarrow> asn \<Rightarrow> val"
+  fixes sat_fm :: "fm \<Rightarrow> asn \<Rightarrow> o"
+  fixes sat_hyp :: "hyp \<Rightarrow> asn \<Rightarrow> o"
 
-  assumes sat_hyp_nil: "sat_hyp Nil A D"
+  assumes sat_hyp_nil: "sat_hyp Nil A"
 
   (*What Equations mean in the model *)
-  assumes sat_eqE:  "sat_fm (mk_eq a b) A D \<Longrightarrow> eval a A D = eval b A D"
-  assumes sat_neqE: "sat_fm (mk_neq a b) A D \<Longrightarrow> eval a A D \<noteq> eval b A D"
+  assumes sat_eqE:  "sat_fm (mk_eq a b) A \<Longrightarrow> eval a A = eval b A"
+  assumes sat_neqE: "sat_fm (mk_neq a b) A \<Longrightarrow> eval a A \<noteq> eval b A"
 
 locale consistent =  suff_semantics +
   (* Valid proofs yield satisfied formulas *)
-  assumes soundness: "\<lbrakk>is_valid_proof p J; sat_hyp (hyp_of J) A D\<rbrakk> \<Longrightarrow> sat_fm (conc_of J) A D"
+  assumes soundness: "\<lbrakk>is_valid_proof p J; sat_hyp (hyp_of J) A\<rbrakk> \<Longrightarrow> sat_fm (conc_of J) A"
 begin
 
 lemma syntactically_consistent:
@@ -113,39 +114,39 @@ proof -
       apply (rule conj_holds)
       done
 
-    have eq_sat: "sat_fm  (conc_of \<langle>Nil, mk_eq a b\<rangle>) zero 0"
+    have eq_sat: "sat_fm  (conc_of \<langle>Nil, mk_eq a b\<rangle>) zero"
       apply (rule soundness)
        apply (rule eq_prf)
       using mk_eq_nat apply simp
       apply (rule sat_hyp_nil)
       done
 
-    have eq_sat1: "sat_fm (mk_eq a b) zero 0"
+    have eq_sat1: "sat_fm (mk_eq a b) zero"
       using eq_sat mk_eq_nat apply simp
       done
 
-    have neq_sat: "sat_fm  (conc_of \<langle>Nil, mk_neq a b\<rangle>) zero 0"
+    have neq_sat: "sat_fm  (conc_of \<langle>Nil, mk_neq a b\<rangle>) zero"
       apply (rule soundness)
        apply (rule neq_prf)
       using mk_neq_nat apply simp
       apply (rule sat_hyp_nil)
       done
-    have neq_sat1: "sat_fm (mk_neq a b) zero 0"
+    have neq_sat1: "sat_fm (mk_neq a b) zero"
       using neq_sat mk_neq_nat apply simp
       done
 
-    have eq_val: "eval a zero 0 = eval b zero 0"
+    have eq_val: "eval a zero = eval b zero"
       apply (rule sat_eqE)
       apply (rule eq_sat1)
       done
 
-    have neq_val: "eval a zero 0 \<noteq> eval b zero 0"
+    have neq_val: "eval a zero  \<noteq> eval b zero"
       apply (rule sat_neqE)
       apply (rule neq_sat1)
       done
 
     show "False"
-      apply (rule exF[where P="eval a zero 0 = eval b zero 0"])
+      apply (rule exF[where P="eval a zero  = eval b zero "])
        apply (rule eq_val)
       apply (fold neq_def)
       apply (rule neq_val)
@@ -200,10 +201,13 @@ locale bga_bijective_encoding =
   fixes load_F :: "fm \<Rightarrow> tm"
   fixes pack_F :: "fmtag \<Rightarrow> fm \<Rightarrow> fm"
 
+(* Fixing Definition*)
+fixes dfns :: "dfn"
+
   (* Semantics *)
   (* eval takes in a term, assignments and definition list
  and returns the valuation of that term*)
-fixes eval :: "tm \<Rightarrow> asn \<Rightarrow> dfn \<Rightarrow> val"
+fixes eval :: "tm \<Rightarrow> asn \<Rightarrow> val"
 
 (*checks if a judgement can be appended to the proof*)
 fixes valid_step :: "jdg \<Rightarrow> pf \<Rightarrow> o"
@@ -266,19 +270,18 @@ fixes check_list :: "pf \<Rightarrow> o"
 5. ifz a? b:c \<Down> (if eval(a)=0 then eval(b) else eval(c))
 6. f_i (a, b) \<Down> eval(D(i)) for asn = \<langle>eval(a), eval(b)\<rangle>
 *)
-  assumes eval_def: "eval t A D :=
+  assumes eval_def: "eval t A :=
     if tag_T t = T_VAR then nth (load_T t) A                          
     else if tag_T t = T_ZERO then 0                                    
-    else if tag_T t = T_SUC then S(eval (load_T t) A D)              
-    else if tag_T t = T_PRED then P(eval (load_T t) A D)               
+    else if tag_T t = T_SUC then S(eval (load_T t) A)              
+    else if tag_T t = T_PRED then P(eval (load_T t) A)               
     else if tag_T t = T_IFZ then                                     
-      (if eval (cpx (load_T t)) A D = 0 
-         then eval (cpx (cpy (load_T t))) A D
-         else eval (cpy (cpy (load_T t))) A D)
+      (if eval (cpx (load_T t)) A = 0 
+         then eval (cpx (cpy (load_T t))) A
+         else eval (cpy (cpy (load_T t))) A)
     else                                                          
-      eval (nth (cpx (load_T t)) D) 
-           ((eval (cpx (cpy (load_T t))) A D)\<triangleright> ((eval (cpy (cpy (load_T t))) A D) \<triangleright> Nil))
-           D"
+      eval (nth (cpx (load_T t)) dfns) 
+           ((eval (cpx (cpy (load_T t))) A)\<triangleright> ((eval (cpy (cpy (load_T t))) A) \<triangleright> Nil))"
 
   (* subst_T t j v: Inside term 't', replace variable index 'j' with term 'v' *)
   assumes subst_T_def: "subst_T t j v := 
