@@ -13,31 +13,34 @@ type_synonym dfn = num  (* Definition *)
 type_synonym pf = num  (* Proof: List of judgements *)
 type_synonym val = num  (* Evaluated Value *)
 
-type_synonym ctx = num  (* Context: list/set of formulas *)
-type_synonym jdg = num  (* Judgment: \<langle>ctx, fm\<rangle> *)
+type_synonym hyp = num  (* Hypothesis: list/set of formulas *)
+type_synonym jdg = num  (* Judgment: \<langle>hyp, fm\<rangle> *)
 
-abbreviation ctx_of :: "jdg \<Rightarrow> ctx" where "ctx_of J \<equiv> cpx J"
+abbreviation hyp_of :: "jdg \<Rightarrow> hyp" where "hyp_of J \<equiv> cpx J"
 abbreviation conc_of :: "jdg \<Rightarrow> fm" where "conc_of J \<equiv> cpy J"
+
+abbreviation mk_jdg :: "hyp \<Rightarrow> fm \<Rightarrow> jdg" (infix "\<tturnstile>" 50)
+  where "G \<tturnstile> c \<equiv> \<langle>G, c\<rangle>"
+abbreviation emptyH :: "hyp" ("\<emptyset>")
+  where "\<emptyset> \<equiv> Nil"
+abbreviation cons  :: "fm \<Rightarrow> List \<Rightarrow> List" (infixr "\<triangleright>" 65)
+  where "f \<triangleright> G \<equiv> Cons f G"
+
+abbreviation hyp_in  :: "fm \<Rightarrow> hyp \<Rightarrow> o" (infixr "\<in>" 75)
+  where "f \<in> G \<equiv> mem f G"
 
 locale suff_syntax =
   (*Encoding  *)
   fixes mk_eq :: "tm \<Rightarrow> tm \<Rightarrow> fm"
   fixes mk_neq :: "tm \<Rightarrow> tm \<Rightarrow> fm"
 
-  (*Provability. is_valid_proof \<lbrace> p \<rbrace> \<lbrace> f \<rbrace> \<equiv> p \<P> \<lbrakk> \<phi> \<turnstile> f \<rbrakk>*)
+  (*Provability. is_valid_proof \<lbrace> p \<rbrace> \<lbrace>\<Gamma> \<turnstile> f \<rbrace> \<equiv> p \<P> \<lbrakk> \<Gamma> \<turnstile> f \<rbrakk>*)
   fixes is_valid_proof :: "pf \<Rightarrow> jdg \<Rightarrow> o"
-
-  (*Context Operations*)
-  fixes ctx_nil :: "ctx"
-  fixes ctx_cons :: "fm \<Rightarrow> ctx \<Rightarrow> ctx"
-  fixes ctx_in :: "fm \<Rightarrow> ctx \<Rightarrow> o"
 
   (*Habeas Quid for Syntax Constructors *)
   assumes mk_eq_N:  "\<lbrakk>a N; b N\<rbrakk> \<Longrightarrow> mk_eq a b N"
   assumes mk_neq_N: "\<lbrakk>a N; b N\<rbrakk> \<Longrightarrow> mk_neq a b N"
-  assumes ctx_nil_N: "ctx_nil N"
-  assumes ctx_cons_N: "\<lbrakk>f N; C N\<rbrakk> \<Longrightarrow> ctx_cons f C N"
-  assumes ctx_in_bool: "\<lbrakk>f N; C N\<rbrakk> \<Longrightarrow> ctx_in f C B"
+
   (*  Habeas Quid for the Proof Checker *)
   assumes proof_bool: "\<lbrakk>p N; J N\<rbrakk> \<Longrightarrow> ((is_valid_proof p J) B)"
 
@@ -45,17 +48,17 @@ locale suff_semantics = suff_syntax +
   (*Semantics. sat checks whether the encoding of a formula is satisfied by an assignment. eval reduces a term under an assignment*)
   fixes eval :: "tm \<Rightarrow> asn \<Rightarrow> dfn \<Rightarrow> val"
   fixes sat_fm :: "fm \<Rightarrow> asn \<Rightarrow> dfn \<Rightarrow> o"
-  fixes sat_ctx :: "ctx \<Rightarrow> asn \<Rightarrow> dfn \<Rightarrow> o"
+  fixes sat_hyp :: "hyp \<Rightarrow> asn \<Rightarrow> dfn \<Rightarrow> o"
 
-  assumes sat_ctx_nil: "sat_ctx ctx_nil A D"
-  assumes sat_ctx_in: "\<lbrakk>sat_ctx G A D; ctx_in f G\<rbrakk> \<Longrightarrow> sat_fm f A D"
+  assumes sat_hyp_nil: "sat_hyp Nil A D"
+
   (*What Equations mean in the model *)
   assumes sat_eqE:  "sat_fm (mk_eq a b) A D \<Longrightarrow> eval a A D = eval b A D"
   assumes sat_neqE: "sat_fm (mk_neq a b) A D \<Longrightarrow> eval a A D \<noteq> eval b A D"
 
 locale consistent =  suff_semantics +
   (* Valid proofs yield satisfied formulas *)
-  assumes soundness: "\<lbrakk>is_valid_proof p J; sat_ctx (ctx_of J) A D\<rbrakk> \<Longrightarrow> sat_fm (conc_of J) A D"
+  assumes soundness: "\<lbrakk>is_valid_proof p J; sat_hyp (hyp_of J) A D\<rbrakk> \<Longrightarrow> sat_fm (conc_of J) A D"
 begin
 
 lemma syntactically_consistent:
@@ -63,9 +66,9 @@ lemma syntactically_consistent:
   assumes b_nat: "b N"
   assumes p1_nat: "p1 N"
   assumes p2_nat: "p2 N"
-  shows " \<not> (is_valid_proof p1 \<langle>ctx_nil, (mk_eq a b)\<rangle> \<and> is_valid_proof p2 \<langle>ctx_nil, (mk_neq a b)\<rangle>)"
+  shows " \<not> (is_valid_proof p1 \<langle>Nil, (mk_eq a b)\<rangle> \<and> is_valid_proof p2 \<langle>Nil, (mk_neq a b)\<rangle>)"
 
-  apply (rule contradiction[where p=" \<not> (is_valid_proof p1 \<langle>ctx_nil, (mk_eq a b)\<rangle> \<and> is_valid_proof p2 \<langle>ctx_nil, (mk_neq a b)\<rangle>)"])
+  apply (rule contradiction[where p=" \<not> (is_valid_proof p1 \<langle>Nil, (mk_eq a b)\<rangle> \<and> is_valid_proof p2 \<langle>Nil, (mk_neq a b)\<rangle>)"])
    apply simp
 
 proof - 
@@ -76,61 +79,59 @@ proof -
   have mk_neq_nat: " mk_neq a b N"
     using a_nat b_nat apply (rule mk_neq_N)
     done
-  have J_eq_nat: "\<langle>ctx_nil, mk_eq a b\<rangle> N"
+  have J_eq_nat: "\<langle>Nil, mk_eq a b\<rangle> N"
     using mk_eq_nat apply simp
-    apply (rule ctx_nil_N)
     done
 
-  have J_neq_nat: "\<langle>ctx_nil, mk_neq a b\<rangle> N"
+  have J_neq_nat: "\<langle>Nil, mk_neq a b\<rangle> N"
     using mk_neq_nat apply simp
-    apply (rule ctx_nil_N)
     done
-  show " is_valid_proof p1 \<langle>ctx_nil, mk_eq a b\<rangle> B"
+  show " is_valid_proof p1 \<langle>Nil, mk_eq a b\<rangle> B"
     using p1_nat J_eq_nat apply (rule proof_bool)
     done
 
-  show " is_valid_proof p2 \<langle>ctx_nil, mk_neq a b\<rangle> B"
+  show " is_valid_proof p2 \<langle>Nil, mk_neq a b\<rangle> B"
     using p2_nat J_neq_nat apply (rule proof_bool)
     done
-  show " \<not> \<not> (is_valid_proof p1 \<langle>ctx_nil, mk_eq a b\<rangle> \<and> is_valid_proof p2 \<langle>ctx_nil, mk_neq a b\<rangle>) \<Longrightarrow> False "
+  show " \<not> \<not> (is_valid_proof p1 \<langle>Nil, mk_eq a b\<rangle> \<and> is_valid_proof p2 \<langle>Nil, mk_neq a b\<rangle>) \<Longrightarrow> False "
 
   proof -
-    assume double_neg: "\<not> \<not> (is_valid_proof p1 \<langle>ctx_nil, mk_eq a b\<rangle> \<and> is_valid_proof p2 \<langle>ctx_nil, mk_neq a b\<rangle>)"
+    assume double_neg: "\<not> \<not> (is_valid_proof p1 \<langle>Nil, mk_eq a b\<rangle> \<and> is_valid_proof p2 \<langle>Nil, mk_neq a b\<rangle>)"
 
-    have conj_holds: "is_valid_proof p1 \<langle>ctx_nil, mk_eq a b\<rangle> \<and> is_valid_proof p2 \<langle>ctx_nil, mk_neq a b\<rangle>"
+    have conj_holds: "is_valid_proof p1 \<langle>Nil, mk_eq a b\<rangle> \<and> is_valid_proof p2 \<langle>Nil, mk_neq a b\<rangle>"
       apply (rule dNegE)
       apply (rule double_neg)
       done
 
-    have eq_prf: "is_valid_proof p1 \<langle>ctx_nil, mk_eq a b\<rangle>"
+    have eq_prf: "is_valid_proof p1 \<langle>Nil, mk_eq a b\<rangle>"
       apply (rule conjE1)
       apply (rule conj_holds)
       done
 
-    have neq_prf: "is_valid_proof p2 \<langle>ctx_nil, mk_neq a b\<rangle>"
+    have neq_prf: "is_valid_proof p2 \<langle>Nil, mk_neq a b\<rangle>"
       apply (rule conjE2)
       apply (rule conj_holds)
       done
 
-    have eq_sat: "sat_fm  (conc_of \<langle>ctx_nil, mk_eq a b\<rangle>) zero 0"
+    have eq_sat: "sat_fm  (conc_of \<langle>Nil, mk_eq a b\<rangle>) zero 0"
       apply (rule soundness)
        apply (rule eq_prf)
-      using ctx_nil_N mk_eq_nat apply simp
-      apply (rule sat_ctx_nil)
+      using mk_eq_nat apply simp
+      apply (rule sat_hyp_nil)
       done
 
     have eq_sat1: "sat_fm (mk_eq a b) zero 0"
-      using eq_sat ctx_nil_N mk_eq_nat apply simp
+      using eq_sat mk_eq_nat apply simp
       done
 
-    have neq_sat: "sat_fm  (conc_of \<langle>ctx_nil, mk_neq a b\<rangle>) zero 0"
+    have neq_sat: "sat_fm  (conc_of \<langle>Nil, mk_neq a b\<rangle>) zero 0"
       apply (rule soundness)
        apply (rule neq_prf)
-      using ctx_nil_N mk_neq_nat apply simp
-      apply (rule sat_ctx_nil)
+      using mk_neq_nat apply simp
+      apply (rule sat_hyp_nil)
       done
     have neq_sat1: "sat_fm (mk_neq a b) zero 0"
-      using neq_sat ctx_nil_N mk_neq_nat apply simp
+      using neq_sat mk_neq_nat apply simp
       done
 
     have eq_val: "eval a zero 0 = eval b zero 0"
@@ -153,12 +154,6 @@ proof -
 qed
 
 end
-
-definition list_hd :: "num \<Rightarrow> num" where
-" list_hd L \<equiv> cpi 3 L"
-
-definition list_tl :: "num \<Rightarrow> num" where
-"list_tl L \<equiv> cpi' 4 L"
 
 type_synonym tmtag = num
 type_synonym fmtag = num
@@ -206,15 +201,26 @@ locale bga_bijective_encoding =
   fixes pack_F :: "fmtag \<Rightarrow> fm \<Rightarrow> fm"
 
   (* Semantics *)
-  fixes eval :: "tm \<Rightarrow> asn \<Rightarrow> dfn \<Rightarrow> val"
-  fixes list_in :: "jdg \<Rightarrow> pf \<Rightarrow> o"
-  fixes valid_step :: "jdg \<Rightarrow> pf \<Rightarrow> o"
-  fixes check_list :: "pf \<Rightarrow> o"
+  (* eval takes in a term, assignments and definition list
+ and returns the valuation of that term*)
+fixes eval :: "tm \<Rightarrow> asn \<Rightarrow> dfn \<Rightarrow> val"
+
+(*checks if a judgement can be appended to the proof*)
+fixes valid_step :: "jdg \<Rightarrow> pf \<Rightarrow> o"
+
+fixes check_list :: "pf \<Rightarrow> o"
+(*checks if the given proof is valid for the given judgement*)
   fixes is_valid_proof :: "pf \<Rightarrow> jdg \<Rightarrow> o"
 
-  (*Context List Operations*)
-  fixes ctx_nil :: "ctx"
-  fixes ctx_cons :: "fm \<Rightarrow> ctx \<Rightarrow> ctx"
+  fixes subst_T        :: "tm \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> tm"
+  fixes subst_F        :: "fm \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> fm"
+  fixes rep_vars_T     :: "tm \<Rightarrow> tm \<Rightarrow> tm"
+  fixes rep_vars_F     :: "fm \<Rightarrow> tm \<Rightarrow> fm"
+  fixes check_template :: "fm \<Rightarrow> fm \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> fm \<Rightarrow> tm \<Rightarrow> o"
+  fixes find_phi       :: "jdg \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> pf \<Rightarrow> o"
+  fixes find_eq        :: "jdg \<Rightarrow> pf \<Rightarrow> pf \<Rightarrow> o"
+  fixes check_subst    :: "jdg \<Rightarrow> pf \<Rightarrow> o"
+
   (* AXIOMS *)
   (*Habeas Quid for the Encoder *)
   assumes pack_F_N: "\<lbrakk>t N; L N\<rbrakk> \<Longrightarrow> pack_F t L N"
@@ -245,31 +251,23 @@ locale bga_bijective_encoding =
   assumes mono_pack_T: "(x \<le> y = 1) \<Longrightarrow> (pack_T tg x \<le> pack_T tg y =1)"
   assumes mono_pack_F: "(x \<le> y = 1) \<Longrightarrow> (pack_F tg x \<le> pack_F tg y =1)"
 
-  (* Context Encodings *)
-  fixes pack_ctx :: "fm \<Rightarrow> ctx \<Rightarrow> ctx" (infixr "\<triangleright>" 65)
-  fixes empty_ctx :: "ctx" ("\<emptyset>")
-  fixes make_jdg :: "ctx \<Rightarrow> fm \<Rightarrow> jdg" (infix "\<tturnstile>" 50)
-  
-  assumes empty_ctx_def: "\<emptyset> := 0"
-  assumes pack_ctx_def:  "f \<triangleright> G := \<langle>f, G\<rangle>"
-  assumes make_jdg_def:  "G \<tturnstile> c := \<langle>G, c\<rangle>"
-
   (* Primitive Recursive Context Helpers *)
-  fixes ctx_in :: "fm \<Rightarrow> ctx \<Rightarrow> o"
-  fixes subst_ctx :: "ctx \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> ctx"
-  fixes free_in_ctx :: "tm \<Rightarrow> ctx \<Rightarrow> o"
-
-  (* ctx_in f G: Checks if formula 'f' exists inside context 'G' *)
-  assumes ctx_in_def: "ctx_in f G := 
-    if G = \<emptyset> then False
-    else if cpx G = f then True
-    else ctx_in f (cpy G)"
+  fixes subst_hyp :: "hyp \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> hyp"
+  fixes free_in_hyp :: "tm \<Rightarrow> hyp \<Rightarrow> o"
 
   (* Note that P does not diverge on 0 due to the implementation 
   of P in GD.thy not doing so*)
   (* We can write this definition very cleanly and without having to handle non-termination separately or use step counts as we are working in GA *)
-  assumes eval_def: "eval t A D := 
-    if tag_T t = T_VAR then cpi (load_T t) A                          
+(*
+1. v_i \<Down> A(i)
+2. 0 \<Down> 0
+3. S(x) \<Down> S(eval(x))
+4. P(x) \<Down> P(eval(x))
+5. ifz a? b:c \<Down> (if eval(a)=0 then eval(b) else eval(c))
+6. f_i (a, b) \<Down> eval(D(i)) for asn = \<langle>eval(a), eval(b)\<rangle>
+*)
+  assumes eval_def: "eval t A D :=
+    if tag_T t = T_VAR then nth (load_T t) A                          
     else if tag_T t = T_ZERO then 0                                    
     else if tag_T t = T_SUC then S(eval (load_T t) A D)              
     else if tag_T t = T_PRED then P(eval (load_T t) A D)               
@@ -278,8 +276,8 @@ locale bga_bijective_encoding =
          then eval (cpx (cpy (load_T t))) A D
          else eval (cpy (cpy (load_T t))) A D)
     else                                                          
-      eval (cpi (cpx (load_T t)) D) 
-           \<langle>eval (cpx (cpy (load_T t))) A D, eval (cpy (cpy (load_T t))) A D\<rangle> 
+      eval (nth (cpx (load_T t)) D) 
+           ((eval (cpx (cpy (load_T t))) A D)\<triangleright> ((eval (cpy (cpy (load_T t))) A D) \<triangleright> Nil))
            D"
 
   (* subst_T t j v: Inside term 't', replace variable index 'j' with term 'v' *)
@@ -304,11 +302,6 @@ locale bga_bijective_encoding =
       pack_F F_EQ \<langle>(subst_T (cpx (load_F f)) j v), (subst_T (cpy (load_F f)) j v)\<rangle>
     else
       pack_F F_NEQ \<langle>(subst_T (cpx (load_F f)) j v), (subst_T (cpy (load_F f)) j v)\<rangle>"
-
-  assumes list_in_def: "list_in f p := 
-    if p = Nil then False
-    else if list_hd p = f then True
-    else list_in f (list_tl p)"
 
 
 (* Counts down p from max_bound to 0. 
@@ -356,11 +349,11 @@ locale bga_bijective_encoding =
 (* Scans the proof list (ptr) for a valid premise J_phi = \<langle>\<Gamma>, \<phi>\<rangle>
    such that \<Gamma> matches J's context, and p[v_(f+1) \<mapsto> a] = \<phi> and p[v_(f+1) \<mapsto> b] = f *)
   assumes find_phi_def: "find_phi J a b ptr :=
-    if ptr = 0 then False
-    else if ctx_of (cpx ptr) = ctx_of J \<and> 
-            check_template (conc_of J) (conc_of (cpx ptr)) a b 
+    if ptr = Nil then False
+    else if hyp_of (list_hd ptr) = hyp_of J \<and> 
+            check_template (conc_of J) (conc_of (list_hd ptr)) a b 
                            (rep_vars_F (conc_of J) (J + 1)) (J + 1) then True
-    else find_phi J a b (cpy ptr)"
+    else find_phi J a b (list_tl ptr)"
 
 (*unconditional version:
   assumes find_eq_def: "find_eq f rest ptr :=
@@ -374,11 +367,11 @@ locale bga_bijective_encoding =
 (* Scans the proof list (ptr) for an equality judgment J_eq = \<langle>\<Gamma>, a = b\<rangle>
    such that \<Gamma> matches J's context, and calls find_phi *)
   assumes find_eq_def: "find_eq J rest ptr :=
-    if ptr = 0 then False
-    else if ctx_of (cpx ptr) = ctx_of J \<and> tag_F (conc_of (cpx ptr)) = F_EQ then
-      if find_phi J (cpx (load_F (conc_of (cpx ptr)))) (cpy (load_F (conc_of (cpx ptr)))) rest then True
-      else find_eq J rest (cpy ptr)
-    else find_eq J rest (cpy ptr)"
+    if ptr = Nil then False
+    else if hyp_of (list_hd ptr) = hyp_of J \<and> tag_F (conc_of (list_hd ptr)) = F_EQ then
+      if find_phi J (cpx (load_F (conc_of (list_hd ptr)))) (cpy (load_F (conc_of (list_hd ptr)))) rest then True
+      else find_eq J rest (list_tl ptr)
+    else find_eq J rest (list_tl ptr)"
 
 (* checking the substitution rule *)
 assumes check_subst_def: "check_subst J rest := find_eq J rest rest"
@@ -387,7 +380,7 @@ assumes check_subst_def: "check_subst J rest := find_eq J rest rest"
 f - formula we are trying to append to the proof
 rest - rest of the proof
 Proof Rules:
-1. f \<turnstile> f
+1. f \<turnstile> f 
 2. a=b, p[x=a] \<turnstile> p[x=b]
 3. \<turnstile> 0 = 0
 4. a=b \<turnstile> b=a
@@ -403,8 +396,8 @@ Proof Rules:
 *)
 
 (* Helper Function Signatures for valid_step *)
-  fixes check_eq_rules  :: "ctx \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> tmtag \<Rightarrow> tmtag \<Rightarrow> pf \<Rightarrow> o"
-  fixes check_neq_rules :: "ctx \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> tmtag \<Rightarrow> tmtag \<Rightarrow> pf \<Rightarrow> o"
+  fixes check_eq_rules  :: "hyp \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> tmtag \<Rightarrow> tmtag \<Rightarrow> pf \<Rightarrow> o"
+  fixes check_neq_rules :: "hyp \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> tmtag \<Rightarrow> tmtag \<Rightarrow> pf \<Rightarrow> o"
   
   fixes find_ind_base   :: "jdg \<Rightarrow> tm \<Rightarrow> pf \<Rightarrow> pf \<Rightarrow> o"
   fixes check_ind       :: "jdg \<Rightarrow> pf \<Rightarrow> o"
@@ -421,37 +414,37 @@ Proof Rules:
 *)
   assumes check_eq_rules_def: "check_eq_rules G lhs rhs tg_L tg_R rest :=
     if lhs = pack_T T_ZERO 0 \<and> rhs = pack_T T_ZERO 0 then True
-    else if list_in (G \<tturnstile> pack_F F_EQ \<langle>rhs, lhs\<rangle>) rest then True
+    else if mem (G \<tturnstile> pack_F F_EQ \<langle>rhs, lhs\<rangle>) rest then True
     else if tg_L = T_SUC \<and> tg_R = T_SUC \<and> 
-            list_in (G \<tturnstile> pack_F F_EQ \<langle>load_T lhs, load_T rhs\<rangle>) rest then True
-    else if list_in (G \<tturnstile> pack_F F_EQ \<langle>pack_T T_SUC lhs, pack_T T_SUC rhs\<rangle>) rest then True
+            mem (G \<tturnstile> pack_F F_EQ \<langle>load_T lhs, load_T rhs\<rangle>) rest then True
+    else if mem (G \<tturnstile> pack_F F_EQ \<langle>pack_T T_SUC lhs, pack_T T_SUC rhs\<rangle>) rest then True
     else if tg_L = T_PRED \<and> tag_T (load_T lhs) = T_SUC \<and> 
             cpx (load_T (load_T lhs)) = rhs \<and> 
-            list_in (G \<tturnstile> pack_F F_EQ \<langle>rhs, rhs\<rangle>) rest then True
+            mem (G \<tturnstile> pack_F F_EQ \<langle>rhs, rhs\<rangle>) rest then True
     else if tg_L = T_IFZ \<and> rhs = cpy (cpy (load_T lhs)) \<and> 
-            list_in (G \<tturnstile> pack_F F_NEQ \<langle>cpx (load_T lhs), pack_T T_ZERO 0\<rangle>) rest \<and>
-            list_in (G \<tturnstile> pack_F F_EQ \<langle>rhs, rhs\<rangle>) rest then True
+            mem (G \<tturnstile> pack_F F_NEQ \<langle>cpx (load_T lhs), pack_T T_ZERO 0\<rangle>) rest \<and>
+            mem (G \<tturnstile> pack_F F_EQ \<langle>rhs, rhs\<rangle>) rest then True
     else if tg_L = T_IFZ \<and> rhs = cpx (cpy (load_T lhs)) \<and> 
-            list_in (G \<tturnstile> pack_F F_EQ \<langle>cpx (load_T lhs), pack_T T_ZERO 0\<rangle>) rest \<and>
-            list_in (G \<tturnstile> pack_F F_EQ \<langle>rhs, rhs\<rangle>) rest then True
+            mem (G \<tturnstile> pack_F F_EQ \<langle>cpx (load_T lhs), pack_T T_ZERO 0\<rangle>) rest \<and>
+            mem (G \<tturnstile> pack_F F_EQ \<langle>rhs, rhs\<rangle>) rest then True
     else False"
 
 (* Not-Equality Rules
 1. \<Gamma> \<turnstile> a\<noteq>b \<Longrightarrow> \<Gamma> \<turnstile> b\<noteq>a
-2. \<Gamma> \<turnstile> a N \<Longrightarrow> \<Gamma> \<turnstile> S(a)=0
+2. \<Gamma> \<turnstile> a N \<Longrightarrow> \<Gamma> \<turnstile> S(a)\<noteq>0
 3. \<Gamma> \<turnstile> a\<noteq>b \<Longrightarrow> \<Gamma> \<turnstile> S(a)\<noteq>S(b)
 4. \<Gamma> \<turnstile> S(a)\<noteq>S(b) \<Longrightarrow> \<Gamma> \<turnstile> a\<noteq>b
 *)
   assumes check_neq_rules_def: "check_neq_rules G lhs rhs tg_L tg_R rest :=
-    if list_in (G \<tturnstile> pack_F F_NEQ \<langle>rhs, lhs\<rangle>) rest then True
+    if mem (G \<tturnstile> pack_F F_NEQ \<langle>rhs, lhs\<rangle>) rest then True
     else if tg_L = T_SUC \<and> rhs = pack_T T_ZERO 0 \<and> 
-            list_in (G \<tturnstile> pack_F F_EQ \<langle>load_T lhs, load_T lhs\<rangle>) rest then True
+            mem (G \<tturnstile> pack_F F_EQ \<langle>load_T lhs, load_T lhs\<rangle>) rest then True
     else if tg_L = T_SUC \<and> tg_R = T_SUC \<and> 
-            list_in (G \<tturnstile> pack_F F_NEQ \<langle>load_T lhs, load_T rhs\<rangle>) rest then True
-    else if list_in (G \<tturnstile> pack_F F_NEQ \<langle>pack_T T_SUC lhs, pack_T T_SUC rhs\<rangle>) rest then True
+            mem (G \<tturnstile> pack_F F_NEQ \<langle>load_T lhs, load_T rhs\<rangle>) rest then True
+    else if mem (G \<tturnstile> pack_F F_NEQ \<langle>pack_T T_SUC lhs, pack_T T_SUC rhs\<rangle>) rest then True
     else False"
 
-fixes check_ind_template :: "fm \<Rightarrow> fm \<Rightarrow> tm \<Rightarrow> ctx \<Rightarrow> fm \<Rightarrow> tm \<Rightarrow> pf \<Rightarrow> o"
+fixes check_ind_template :: "fm \<Rightarrow> fm \<Rightarrow> tm \<Rightarrow> hyp \<Rightarrow> fm \<Rightarrow> tm \<Rightarrow> pf \<Rightarrow> o"
 (*counts down 'p', testing if it is the valid induction template 
 checks for a p such that:
 p[v_i \<rightarrow> a] = \<phi>
@@ -462,7 +455,7 @@ p[v_i \<rightarrow> a] = \<phi>
   assumes check_ind_template_def: "check_ind_template f phi a G p i rest :=
     if subst_F p i a = f \<and> 
        subst_F p i (pack_T T_ZERO 0) = phi \<and>
-       list_in (pack_F F_EQ \<langle>pack_T T_VAR i, pack_T T_VAR i\<rangle> \<triangleright> p \<triangleright> G \<tturnstile> 
+       mem (pack_F F_EQ \<langle>pack_T T_VAR i, pack_T T_VAR i\<rangle> \<triangleright> p \<triangleright> G \<tturnstile> 
                 subst_F p i (pack_T T_SUC (pack_T T_VAR i))) rest
     then True
     else if p > 0 = 1 then check_ind_template f phi a G (p - 1) i rest
@@ -481,17 +474,17 @@ but that doesn't matter). then we pick an upperbound such that if such a p exist
 
 *)
 assumes find_ind_base_def: "find_ind_base J a rest ptr :=
-    if ptr = 0 then False
-    else if ctx_of (cpx ptr) = ctx_of J then
-      if check_ind_template (conc_of J) (conc_of (cpx ptr)) a (ctx_of J) 
+    if ptr = Nil then False
+    else if hyp_of (list_hd ptr) = hyp_of J then
+      if check_ind_template (conc_of J) (conc_of (list_hd ptr)) a (hyp_of J) 
                             (rep_vars_F (conc_of J) (J + 1)) (J + 1) rest
       then True
-      else find_ind_base J a rest (cpy ptr)
-    else find_ind_base J a rest (cpy ptr)"
+      else find_ind_base J a rest (list_tl ptr)
+    else find_ind_base J a rest (list_tl ptr)"
 
   (* check_ind triggers the search if the Habeas Quid premise \<Gamma> \<turnstile> a N (encoded as a=a) exists *)
   assumes check_ind_def: "check_ind J rest :=
-    if list_in (ctx_of J \<tturnstile> pack_F F_EQ \<langle>cpx (load_F (conc_of J)), cpx (load_F (conc_of J))\<rangle>) rest then
+    if mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpx (load_F (conc_of J)), cpx (load_F (conc_of J))\<rangle>) rest then
        find_ind_base J (cpx (load_F (conc_of J))) rest rest
     else False"
 
@@ -502,42 +495,44 @@ fixes check_cut   :: "jdg \<Rightarrow> pf \<Rightarrow> o"
   \<Gamma> \<turnstile> a \<Longrightarrow> a + \<Gamma> \<turnstile> c \<Longrightarrow> \<Gamma> \<turnstile> c
   *)
   assumes find_cut_def: "find_cut J rest ptr :=
-    if ptr = 0 then False
-    else if ctx_of (cpx ptr) = ctx_of J then
-      if list_in ((conc_of (cpx ptr)) \<triangleright> (ctx_of J) \<tturnstile> (conc_of J)) rest then True
-      else find_cut J rest (cpy ptr)
-    else find_cut J rest (cpy ptr)"
+    if ptr = Nil then False
+    else if hyp_of (list_hd ptr) = hyp_of J then
+      if mem ((conc_of (list_hd ptr)) \<triangleright> (hyp_of J) \<tturnstile> (conc_of J)) rest then True
+      else find_cut J rest (list_tl ptr)
+    else find_cut J rest (list_tl ptr)"
 
   assumes check_cut_def: "check_cut J rest := find_cut J rest rest"
 
   fixes check_weakening :: "jdg \<Rightarrow> pf \<Rightarrow> o"
   assumes check_weakening_def: "check_weakening J rest :=
-    if ctx_of J = 0 then False
-    else list_in (cpy (ctx_of J) \<tturnstile> conc_of J) rest"
+    if hyp_of J = Nil then False
+    else mem (list_tl (hyp_of J) \<tturnstile> conc_of J) rest"
 
 (* The main step check
-1. c + \<Gamma> \<turnstile> c
+1. 1 hyp Rule
 2. 1 Cut Rule
 3. 1 Subst Rule
 4. 1 Induction Rule
 5. 7 Equality Rules
 6. 4 Not-equality rules
+
+wk1, sub1, app2I
  *)
   assumes valid_step_def: "valid_step J rest :=
-    if ctx_in (conc_of J) (ctx_of J) then True
+    if mem (conc_of J) (hyp_of J) then True
     else if check_cut J rest then True
     else if check_subst J rest then True
     else if check_ind J rest then True
     else if tag_F (conc_of J) = F_EQ then
-      check_eq_rules (ctx_of J) (cpx (load_F (conc_of J))) (cpy (load_F (conc_of J))) 
+      check_eq_rules (hyp_of J) (cpx (load_F (conc_of J))) (cpy (load_F (conc_of J))) 
                      (tag_T (cpx (load_F (conc_of J)))) (tag_T (cpy (load_F (conc_of J)))) rest
     else
-      check_neq_rules (ctx_of J) (cpx (load_F (conc_of J))) (cpy (load_F (conc_of J))) 
+      check_neq_rules (hyp_of J) (cpx (load_F (conc_of J))) (cpy (load_F (conc_of J))) 
                       (tag_T (cpx (load_F (conc_of J)))) (tag_T (cpy (load_F (conc_of J)))) rest"
 (* unconditional version
 
 assumes valid_step_def: "valid_step f rest := 
-    if list_in f rest then True
+    if mem f rest then True
     
     else if check_subst f rest then True
 
@@ -570,12 +565,12 @@ assumes valid_step_def: "valid_step f rest :=
 *)
 assumes check_list_def: "check_list prf := 
     if prf = Nil then True
-    else if valid_step (cpi 3 prf) (cpi' 4 prf) then check_list (cpi' 4 prf)
+    else if valid_step (list_hd prf) (list_tl prf) then check_list (list_tl prf)
     else False"
 
 assumes checker_def: "is_valid_proof prf f := 
     if prf = Nil then False
-    else if cpi 3 prf = f then check_list prf
+    else if list_hd prf = f then check_list prf
     else False"
 
 begin

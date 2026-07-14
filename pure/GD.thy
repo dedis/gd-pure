@@ -4765,4 +4765,34 @@ apply (rule eqSym)
 apply (assumption+)
   done
 
+axiomatization mem :: "num \<Rightarrow> List \<Rightarrow> o" where
+  mem_def: "mem x G := if G = Nil then False
+                       else if list_hd G = x then True
+                       else mem x (list_tl G)"
+
+lemma mem_nil [simp]: "\<not> mem x Nil"
+  by (rule defE[OF mem_def[where G = "Nil"]], simp)
+
+lemma mem_bool [auto]: "x N \<Longrightarrow> G N \<Longrightarrow> mem x G B"
+proof -
+  assume x_nat: "x N" and G_nat: "G N"
+  show "mem x G B"
+  proof (rule list_induct[OF G_nat])
+    show "mem x Nil B" by (rule defE[OF mem_def[where G = "Nil"]], simp)
+  next
+    fix h t
+    assume h_nat: "h N" and t_nat: "t N" and IH: "mem x t B"
+    
+    show "mem x (Cons h t) B"
+      apply (rule defE[OF mem_def[where G = "Cons h t"]])
+      using h_nat t_nat apply (simp)
+      using x_nat h_nat t_nat IH by simp
+  qed
+qed
+
+axiomatization nth :: "num \<Rightarrow> List \<Rightarrow> num" where
+  nth_def: "nth i xs := if xs = Nil then omega
+                        else if i = 0 then list_hd xs
+                        else nth (i - 1) (list_tl xs)"
+
 end (* End of theory *)
