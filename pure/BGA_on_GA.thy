@@ -255,7 +255,7 @@ fixes check_list :: "pf \<Rightarrow> o"
   fixes subst_hyp :: "hyp \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> hyp"
   fixes free_in_hyp :: "tm \<Rightarrow> hyp \<Rightarrow> o"
 
-  (* Note that P does not diverge on 0 due to the implementation 
+  (*  Note that P does not diverge on 0 due to the implementation 
   of P in GD.thy not doing so*)
   (* We can write this definition very cleanly and without having to handle non-termination separately or use step counts as we are working in GA *)
 (*

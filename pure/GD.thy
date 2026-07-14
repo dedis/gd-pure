@@ -1799,9 +1799,7 @@ lemma [simp]: "x N \<Longrightarrow> \<langle>x, 0\<rangle> = div (x * S(x)) 2"
 lemma cpair_terminates [auto]: "x N \<Longrightarrow> y N \<Longrightarrow> \<langle>x, y\<rangle> N"
 apply (induct y, simp)
 apply (unfold_def cpair_def, simp)+
-done
-
-find_theorems name: "cpair"
+  done
 
 lemma cpair_suc [auto]: "x N \<Longrightarrow> y N \<Longrightarrow> \<langle>x, S(y)\<rangle> = \<langle>x, y\<rangle> + x + S(y) + 1"
 apply (rule eqSym)
