@@ -4793,4 +4793,9 @@ axiomatization nth :: "num \<Rightarrow> List \<Rightarrow> num" where
                         else if i = 0 then list_hd xs
                         else nth (i - 1) (list_tl xs)"
 
+axiomatization len :: "List \<Rightarrow> num" where
+  len_def: "len xs := if xs = Nil then 0 else S (len (list_tl xs))"
+
+lemma nth_in_range_N: "xs N \<Longrightarrow> i < len xs = 1 \<Longrightarrow> nth i xs N"
+  sorry
 end (* End of theory *)

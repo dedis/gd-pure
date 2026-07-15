@@ -186,6 +186,9 @@ Formula Tags: Constructor Name : Syntax : Argument
   abbreviation F_EQ   :: num where "F_EQ \<equiv> 0"
   abbreviation F_NEQ  :: num where "F_NEQ \<equiv> 1"
 
+(* Using the following convention:
+Definitions not fundamental to the logic (like arithmetic, list etc) will be made in locales and not as axioms.
+*)
 
 locale bga_bijective_encoding =
   (*Term Encoding *)
@@ -203,27 +206,6 @@ locale bga_bijective_encoding =
 
 (* Fixing Definition*)
 fixes dfns :: "dfn"
-
-  (* Semantics *)
-  (* eval takes in a term, assignments and definition list
- and returns the valuation of that term*)
-fixes eval :: "tm \<Rightarrow> asn \<Rightarrow> val"
-
-(*checks if a judgement can be appended to the proof*)
-fixes valid_step :: "jdg \<Rightarrow> pf \<Rightarrow> o"
-
-fixes check_list :: "pf \<Rightarrow> o"
-(*checks if the given proof is valid for the given judgement*)
-  fixes is_valid_proof :: "pf \<Rightarrow> jdg \<Rightarrow> o"
-
-  fixes subst_T        :: "tm \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> tm"
-  fixes subst_F        :: "fm \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> fm"
-  fixes rep_vars_T     :: "tm \<Rightarrow> tm \<Rightarrow> tm"
-  fixes rep_vars_F     :: "fm \<Rightarrow> tm \<Rightarrow> fm"
-  fixes check_template :: "fm \<Rightarrow> fm \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> fm \<Rightarrow> tm \<Rightarrow> o"
-  fixes find_phi       :: "jdg \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> pf \<Rightarrow> o"
-  fixes find_eq        :: "jdg \<Rightarrow> pf \<Rightarrow> pf \<Rightarrow> o"
-  fixes check_subst    :: "jdg \<Rightarrow> pf \<Rightarrow> o"
 
   (* AXIOMS *)
   (*Habeas Quid for the Encoder *)
@@ -255,9 +237,12 @@ fixes check_list :: "pf \<Rightarrow> o"
   assumes mono_pack_T: "(x \<le> y = 1) \<Longrightarrow> (pack_T tg x \<le> pack_T tg y =1)"
   assumes mono_pack_F: "(x \<le> y = 1) \<Longrightarrow> (pack_F tg x \<le> pack_F tg y =1)"
 
-  (* Primitive Recursive Context Helpers *)
-  fixes subst_hyp :: "hyp \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> hyp"
-  fixes free_in_hyp :: "tm \<Rightarrow> hyp \<Rightarrow> o"
+
+locale bga_semantics = bga_bijective_encoding +
+  (* Semantics *)
+  (* eval takes in a term, assignments and definition list
+ and returns the valuation of that term*)
+fixes eval :: "tm \<Rightarrow> asn \<Rightarrow> val"
 
   (*  Note that P does not diverge on 0 due to the implementation 
   of P in GD.thy not doing so*)
@@ -283,6 +268,8 @@ fixes check_list :: "pf \<Rightarrow> o"
       eval (nth (cpx (load_T t)) dfns) 
            ((eval (cpx (cpy (load_T t))) A)\<triangleright> ((eval (cpy (cpy (load_T t))) A) \<triangleright> Nil))"
 
+locale bga_subst = bga_bijective_encoding +
+  fixes subst_T        :: "tm \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> tm"
   (* subst_T t j v: Inside term 't', replace variable index 'j' with term 'v' *)
   assumes subst_T_def: "subst_T t j v := 
     if tag_T t = T_VAR then 
@@ -299,6 +286,7 @@ fixes check_list :: "pf \<Rightarrow> o"
              (subst_T (cpx (cpy (load_T t))) j v), 
              (subst_T (cpy (cpy (load_T t))) j v)\<rangle>\<rangle>)"
 
+    fixes subst_F        :: "fm \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> fm"
   (* subst_F f j v: Inside formula 'f', replace variable index 'j' with term 'v' *)
   assumes subst_F_def: "subst_F f j v :=
     if tag_F f = F_EQ then
@@ -306,7 +294,26 @@ fixes check_list :: "pf \<Rightarrow> o"
     else
       pack_F F_NEQ \<langle>(subst_T (cpx (load_F f)) j v), (subst_T (cpy (load_F f)) j v)\<rangle>"
 
+  fixes subst_body :: "tm \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> tm"    
+  (* subst_body b x y  =  b[0\<mapsto>x, 1\<mapsto>y] simultaneously *)
+  assumes subst_body_def: "subst_body b x y :=
+    if tag_T b = T_VAR then
+      (if load_T b = 0 then x else if load_T b = 1 then y else b)
+    else if tag_T b = T_ZERO then b
+    else if tag_T b = T_SUC  then pack_T T_SUC  (subst_body (load_T b) x y)
+    else if tag_T b = T_PRED then pack_T T_PRED (subst_body (load_T b) x y)
+    else if tag_T b = T_IFZ  then
+      pack_T T_IFZ \<langle>subst_body (cpx (load_T b)) x y,
+               \<langle>subst_body (cpx (cpy (load_T b))) x y,
+                subst_body (cpy (cpy (load_T b))) x y\<rangle>\<rangle>
+    else
+      pack_T T_APP \<langle>cpx (load_T b),
+               \<langle>subst_body (cpx (cpy (load_T b))) x y,
+                subst_body (cpy (cpy (load_T b))) x y\<rangle>\<rangle>"
 
+locale bga_subst_rule = bga_subst +
+
+  fixes check_template :: "fm \<Rightarrow> fm \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> fm \<Rightarrow> tm \<Rightarrow> o"
 (* Counts down p from max_bound to 0. 
      i is fixed to a fresh variable (e.g., f+1)
   f - formula we are trying to see if valid
@@ -320,6 +327,7 @@ fixes check_list :: "pf \<Rightarrow> o"
     else if p > 0 = 1 then check_template f phi a b (p - 1) i
     else False"
 
+  fixes rep_vars_T     :: "tm \<Rightarrow> tm \<Rightarrow> tm"
 (* rep_vars_T t i: Replaces all leaves in term t with variable i *)
   assumes rep_vars_T_def: "rep_vars_T t i :=
     if tag_T t = T_VAR then pack_T T_VAR i
@@ -335,6 +343,7 @@ fixes check_list :: "pf \<Rightarrow> o"
                \<langle>rep_vars_T (cpx (cpy (load_T t))) i, 
                 rep_vars_T (cpy (cpy (load_T t))) i\<rangle>\<rangle>"
 
+  fixes rep_vars_F     :: "fm \<Rightarrow> tm \<Rightarrow> fm"
   (* rep_vars_F f i: Replaces all leaves in formula f with variable i *)
   assumes rep_vars_F_def: "rep_vars_F f i :=
     if tag_F f = F_EQ then
@@ -349,6 +358,7 @@ fixes check_list :: "pf \<Rightarrow> o"
     else find_phi f a b (cpy ptr)"
 *)
 
+  fixes find_phi       :: "jdg \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> pf \<Rightarrow> o"
 (* Scans the proof list (ptr) for a valid premise J_phi = \<langle>\<Gamma>, \<phi>\<rangle>
    such that \<Gamma> matches J's context, and p[v_(f+1) \<mapsto> a] = \<phi> and p[v_(f+1) \<mapsto> b] = f *)
   assumes find_phi_def: "find_phi J a b ptr :=
@@ -367,6 +377,7 @@ fixes check_list :: "pf \<Rightarrow> o"
     else find_eq f rest (cpy ptr)"
 *)
 
+  fixes find_eq        :: "jdg \<Rightarrow> pf \<Rightarrow> pf \<Rightarrow> o"
 (* Scans the proof list (ptr) for an equality judgment J_eq = \<langle>\<Gamma>, a = b\<rangle>
    such that \<Gamma> matches J's context, and calls find_phi *)
   assumes find_eq_def: "find_eq J rest ptr :=
@@ -376,8 +387,11 @@ fixes check_list :: "pf \<Rightarrow> o"
       else find_eq J rest (list_tl ptr)
     else find_eq J rest (list_tl ptr)"
 
+  fixes check_subst    :: "jdg \<Rightarrow> pf \<Rightarrow> o"
 (* checking the substitution rule *)
 assumes check_subst_def: "check_subst J rest := find_eq J rest rest"
+
+locale bga_eq_rule = bga_bijective_encoding +
 
 (*
 f - formula we are trying to append to the proof
@@ -398,14 +412,7 @@ Proof Rules:
 
 *)
 
-(* Helper Function Signatures for valid_step *)
-  fixes check_eq_rules  :: "hyp \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> tmtag \<Rightarrow> tmtag \<Rightarrow> pf \<Rightarrow> o"
-  fixes check_neq_rules :: "hyp \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> tmtag \<Rightarrow> tmtag \<Rightarrow> pf \<Rightarrow> o"
-  
-  fixes find_ind_base   :: "jdg \<Rightarrow> tm \<Rightarrow> pf \<Rightarrow> pf \<Rightarrow> o"
-  fixes check_ind       :: "jdg \<Rightarrow> pf \<Rightarrow> o"
-
-
+fixes check_eq_rules  :: "hyp \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> tmtag \<Rightarrow> tmtag \<Rightarrow> pf \<Rightarrow> o"
 (* Equality Rules
 1. \<Gamma> \<turnstile> 0 N
 2. \<Gamma> \<turnstile> a=b \<Longrightarrow> \<Gamma> \<turnstile> b=a
@@ -432,6 +439,7 @@ Proof Rules:
             mem (G \<tturnstile> pack_F F_EQ \<langle>rhs, rhs\<rangle>) rest then True
     else False"
 
+  fixes check_neq_rules :: "hyp \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> tmtag \<Rightarrow> tmtag \<Rightarrow> pf \<Rightarrow> o"
 (* Not-Equality Rules
 1. \<Gamma> \<turnstile> a\<noteq>b \<Longrightarrow> \<Gamma> \<turnstile> b\<noteq>a
 2. \<Gamma> \<turnstile> a N \<Longrightarrow> \<Gamma> \<turnstile> S(a)\<noteq>0
@@ -446,6 +454,8 @@ Proof Rules:
             mem (G \<tturnstile> pack_F F_NEQ \<langle>load_T lhs, load_T rhs\<rangle>) rest then True
     else if mem (G \<tturnstile> pack_F F_NEQ \<langle>pack_T T_SUC lhs, pack_T T_SUC rhs\<rangle>) rest then True
     else False"
+
+locale bga_ind_rule = bga_subst_rule+
 
 fixes check_ind_template :: "fm \<Rightarrow> fm \<Rightarrow> tm \<Rightarrow> hyp \<Rightarrow> fm \<Rightarrow> tm \<Rightarrow> pf \<Rightarrow> o"
 (*counts down 'p', testing if it is the valid induction template 
@@ -463,6 +473,8 @@ p[v_i \<rightarrow> a] = \<phi>
     then True
     else if p > 0 = 1 then check_ind_template f phi a G (p - 1) i rest
     else False"
+
+  fixes find_ind_base   :: "jdg \<Rightarrow> tm \<Rightarrow> pf \<Rightarrow> pf \<Rightarrow> o"
 (*scans the proof list for the base case judgment.
 J - \<Gamma> \<turnstile> \<phi>
 
@@ -485,11 +497,15 @@ assumes find_ind_base_def: "find_ind_base J a rest ptr :=
       else find_ind_base J a rest (list_tl ptr)
     else find_ind_base J a rest (list_tl ptr)"
 
+  fixes check_ind       :: "jdg \<Rightarrow> pf \<Rightarrow> o"
   (* check_ind triggers the search if the Habeas Quid premise \<Gamma> \<turnstile> a N (encoded as a=a) exists *)
   assumes check_ind_def: "check_ind J rest :=
     if mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpx (load_F (conc_of J)), cpx (load_F (conc_of J))\<rangle>) rest then
        find_ind_base J (cpx (load_F (conc_of J))) rest rest
     else False"
+
+locale bga_struct_rule = bga_bijective_encoding +
+
 
 fixes find_cut    :: "jdg \<Rightarrow> pf \<Rightarrow> pf \<Rightarrow> o"
 fixes check_cut   :: "jdg \<Rightarrow> pf \<Rightarrow> o"
@@ -511,6 +527,51 @@ fixes check_cut   :: "jdg \<Rightarrow> pf \<Rightarrow> o"
     if hyp_of J = Nil then False
     else mem (list_tl (hyp_of J) \<tturnstile> conc_of J) rest"
 
+locale bga_app_rule = bga_subst_rule +
+
+(*
+J d x y
+let J = \<Gamma> \<turnstile> f
+checks if
+1. \<Gamma> \<turnstile> x=x & \<Gamma> \<turnstile> y=y in proof
+2. \<Gamma> \<turnstile> f [d(x,y) \<rightarrow> D_d\<langle>x, y\<rangle>] in proof
+*)
+fixes app_try :: "jdg \<Rightarrow> num \<Rightarrow> num \<Rightarrow> num \<Rightarrow> pf \<Rightarrow> o"
+  assumes app_try_def: "app_try J d x y rest :=
+    mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>x, x\<rangle>) rest \<and> 
+    mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>y, y\<rangle>) rest \<and>  
+    find_phi J (subst_body (nth d dfns) x y) (pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle>) rest"
+
+(* Tries to see if application is satisfied for some y*)
+fixes app_y :: "jdg \<Rightarrow> num \<Rightarrow> num \<Rightarrow> num \<Rightarrow> pf \<Rightarrow> o"
+  assumes app_y_def: "app_y J d x y rest :=
+    if app_try J d x y rest then True
+    else if y > 0 = 1 then app_y J d x (y - 1) rest
+    else False"
+
+(* Tries to see if application is satisfied for some x, y with y bounded by f (where J= \<Gamma>\<turnstile>f) *)
+  fixes app_x :: "jdg \<Rightarrow> num \<Rightarrow> num \<Rightarrow> pf \<Rightarrow> o"
+  assumes app_x_def: "app_x J d x rest :=
+    if app_y J d x (conc_of J) rest then True
+    else if x > 0 = 1 then app_x J d (x - 1) rest
+    else False"
+
+(*Given a J and an upperbound for def, sees if application can be satisfied by any d,x,y triplet *)
+  fixes app_d :: "jdg \<Rightarrow> num \<Rightarrow> pf \<Rightarrow> o"
+  assumes app_d_def: "app_d J d rest :=
+    if d < len dfns = 1 then
+      (if app_x J d (conc_of J) rest then True
+       else if d > 0 = 1 then app_d J (d - 1) rest else False)
+    else
+      (if d > 0 = 1 then app_d J (d - 1) rest else False)"
+
+  fixes check_app :: "jdg \<Rightarrow> pf \<Rightarrow> o"
+  assumes check_app_def: "check_app J rest := app_d J (len dfns - 1) rest"
+
+locale bga_proof_check = bga_subst_rule+ bga_eq_rule+ bga_ind_rule + bga_struct_rule + bga_app_rule+
+(*checks if a judgement can be appended to the proof*)
+fixes valid_step :: "jdg \<Rightarrow> pf \<Rightarrow> o"
+
 (* The main step check
 1. 1 hyp Rule
 2. 1 Cut Rule
@@ -518,14 +579,15 @@ fixes check_cut   :: "jdg \<Rightarrow> pf \<Rightarrow> o"
 4. 1 Induction Rule
 5. 7 Equality Rules
 6. 4 Not-equality rules
-
-wk1, sub1, app2I
+7. 1 app2I rule
+wk1, sub1
  *)
   assumes valid_step_def: "valid_step J rest :=
     if mem (conc_of J) (hyp_of J) then True
     else if check_cut J rest then True
     else if check_subst J rest then True
     else if check_ind J rest then True
+    else if check_app J rest then True
     else if tag_F (conc_of J) = F_EQ then
       check_eq_rules (hyp_of J) (cpx (load_F (conc_of J))) (cpy (load_F (conc_of J))) 
                      (tag_T (cpx (load_F (conc_of J)))) (tag_T (cpy (load_F (conc_of J)))) rest
@@ -566,16 +628,23 @@ assumes valid_step_def: "valid_step f rest :=
       else if list_in (pack_F F_EQ \<langle>(pack_T T_SUC (cpx (load_F f))), (pack_T T_SUC (cpy (load_F f)))\<rangle>) rest then True
       else False"
 *)
+
+(* Checks if the given head of proof is valid*)
+fixes check_list :: "pf \<Rightarrow> o"
 assumes check_list_def: "check_list prf := 
     if prf = Nil then True
     else if valid_step (list_hd prf) (list_tl prf) then check_list (list_tl prf)
     else False"
 
-assumes checker_def: "is_valid_proof prf f := 
+(*checks if the given proof is valid for the given judgement*)
+fixes is_valid_proof :: "pf \<Rightarrow> jdg \<Rightarrow> o"
+
+assumes is_valid_proof_def: "is_valid_proof prf J := 
     if prf = Nil then False
-    else if list_hd prf = f then check_list prf
+    else if list_hd prf = J then check_list prf
     else False"
 
+locale bga_full = bga_semantics + bga_proof_check
 begin
 
 definition mk_eq :: "num \<Rightarrow> num \<Rightarrow> num" where
@@ -584,10 +653,10 @@ definition mk_eq :: "num \<Rightarrow> num \<Rightarrow> num" where
 definition mk_neq :: "num \<Rightarrow> num \<Rightarrow> num" where
     "mk_neq a b \<equiv> pack_F 1 \<langle>a, b\<rangle>"
 
-definition sat :: "num \<Rightarrow> num \<Rightarrow> num \<Rightarrow> o" where
-    "sat f A D \<equiv> if tag_F f = 0 
-               then eval (cpx (load_F f)) A D = eval (cpy (load_F f)) A D
-               else eval (cpx (load_F f)) A D \<noteq> eval (cpy (load_F f)) A D"
+definition sat :: "num \<Rightarrow> num  \<Rightarrow> o" where
+    "sat f A \<equiv> if tag_F f = 0 
+               then eval (cpx (load_F f)) A = eval (cpy (load_F f)) A
+               else eval (cpx (load_F f)) A \<noteq> eval (cpy (load_F f)) A"
 
 lemma proof_is_bool:
     assumes "p N" and "f N"
@@ -596,7 +665,7 @@ lemma proof_is_bool:
 
 lemma soundness_bridge:
     assumes "is_valid_proof p f"
-    shows "sat f A D"
+    shows "sat f A"
   sorry
 
 
