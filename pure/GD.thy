@@ -4796,6 +4796,30 @@ axiomatization nth :: "num \<Rightarrow> List \<Rightarrow> num" where
 axiomatization len :: "List \<Rightarrow> num" where
   len_def: "len xs := if xs = Nil then 0 else S (len (list_tl xs))"
 
+lemma nth_in_range_all:
+  assumes xs_nat: "xs N"
+  shows "\<forall>i. (i N) \<longrightarrow> (i < len xs = 1) \<longrightarrow> (nth i xs N)"
+proof (rule list_induct[OF xs_nat])
+  show "\<forall>i. (i N) \<longrightarrow> (i < len Nil = 1) \<longrightarrow> (nth i Nil N)"
+    apply (rule forallI)
+    apply ( rule implI)
+     apply simp
+     apply ( rule implI)
+    sorry
+next
+  fix h t
+  assume h_nat: "h N" and t_nat: "t N"
+  assume IH: "\<forall>i. (i N) \<longrightarrow> (i < len t = 1) \<longrightarrow> (nth i t N)"
+  show "\<forall>i. (i N) \<longrightarrow> (i < len (Cons h t) = 1) \<longrightarrow> (nth i (Cons h t) N)"
+    sorry
+qed
+
 lemma nth_in_range_N: "xs N \<Longrightarrow> i < len xs = 1 \<Longrightarrow> nth i xs N"
   sorry
+
+  (* every formula of G' occurs in G *)
+axiomatization subset :: "List \<Rightarrow> List \<Rightarrow> o" where
+  subhyp_def: "subset G' G :=
+    if G' = Nil then True
+    else mem (list_hd G') G \<and> subset (list_tl G') G"
 end (* End of theory *)

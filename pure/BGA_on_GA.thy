@@ -54,8 +54,8 @@ locale suff_semantics = suff_syntax +
   assumes sat_hyp_nil: "sat_hyp Nil A"
 
   (*What Equations mean in the model *)
-  assumes sat_eqE:  "sat_fm (mk_eq a b) A \<Longrightarrow> eval a A = eval b A"
-  assumes sat_neqE: "sat_fm (mk_neq a b) A \<Longrightarrow> eval a A \<noteq> eval b A"
+  assumes sat_eqE:  "\<lbrakk>a N; b N\<rbrakk> \<Longrightarrow>sat_fm (mk_eq a b) A \<Longrightarrow> eval a A = eval b A"
+  assumes sat_neqE: "\<lbrakk>a N; b N\<rbrakk> \<Longrightarrow>sat_fm (mk_neq a b) A \<Longrightarrow> eval a A \<noteq> eval b A"
 
 locale consistent =  suff_semantics +
   (* Valid proofs yield satisfied formulas *)
@@ -137,11 +137,13 @@ proof -
 
     have eq_val: "eval a zero = eval b zero"
       apply (rule sat_eqE)
+      using a_nat b_nat apply simp+
       apply (rule eq_sat1)
       done
 
     have neq_val: "eval a zero  \<noteq> eval b zero"
       apply (rule sat_neqE)
+      using a_nat b_nat apply simp+
       apply (rule neq_sat1)
       done
 
@@ -267,6 +269,15 @@ fixes eval :: "tm \<Rightarrow> asn \<Rightarrow> val"
     else                                                          
       eval (nth (cpx (load_T t)) dfns) 
            ((eval (cpx (cpy (load_T t))) A)\<triangleright> ((eval (cpy (cpy (load_T t))) A) \<triangleright> Nil))"
+begin
+definition sat :: "num \<Rightarrow> num  \<Rightarrow> o" where
+    "sat f A \<equiv> if tag_F f = 0 
+               then eval (cpx (load_F f)) A = eval (cpy (load_F f)) A
+               else eval (cpx (load_F f)) A \<noteq> eval (cpy (load_F f)) A"
+
+definition sat_hyp :: "hyp \<Rightarrow> asn \<Rightarrow> o" where
+  "sat_hyp G A \<equiv> \<forall>f. (mem f G) \<longrightarrow> (sat f A)"
+end
 
 locale bga_subst = bga_bijective_encoding +
   fixes subst_T        :: "tm \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> tm"
@@ -522,10 +533,14 @@ fixes check_cut   :: "jdg \<Rightarrow> pf \<Rightarrow> o"
 
   assumes check_cut_def: "check_cut J rest := find_cut J rest rest"
 
-  fixes check_weakening :: "jdg \<Rightarrow> pf \<Rightarrow> o"
-  assumes check_weakening_def: "check_weakening J rest :=
-    if hyp_of J = Nil then False
-    else mem (list_tl (hyp_of J) \<tturnstile> conc_of J) rest"
+  fixes find_struct :: "jdg \<Rightarrow> hyp \<Rightarrow> pf \<Rightarrow> o"
+  assumes find_struct_def: "find_struct J G ptr :=
+    if ptr = Nil then False
+    else if conc_of (list_hd ptr) = conc_of J \<and> subset (hyp_of (list_hd ptr)) G then True
+    else find_struct J G (list_tl ptr)"
+
+  fixes check_struct :: "jdg \<Rightarrow> pf \<Rightarrow> o"
+  assumes check_struct_def: "check_struct J rest := find_struct J (hyp_of J) rest"
 
 locale bga_app_rule = bga_subst_rule +
 
@@ -580,7 +595,8 @@ fixes valid_step :: "jdg \<Rightarrow> pf \<Rightarrow> o"
 5. 7 Equality Rules
 6. 4 Not-equality rules
 7. 1 app2I rule
-wk1, sub1
+8. 1 wk1 rule
+sub1
  *)
   assumes valid_step_def: "valid_step J rest :=
     if mem (conc_of J) (hyp_of J) then True
@@ -588,6 +604,7 @@ wk1, sub1
     else if check_subst J rest then True
     else if check_ind J rest then True
     else if check_app J rest then True
+    else if check_struct J rest then True
     else if tag_F (conc_of J) = F_EQ then
       check_eq_rules (hyp_of J) (cpx (load_F (conc_of J))) (cpy (load_F (conc_of J))) 
                      (tag_T (cpx (load_F (conc_of J)))) (tag_T (cpy (load_F (conc_of J)))) rest
@@ -653,21 +670,104 @@ definition mk_eq :: "num \<Rightarrow> num \<Rightarrow> num" where
 definition mk_neq :: "num \<Rightarrow> num \<Rightarrow> num" where
     "mk_neq a b \<equiv> pack_F 1 \<langle>a, b\<rangle>"
 
-definition sat :: "num \<Rightarrow> num  \<Rightarrow> o" where
-    "sat f A \<equiv> if tag_F f = 0 
-               then eval (cpx (load_F f)) A = eval (cpy (load_F f)) A
-               else eval (cpx (load_F f)) A \<noteq> eval (cpy (load_F f)) A"
 
-lemma proof_is_bool:
-    assumes "p N" and "f N"
-    shows "is_valid_proof p f B"
+lemma mk_eq_N':
+  assumes a_nat: "a N"
+  assumes b_nat: "b N"
+  shows "mk_eq a b N"
+  unfolding mk_eq_def  apply (rule pack_F_N)
+  using a_nat b_nat  apply simp+
+  done
+
+lemma mk_neq_N':
+  assumes a_nat: "a N"
+  assumes b_nat: "b N"
+  shows "mk_neq a b N"
+  unfolding mk_neq_def  apply (rule pack_F_N)
+  using a_nat b_nat  apply simp+
+  done
+
+lemma sat_hyp_nil': "sat_hyp Nil A"
+  unfolding sat_hyp_def
+  apply (rule forallI)
+  apply (rule implI)
+   apply simp
+proof - 
+  fix f
+  assume f_nat: "f N"
+  assume f_in_empty: "f \<in> \<emptyset>"
+  show "sat f A"
+    apply (rule exF[where P = "f \<in> \<emptyset>"])
+     apply (rule f_in_empty)
+    apply (rule mem_nil)
+    done
+qed
+lemma sat_hyp_mem: "f N \<Longrightarrow> f \<in> G \<Longrightarrow> sat_hyp G A \<Longrightarrow> sat f A"
+  unfolding sat_hyp_def
+proof -
+  assume f_nat: "f N" and f_in: "f \<in> G" and all: "\<forall>g. g \<in> G \<longrightarrow> sat g A"
+  have imp: "f \<in> G \<longrightarrow> sat f A"
+    apply (rule forallE[where a = f]) apply (rule all) apply (rule f_nat) done
+  show "sat f A"
+    apply (rule implE[where a = "f \<in> G"]) apply (rule imp) apply (rule f_in) done
+qed
+
+lemma subhyp_mem: "f N \<Longrightarrow> subhyp G' G \<Longrightarrow> f \<in> G' \<Longrightarrow> f \<in> G"
   sorry
 
-lemma soundness_bridge:
-    assumes "is_valid_proof p f"
-    shows "sat f A"
+lemma sat_hyp_subhyp: "subhyp G' G \<Longrightarrow> G' N \<Longrightarrow> sat_hyp G A \<Longrightarrow> sat_hyp G' A"
+proof -
+  assume sub: "subhyp G' G" and G'_nat: "G' N" and satG: "sat_hyp G A"
+  show "sat_hyp G' A"
+    unfolding sat_hyp_def
+    apply (rule forallI)
+    apply (rule implI)
+     apply (simp add: G'_nat)
+    apply (rule G'_nat)
+  proof -
+    fix f
+    assume f_nat: "f N" and f_in': "f \<in> G'"
+    have fG: "f \<in> G" using f_nat sub f_in' by (rule subhyp_mem)
+    show "sat f A" using f_nat fG satG by (rule sat_hyp_mem)
+  qed
+qed
+
+lemma sat_eqE': "a N \<Longrightarrow> b N \<Longrightarrow> sat (mk_eq a b) A \<Longrightarrow> eval a A = eval b A"
+proof -
+  assume a: "a N" and b: "b N" and h: "sat (mk_eq a b) A"
+  have p: "\<langle>a, b\<rangle> N" using a b by simp
+  have tg: "tag_F (mk_eq a b) = F_EQ"
+    unfolding mk_eq_def apply (rule tag_pack_F)
+    using a b apply simp+
+    done
+  have ld: "load_F (mk_eq a b) = \<langle>a, b\<rangle>"
+    unfolding mk_eq_def apply (rule load_pack_F)
+    using a b apply simp+
+    done
+  from h[unfolded sat_def] show "eval a A = eval b A"
+    using tg ld a b sorry
+qed
+
+lemma sat_neqE': "a N \<Longrightarrow> b N \<Longrightarrow> sat (mk_neq a b) A \<Longrightarrow> eval a A \<noteq> eval b A"
   sorry
 
+lemma proof_is_bool: "p N \<Longrightarrow> J N \<Longrightarrow> is_valid_proof p J B"
+  sorry
+
+lemma soundness_bridge: "is_valid_proof p J \<Longrightarrow> sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A"
+  sorry
+
+sublocale consistent mk_eq mk_neq dfns is_valid_proof eval sat sat_hyp
+proof (unfold_locales)
+  show "\<And>a b.   a N \<Longrightarrow> b N \<Longrightarrow> mk_eq a b N"                         by (rule mk_eq_N')
+  show "\<And>a b.   a N \<Longrightarrow> b N \<Longrightarrow> mk_neq a b N"                        by (rule mk_neq_N')
+  show "\<And>p J.   p N \<Longrightarrow> J N \<Longrightarrow> is_valid_proof p J B"                by (rule proof_is_bool)
+  show "\<And>A.     sat_hyp Nil A"                                          by (rule sat_hyp_nil')
+  show "\<And>a b A. a N \<Longrightarrow> b N \<Longrightarrow> sat (mk_eq a b) A \<Longrightarrow> eval a A = eval b A"   by (rule sat_eqE')
+  show "\<And>a b A. a N \<Longrightarrow> b N \<Longrightarrow> sat (mk_neq a b) A \<Longrightarrow> eval a A \<noteq> eval b A"  by (rule sat_neqE')
+  show "\<And>p J A. is_valid_proof p J \<Longrightarrow> sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A"
+    by (rule soundness_bridge)
+qed
 
 end
 end
