@@ -712,7 +712,7 @@ proof -
     apply (rule implE[where a = "f \<in> G"]) apply (rule imp) apply (rule f_in) done
 qed
 
-lemma subhyp_mem: "f N \<Longrightarrow> subhyp G' G \<Longrightarrow> f \<in> G' \<Longrightarrow> f \<in> G"
+lemma subhyp_mem: "(f N) \<Longrightarrow> subhyp G' G \<Longrightarrow> f \<in> G' \<Longrightarrow> f \<in> G"
   sorry
 
 lemma sat_hyp_subhyp: "subhyp G' G \<Longrightarrow> G' N \<Longrightarrow> sat_hyp G A \<Longrightarrow> sat_hyp G' A"

@@ -294,8 +294,15 @@ axiomatization where
   condI2: \<open>\<lbrakk>\<not>c; b N\<rbrakk> \<Longrightarrow> (if c then a else b) = b\<close> and
   (*condT: \<open>\<lbrakk>c B; a N; b N\<rbrakk> \<Longrightarrow> if c then a else b N\<close> and*)
   condI1B: \<open>\<lbrakk>c; d B\<rbrakk> \<Longrightarrow> (if c then d else e) \<longleftrightarrow> d\<close> and
-  condI2B: \<open>\<lbrakk>\<not>c; e B\<rbrakk> \<Longrightarrow> (if c then d else e) \<longleftrightarrow> e\<close>
+  condI2B: \<open>\<lbrakk>\<not>c; e B\<rbrakk> \<Longrightarrow> (if c then d else e) \<longleftrightarrow> e\<close> and
   (*condTB: \<open>\<lbrakk>c B; d B; e B\<rbrakk> \<Longrightarrow> if c then d else e B\<close>*)
+  (*New additions*)
+  condE1: \<open>\<lbrakk>c;  (if c then a else b) N\<rbrakk> \<Longrightarrow> (a N)\<close> and
+  condE2: \<open>\<lbrakk>\<not>c;  (if c then a else b) N\<rbrakk> \<Longrightarrow> (b N)\<close> and
+  condE3: \<open>\<lbrakk>(if c then a else b) N\<rbrakk> \<Longrightarrow> (c B)\<close> and
+  condE1B: \<open>\<lbrakk>c;  (if c then d else e) B\<rbrakk> \<Longrightarrow> (d B)\<close> and
+  condE2B: \<open>\<lbrakk>\<not>c;  (if c then d else e) B\<rbrakk> \<Longrightarrow> (e B)\<close> and
+  condE3B: \<open>\<lbrakk>(if c then d else e) B\<rbrakk> \<Longrightarrow> (c B)\<close>
 
 lemma condI1BEq:
   assumes c_holds: "c"
@@ -4796,30 +4803,221 @@ axiomatization nth :: "num \<Rightarrow> List \<Rightarrow> num" where
 axiomatization len :: "List \<Rightarrow> num" where
   len_def: "len xs := if xs = Nil then 0 else S (len (list_tl xs))"
 
-lemma nth_in_range_all:
-  assumes xs_nat: "xs N"
-  shows "\<forall>i. (i N) \<longrightarrow> (i < len xs = 1) \<longrightarrow> (nth i xs N)"
-proof (rule list_induct[OF xs_nat])
-  show "\<forall>i. (i N) \<longrightarrow> (i < len Nil = 1) \<longrightarrow> (nth i Nil N)"
-    apply (rule forallI)
-    apply ( rule implI)
-     apply simp
-     apply ( rule implI)
-    sorry
-next
-  fix h t
-  assume h_nat: "h N" and t_nat: "t N"
-  assume IH: "\<forall>i. (i N) \<longrightarrow> (i < len t = 1) \<longrightarrow> (nth i t N)"
-  show "\<forall>i. (i N) \<longrightarrow> (i < len (Cons h t) = 1) \<longrightarrow> (nth i (Cons h t) N)"
-    sorry
-qed
-
-lemma nth_in_range_N: "xs N \<Longrightarrow> i < len xs = 1 \<Longrightarrow> nth i xs N"
-  sorry
-
   (* every formula of G' occurs in G *)
 axiomatization subset :: "List \<Rightarrow> List \<Rightarrow> o" where
   subhyp_def: "subset G' G :=
     if G' = Nil then True
     else mem (list_hd G') G \<and> subset (list_tl G') G"
+
+(*Few theorems to help with if-then-else cases*)
+lemma cond_thenE:
+  assumes c: "c"
+  assumes cond: "if c then a else b"
+  shows "a"
+proof -
+  have condB: "(if c then a else b) B"
+    using cond apply simp
+    done
+  have aB: "a B"
+    using c condB apply (rule condE1B)
+    done
+  have step: "(if c then a else b) \<longleftrightarrow> a"
+    using c aB apply (rule condI1B)
+    done
+  show ?thesis
+    using cond step apply simp
+    done
+qed
+
+
+lemma notcond_thenE:
+  assumes c: "\<not>c"
+  assumes cond: "if c then a else b"
+  shows "b"
+proof -
+  have condB: "(if c then a else b) B"
+    using cond apply simp
+    done
+  have aB: "b B"
+    using c condB apply (rule condE2B)
+    done
+  have step: "(if c then a else b) \<longleftrightarrow> b"
+    using c aB apply (rule condI2B)
+    done
+  show ?thesis
+    using cond step apply simp
+    done
+qed
+
+lemma cond_thenEq:
+  assumes c: "c"
+  assumes cond: "(if c then a else b) N"
+  shows "(if c then a else b) = a"
+proof -
+  have aN: "a N"
+    using c cond by (rule condE1)
+  show ?thesis
+    using c aN by (rule condI1)
+qed
+
+lemma notcond_thenEq:
+  assumes c: "\<not>c"
+  assumes cond: "(if c then a else b) N"
+  shows "(if c then a else b) = b"
+proof -
+  have bN: "b N"
+    using c cond by (rule condE2)
+  show ?thesis
+    using c bN by (rule condI2)
+qed
+
+lemma len_nil [simp]: "len Nil = 0"
+  by (unfold_def len_def, simp)
+
+lemma len_nat [auto]: "x N \<Longrightarrow> len x N"
+proof -
+  assume x_nat: "x N"
+  show "len x N"
+  proof (rule list_induct[OF x_nat])
+    show "len Nil N"
+      by (rule defE[OF len_def[where xs = "Nil"]], simp)
+  next
+    fix n xs
+    assume n_nat: "n N" and xs_nat: "xs N" and IH: "len xs N"
+    have ne: "\<not> (Cons n xs = Nil)" using n_nat xs_nat by simp
+
+    have bN: "S (len (list_tl (Cons n xs))) N"
+      apply (rule natS)
+      using n_nat xs_nat IH apply simp
+      done
+    show "len (Cons n xs) N"
+      apply (rule defE[OF len_def[where xs = "Cons n xs"]])
+      apply (subst rule: condI2[OF ne bN])
+      apply (rule bN)
+      done
+  qed
+qed
+
+
+lemma len_cons [simp]: 
+  assumes n_nat: "n N"
+  assumes xs_nat: "xs N"
+  shows " len (Cons n xs) = S (len xs)"
+  apply (rule defE[OF len_def[where xs = "Cons n xs"]])
+  using n_nat xs_nat apply simp
+  done
+
+lemma nth_zero_cons [simp]: "n N \<Longrightarrow> xs N \<Longrightarrow> nth 0 (Cons n xs) = n"
+  by (rule defE[OF nth_def[where i = "0" and xs = "Cons n xs"]], simp)
+
+lemma nth_in_range_all:
+  assumes xs_nat: "xs N"
+  shows "\<forall>i. (i N) \<longrightarrow> (i < len xs = 1) \<longrightarrow> (nth i xs N)"
+proof (rule list_induct[OF xs_nat])
+  (* ---------------- Nil ---------------- *)
+  show "\<forall>i. (i N) \<longrightarrow> (i < len Nil = 1) \<longrightarrow> (nth i Nil N)"
+  proof (rule forallI)
+    fix i assume i_nat: "i N"
+    show "(i N) \<longrightarrow> (i < len Nil = 1) \<longrightarrow> (nth i Nil N)"
+    proof (rule implI)
+      show "(i N) B" unfolding bJudg_def by (rule disjI1[OF i_nat])
+    next
+      assume "i N"
+      show "(i < len Nil = 1) \<longrightarrow> (nth i Nil N)"
+      proof (rule implI)
+        show "(i < len Nil = 1) B" using i_nat by auto
+      next
+        assume prem: "i < len Nil = 1"
+        (* len Nil = 0 and  i < 0 = 0, so the premise says 1 = 0 *)
+        have c1: "i < 0 = 1" using prem by simp
+        have c0: "i < 0 = 0" by simp
+        have p:  "S zero = zero" using eq_trans[OF eqSym[OF c1] c0] .
+        have np: "\<not> (S zero = zero)" using sucNonZero[OF nat0] by (simp)
+        show "nth i Nil N" by (rule exF[OF p np])
+      qed
+    qed
+  qed
+next
+  (* ---------------- Cons ---------------- *)
+  fix h t
+  assume h_nat: "h N" and t_nat: "t N"
+  assume IH: "\<forall>i. (i N) \<longrightarrow> (i < len t = 1) \<longrightarrow> (nth i t N)"
+  show "\<forall>i. (i N) \<longrightarrow> (i < len (Cons h t) = 1) \<longrightarrow> (nth i (Cons h t) N)"
+  proof (rule forallI)
+    fix i assume i_nat: "i N"
+    show "(i N) \<longrightarrow> (i < len (Cons h t) = 1) \<longrightarrow> (nth i (Cons h t) N)"
+    proof (rule implI)
+      show "(i N) B" unfolding bJudg_def by (rule disjI1[OF i_nat])
+    next
+      assume "i N"
+      show "(i < len (Cons h t) = 1) \<longrightarrow> (nth i (Cons h t) N)"
+      proof (rule implI)
+        show "(i < len (Cons h t) = 1) B" using i_nat h_nat t_nat by auto
+      next
+        assume prem: "i < len (Cons h t) = 1"
+        have ne: "\<not> (Cons h t = Nil)" using h_nat t_nat by simp
+        show "nth i (Cons h t) N"
+        proof (rule cases_nat_2[where x = "i"])
+          show "i N" by (rule i_nat)
+        next
+          assume "i = 0"
+          show "nth 0 (Cons h t) N" using h_nat t_nat by (simp)
+        next
+          fix k assume k_nat: "k N" and i_eq: "i = S k"
+          (* rewrite the premise:  i < len(Cons h t) = 1  becomes  S k < S(len t) = 1 *)
+          have prem'': "S k < S (len t) = 1" using prem i_eq h_nat t_nat by simp
+          (* strip the successors:  k < len t = 1 *)
+          have kt: "k < len t = 1"
+          proof -
+            have "P (S k) < P (S (len t)) = 1"
+              apply (rule le_monotone_pred)
+              using k_nat t_nat apply simp+
+                  apply  (rule prem'')
+              using k_nat t_nat apply simp+
+              apply  (rule prem'')
+              done
+            thus "k < len t = 1" using k_nat len_nat[OF t_nat] by simp
+          qed
+
+          have h1: "(k N) \<longrightarrow> (k < len t = 1) \<longrightarrow>( nth k t N)"
+            apply (rule forallE[OF IH k_nat])
+            done
+          have h2: "(k < len t = 1) \<longrightarrow> (nth k t N)" 
+            using h1 k_nat apply (rule implE)
+            done
+          have tail: "nth k t N" using h2 kt by (rule implE)
+
+          have sk_nz: "\<not> (S k = 0)" using sucNonZero[OF k_nat] by (simp)
+          have e1: "S k - 1 = k"
+            apply (unfold_def sub_def, simp add: k_nat)
+          proof -
+            have notcond: "\<not> (1=0)"
+              apply simp
+              done
+            show "(if S zero = zero then S k else P(S k - zero)) = k "
+              using k_nat notcond apply simp
+              done
+          qed
+          have e2: "list_tl (Cons h t) = t" using h_nat t_nat by simp
+          have deep: "nth (S k - 1) (list_tl (Cons h t)) = nth k t"
+            using e1 e2 tail apply simp
+            done
+
+          have inner:
+            "(if S k = 0 then list_hd (Cons h t)
+                else nth (S k - 1) (list_tl (Cons h t))) = nth k t"
+            by (rule condI2Eq[OF sk_nz tail deep])
+          have goal_eq: "nth (S k) (Cons h t) = nth k t"
+            by (rule defE[OF nth_def[where i = "S k" and xs = "Cons h t"]],
+                rule condI2Eq[OF ne tail inner])
+          show "nth (S k) (Cons h t) N" using goal_eq tail by simp
+        qed
+      qed
+    qed
+  qed
+qed
+
+lemma nth_in_range_N: "xs N \<Longrightarrow> i < len xs = 1 \<Longrightarrow> nth i xs N"
+  sorry
+
 end (* End of theory *)
