@@ -109,6 +109,8 @@ where
   sucNonZero: \<open>a N \<Longrightarrow> S a \<noteq> zero\<close> and
   predSucInv: \<open>a N \<Longrightarrow> P(S(a)) = a\<close> and
   pred0: \<open>P(zero) = zero\<close> and
+  eqE: \<open>((a = b) B) \<Longrightarrow> ((a N) \<and> (b N))\<close> and
+  predTIE: \<open>(P a N) \<Longrightarrow> (a N)\<close> and
   ind [case_names HQ Base Step]:
            "\<lbrakk>a N; Q zero; \<And>x. x N \<Longrightarrow> Q x \<Longrightarrow> Q S(x)\<rbrakk> \<Longrightarrow> Q a"
 
@@ -5017,7 +5019,39 @@ next
   qed
 qed
 
-lemma nth_in_range_N: "xs N \<Longrightarrow> i < len xs = 1 \<Longrightarrow> nth i xs N"
-  sorry
+lemma nth_in_range_N:
+  assumes xs_nat: "xs N" and lt: "i < len xs = 1"
+  shows "nth i xs N"
+proof -
+
+  have u: "(if len xs = 0 then 0
+              else if i = 0 then 1 else less (P i) (P (len xs))) N"
+    by (rule defI[OF less_def[where x = "i" and y = "len xs"]],
+        rule eq_impl_term[OF lt])
+  have g1: "(len xs = 0) B" using u by (rule condE3)
+  have i_nat: "i N"
+  proof (rule disjE1[OF g1[unfolded bJudg_def]])
+    assume z: "len xs = 0"
+    have z0: "i < len xs = 0" using z by simp
+    have p:  "S zero = zero" using eq_trans[OF eqSym[OF lt] z0] .
+    have np: "\<not> (S zero = zero)" using sucNonZero[OF nat0] by (simp)
+    show "i N" by (rule exF[OF p np])
+  next
+    assume nz: "\<not> (len xs = 0)"
+    have innerN: "(if i = 0 then 1 else less (P i) (P (len xs))) N"
+      using nz u by (rule condE2)
+    have g2: "(i = 0) B" using innerN by (rule condE3)
+    have step: " (i N) \<and> (0 N)" using g2 apply (rule eqE) done
+    show "i N" 
+      using step apply (rule conjE1) done
+  qed
+
+  have all: "\<forall>i. (i N) \<longrightarrow> (i < len xs = 1) \<longrightarrow> (nth i xs N)"
+    by (rule nth_in_range_all[OF xs_nat])
+  have "(i N) \<longrightarrow> (i < len xs = 1) \<longrightarrow> (nth i xs N)"
+    by (rule forallE[OF all i_nat])
+  hence "(i < len xs = 1) \<longrightarrow> (nth i xs N)" using i_nat by (rule implE)
+  thus "nth i xs N" using lt by (rule implE)
+qed
 
 end (* End of theory *)
