@@ -104,19 +104,19 @@ proof -
       apply (rule double_neg)
       done
 
-    have eq_prf: "is_valid_proof p1 \<langle>Nil, mk_eq a b\<rangle>"
+    have eq_pf: "is_valid_proof p1 \<langle>Nil, mk_eq a b\<rangle>"
       apply (rule conjE1)
       apply (rule conj_holds)
       done
 
-    have neq_prf: "is_valid_proof p2 \<langle>Nil, mk_neq a b\<rangle>"
+    have neq_pf: "is_valid_proof p2 \<langle>Nil, mk_neq a b\<rangle>"
       apply (rule conjE2)
       apply (rule conj_holds)
       done
 
     have eq_sat: "sat_fm  (conc_of \<langle>Nil, mk_eq a b\<rangle>) zero"
       apply (rule soundness)
-       apply (rule eq_prf)
+       apply (rule eq_pf)
       using mk_eq_nat apply simp
       apply (rule sat_hyp_nil)
       done
@@ -127,7 +127,7 @@ proof -
 
     have neq_sat: "sat_fm  (conc_of \<langle>Nil, mk_neq a b\<rangle>) zero"
       apply (rule soundness)
-       apply (rule neq_prf)
+       apply (rule neq_pf)
       using mk_neq_nat apply simp
       apply (rule sat_hyp_nil)
       done
@@ -650,17 +650,17 @@ assumes valid_step_def: "valid_step f rest :=
 
 (* Checks if the given head of proof is valid*)
 fixes check_list :: "pf \<Rightarrow> o"
-assumes check_list_def: "check_list prf := 
-    if prf = Nil then True
-    else if valid_step (list_hd prf) (list_tl prf) then check_list (list_tl prf)
+assumes check_list_def: "check_list pf := 
+    if pf = Nil then True
+    else if valid_step (list_hd pf) (list_tl pf) then check_list (list_tl pf)
     else False"
 
 (*checks if the given proof is valid for the given judgement*)
 fixes is_valid_proof :: "pf \<Rightarrow> jdg \<Rightarrow> o"
 
-assumes is_valid_proof_def: "is_valid_proof prf J := 
-    if prf = Nil then False
-    else if list_hd prf = J then check_list prf
+assumes is_valid_proof_def: "is_valid_proof pf J := 
+    if pf = Nil then False
+    else if list_hd pf = J then check_list pf
     else False"
 
 locale bga_full = bga_semantics + bga_proof_check
@@ -1169,15 +1169,24 @@ lemma subst_F_N:
   assumes f: "f N" and j: "j N" and v: "v N"
   shows "subst_F f j v N"
 proof -
-  have Lf: "load_F f N" by (rule load_F_N[OF f])
-  have cx: "cpx (load_F f) N" by (rule cpx_terminates[OF Lf])
-  have cy: "cpy (load_F f) N" by (rule cpy_terminates[OF Lf])
+  have Lf: "load_F f N" 
+    by (rule load_F_N[OF f])
+  have cx: "cpx (load_F f) N" 
+    by (rule cpx_terminates[OF Lf])
+  have cy: "cpy (load_F f) N" 
+    by (rule cpy_terminates[OF Lf])
   
-  have s_cx: "subst_T (cpx (load_F f)) j v N" by (rule subst_T_N[OF cx j v])
-  have s_cy: "subst_T (cpy (load_F f)) j v N" by (rule subst_T_N[OF cy j v])
+  have s_cx: "subst_T (cpx (load_F f)) j v N" 
+    by (rule subst_T_N[OF cx j v])
+  have s_cy: "subst_T (cpy (load_F f)) j v N" 
+    by (rule subst_T_N[OF cy j v])
   
-  have tgN: "tag_F f N" by (rule tag_F_N[OF f])
-  have gEQ: "(tag_F f = F_EQ) B" apply (rule eqBool[OF tgN]) apply simp done
+  have tgN: "tag_F f N" 
+    by (rule tag_F_N[OF f])
+  have gEQ: "(tag_F f = F_EQ) B" 
+    apply (rule eqBool[OF tgN]) 
+    apply simp 
+    done
   
   have A1N: "pack_F F_EQ \<langle>subst_T (cpx (load_F f)) j v, subst_T (cpy (load_F f)) j v\<rangle> N"
     apply (rule pack_F_N)
@@ -1204,15 +1213,24 @@ lemma rep_vars_F_N:
   assumes f: "f N" and i: "i N"
   shows "rep_vars_F f i N"
 proof -
-  have Lf: "load_F f N" by (rule load_F_N[OF f])
-  have cx: "cpx (load_F f) N" by (rule cpx_terminates[OF Lf])
-  have cy: "cpy (load_F f) N" by (rule cpy_terminates[OF Lf])
+  have Lf: "load_F f N" 
+    by (rule load_F_N[OF f])
+  have cx: "cpx (load_F f) N" 
+    by (rule cpx_terminates[OF Lf])
+  have cy: "cpy (load_F f) N" 
+    by (rule cpy_terminates[OF Lf])
   
-  have r_cx: "rep_vars_T (cpx (load_F f)) i N" by (rule rep_vars_T_N[OF cx i])
-  have r_cy: "rep_vars_T (cpy (load_F f)) i N" by (rule rep_vars_T_N[OF cy i])
+  have r_cx: "rep_vars_T (cpx (load_F f)) i N" 
+    by (rule rep_vars_T_N[OF cx i])
+  have r_cy: "rep_vars_T (cpy (load_F f)) i N" 
+    by (rule rep_vars_T_N[OF cy i])
   
-  have tgN: "tag_F f N" by (rule tag_F_N[OF f])
-  have gEQ: "(tag_F f = F_EQ) B" apply (rule eqBool[OF tgN]) apply simp done
+  have tgN: "tag_F f N" 
+    by (rule tag_F_N[OF f])
+  have gEQ: "(tag_F f = F_EQ) B" 
+    apply (rule eqBool[OF tgN]) 
+    apply simp 
+    done
   
   have A1N: "pack_F F_EQ \<langle>rep_vars_T (cpx (load_F f)) i, rep_vars_T (cpy (load_F f)) i\<rangle> N"
     apply (rule pack_F_N)
@@ -1265,14 +1283,22 @@ next
   fix h t assume h: "h N" and t: "t N" and IH: "find_phi J a b t B"
   show "find_phi J a b (Cons h t) B"
   proof -
-    have htN: "h \<triangleright> t N" using h t by simp
-    have g1: "(h \<triangleright> t = \<emptyset>) B" apply (rule eqBool[OF htN]) apply simp done
+    have htN: "h \<triangleright> t N" 
+      using h t by simp
+    have g1: "(h \<triangleright> t = \<emptyset>) B" 
+      apply (rule eqBool[OF htN]) 
+      apply simp 
+      done
 
-    have eq1: "(hyp_of h = hyp_of J) B" using h J by simp
+    have eq1: "(hyp_of h = hyp_of J) B" 
+      using h J by simp
     
-    have cy_J: "conc_of J N" using J by simp
-    have cy_h: "conc_of h N" using h by simp
-    have SJ: "S J N" using J by simp
+    have cy_J: "conc_of J N" 
+      using J by simp
+    have cy_h: "conc_of h N" 
+      using h by simp
+    have SJ: "S J N" 
+      using J by simp
     
     have rep: "rep_vars_F (conc_of J) (S J) N" 
       by (rule rep_vars_F_N[OF cy_J SJ])
@@ -1304,22 +1330,35 @@ lemma app_try_bool [auto]:
       and dr: "d < len dfns = 1"
   shows "app_try J d x y rest B"
 proof (rule defE[OF app_try_def[where J=J and d=d and x=x and y=y and rest=rest]])
-  have hj:  "hyp_of J N"             using J by simp
-  have xx:  "\<langle>x, x\<rangle> N"              using x by simp
-  have yy:  "\<langle>y, y\<rangle> N"              using y by simp
-  have pfx: "pack_F F_EQ \<langle>x, x\<rangle> N"  by (rule pack_F_N[OF _ xx], simp)
-  have pfy: "pack_F F_EQ \<langle>y, y\<rangle> N"  by (rule pack_F_N[OF _ yy], simp)
-  have jxx: "(hyp_of J \<tturnstile> pack_F F_EQ \<langle>x, x\<rangle>) N" using hj pfx by simp
-  have jyy: "(hyp_of J \<tturnstile> pack_F F_EQ \<langle>y, y\<rangle>) N" using hj pfy by simp
+  have hj:  "hyp_of J N"             
+    using J by simp
+  have xx:  "\<langle>x, x\<rangle> N"              
+    using x by simp
+  have yy:  "\<langle>y, y\<rangle> N"              
+    using y by simp
+  have pfx: "pack_F F_EQ \<langle>x, x\<rangle> N"  
+    by (rule pack_F_N[OF _ xx], simp)
+  have pfy: "pack_F F_EQ \<langle>y, y\<rangle> N"  
+    by (rule pack_F_N[OF _ yy], simp)
+  have jxx: "(hyp_of J \<tturnstile> pack_F F_EQ \<langle>x, x\<rangle>) N" 
+    using hj pfx by simp
+  have jyy: "(hyp_of J \<tturnstile> pack_F F_EQ \<langle>y, y\<rangle>) N" 
+    using hj pfy by simp
   have ndf: "nth d dfns N"
-    using dfns_N dr apply (rule nth_in_range_N)
+    using dfns_N dr 
+    apply (rule nth_in_range_N)
     done
 
-  have sb:  "subst_body (nth d dfns) x y N" by (rule subst_body_N[OF ndf x y])
-  have dxy: "\<langle>d, \<langle>x, y\<rangle>\<rangle> N"                 using d x y by simp
-  have pT:  "pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle> N"    by (rule pack_T_N[OF _ dxy], simp)
-  have m1: "mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>x, x\<rangle>) rest B" by (rule mem_bool[OF jxx r])
-  have m2: "mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>y, y\<rangle>) rest B" by (rule mem_bool[OF jyy r])
+  have sb:  "subst_body (nth d dfns) x y N" 
+    by (rule subst_body_N[OF ndf x y])
+  have dxy: "\<langle>d, \<langle>x, y\<rangle>\<rangle> N"                 
+    using d x y by simp
+  have pT:  "pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle> N"    
+    by (rule pack_T_N[OF _ dxy], simp)
+  have m1: "mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>x, x\<rangle>) rest B" 
+    by (rule mem_bool[OF jxx r])
+  have m2: "mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>y, y\<rangle>) rest B" 
+    by (rule mem_bool[OF jyy r])
   have fp: "find_phi J (subst_body (nth d dfns) x y) (pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle>) rest B"
            by (rule find_phi_bool[OF J sb pT r])
   show "(mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>x, x\<rangle>) rest
@@ -1331,15 +1370,18 @@ qed
 lemma sat_neqE': "a N \<Longrightarrow> b N \<Longrightarrow> sat (mk_neq a b) A \<Longrightarrow> eval a A \<noteq> eval b A"
 proof -
   assume a: "a N" and b: "b N" and h: "sat (mk_neq a b) A"
-  have p: "\<langle>a, b\<rangle> N" using a b by simp
+  have p: "\<langle>a, b\<rangle> N" 
+    using a b by simp
   have tg: "tag_F (mk_neq a b) = F_NEQ"
-    unfolding mk_neq_def apply (rule tag_pack_F)
+    unfolding mk_neq_def 
+    apply (rule tag_pack_F)
     using a b apply simp+
     done
   have tg_ne: "\<not> (tag_F (mk_neq a b) = F_EQ)"
     using tg by simp
   have ld: "load_F (mk_neq a b) = \<langle>a, b\<rangle>"
-    unfolding mk_neq_def apply (rule load_pack_F)
+    unfolding mk_neq_def 
+    apply (rule load_pack_F)
     using a b apply simp+
     done
   have step: "eval (hyp_of (load_F (mk_neq a b))) A
@@ -1372,10 +1414,16 @@ next
   fix h t assume h: "h N" and t: "t N" and IH: "find_cut J rest t B"
   show "find_cut J rest (Cons h t) B"
   proof -
-    have htN: "h \<triangleright> t N" using h t by simp
-    have g0: "(h \<triangleright> t = \<emptyset>) B" apply (rule eqBool[OF htN]) apply simp done
-    have g1: "(hyp_of h = hyp_of J) B" using h J by simp
-    have cc: "conc_of h \<triangleright> hyp_of J \<tturnstile> conc_of J N" using h J by simp
+    have htN: "h \<triangleright> t N" 
+      using h t by simp
+    have g0: "(h \<triangleright> t = \<emptyset>) B" 
+      apply (rule eqBool[OF htN]) 
+      apply simp 
+      done
+    have g1: "(hyp_of h = hyp_of J) B" 
+      using h J by simp
+    have cc: "conc_of h \<triangleright> hyp_of J \<tturnstile> conc_of J N" 
+      using h J by simp
     have m: "mem (conc_of h \<triangleright> hyp_of J \<tturnstile> conc_of J) rest B"
       by (rule mem_bool[OF cc rest])
     show "find_cut J rest (h \<triangleright> t) B"
@@ -1407,20 +1455,32 @@ next
   fix h t assume h: "h N" and t: "t N" and IH: "find_eq J rest t B"
   show "find_eq J rest (Cons h t) B"
   proof -
-    have htN: "h \<triangleright> t N" using h t by simp
-    have g0: "(h \<triangleright> t = \<emptyset>) B" apply (rule eqBool[OF htN]) apply simp done
+    have htN: "h \<triangleright> t N" 
+      using h t by simp
+    have g0: "(h \<triangleright> t = \<emptyset>) B" 
+      apply (rule eqBool[OF htN]) 
+      apply simp 
+      done
 
-    have ch: "conc_of h N" using h by simp
-    have eqh: "(hyp_of h = hyp_of J) B" using h J by simp
-    have tgh: "tag_F (conc_of h) N" by (rule tag_F_N[OF ch])
-    have feqN: "F_EQ N" by simp
-    have eqtg: "(tag_F (conc_of h) = F_EQ) B" by (rule eqBool[OF tgh feqN])
+    have ch: "conc_of h N" 
+      using h by simp
+    have eqh: "(hyp_of h = hyp_of J) B" 
+      using h J by simp
+    have tgh: "tag_F (conc_of h) N" 
+      by (rule tag_F_N[OF ch])
+    have feqN: "F_EQ N" 
+      by simp
+    have eqtg: "(tag_F (conc_of h) = F_EQ) B" 
+      by (rule eqBool[OF tgh feqN])
     have g1: "(hyp_of h = hyp_of J \<and> tag_F (conc_of h) = F_EQ) B"
       using eqh eqtg by simp
 
-    have Lch: "load_F (conc_of h) N" by (rule load_F_N[OF ch])
-    have cxh: "cpx (load_F (conc_of h)) N" by (rule cpx_terminates[OF Lch])
-    have cyh: "cpy (load_F (conc_of h)) N" by (rule cpy_terminates[OF Lch])
+    have Lch: "load_F (conc_of h) N" 
+      by (rule load_F_N[OF ch])
+    have cxh: "cpx (load_F (conc_of h)) N" 
+      by (rule cpx_terminates[OF Lch])
+    have cyh: "cpy (load_F (conc_of h)) N" 
+      by (rule cpy_terminates[OF Lch])
     have gphi: "find_phi J (cpx (load_F (conc_of h))) (cpy (load_F (conc_of h))) rest B"
       by (rule find_phi_bool[OF J cxh cyh rest])
 
@@ -1445,15 +1505,639 @@ lemma check_struct_bool [auto]:
   assumes J: "J N" and rest: "rest N"
   shows "check_struct J rest B"
 proof -
-  have hj: "hyp_of J N" using J by simp
+  have hj: "hyp_of J N" 
+    using J by simp
   show ?thesis
     apply (rule defE[OF check_struct_def[where J=J and rest=rest]])
     apply (rule find_struct_bool[OF J hj rest])
     done
 qed
 
+(* Lazy conditional booleanness *)
+lemma condTB':
+  assumes c_bool: "c B" and a_bool: "c \<Longrightarrow> a B" and b_bool: "\<not>c \<Longrightarrow> b B"
+  shows "(if c then a else b) B"
+  apply (rule cases_bool[where q = "c"])
+    apply (rule c_bool)
+proof -
+  show "c \<Longrightarrow> (if c then a else b) B"
+  proof -
+    assume cc: "c"
+    have e: "(if c then a else b) \<longleftrightarrow> a" 
+      by (rule condI1B[OF cc a_bool[OF cc]])
+    show "(if c then a else b) B" 
+      using a_bool[OF cc] e by simp
+  qed
+next
+  show "\<not>c \<Longrightarrow> (if c then a else b) B"
+  proof -
+    assume nc: "\<not>c"
+    have e: "(if c then a else b) \<longleftrightarrow> b" 
+      by (rule condI2B[OF nc b_bool[OF nc]])
+    show "(if c then a else b) B" 
+      using b_bool[OF nc] e by simp
+  qed
+qed
+
+(* Habeas quid for the induction step judgment  *)
+lemma ind_jdg_N:
+  assumes p: "p N" and G: "G N" and i: "i N"
+  shows "pack_F F_EQ \<langle>pack_T T_VAR i, pack_T T_VAR i\<rangle> \<triangleright> p \<triangleright> G \<tturnstile>
+         subst_F p i (pack_T T_SUC (pack_T T_VAR i)) N"
+proof -
+  have vi: "pack_T T_VAR i N" 
+    by (rule pack_T_N[OF _ i], simp)
+  have vv: "\<langle>pack_T T_VAR i, pack_T T_VAR i\<rangle> N" 
+    using vi by simp
+  have feq: "pack_F F_EQ \<langle>pack_T T_VAR i, pack_T T_VAR i\<rangle> N" 
+    by (rule pack_F_N[OF _ vv], simp)
+  have sv: "pack_T T_SUC (pack_T T_VAR i) N" 
+    by (rule pack_T_N[OF _ vi], simp)
+  have cc: "subst_F p i (pack_T T_SUC (pack_T T_VAR i)) N" 
+    by (rule subst_F_N[OF p i sv])
+  show ?thesis 
+    using feq p G cc by simp
+qed
+
+lemma check_eq_rules_bool [auto]:
+  assumes G: "G N" and lhs: "lhs N" and rhs: "rhs N"
+      and tg_L: "tg_L N" and tg_R: "tg_R N" and rest: "rest N"
+  shows "check_eq_rules G lhs rhs tg_L tg_R rest B"
+proof -
+  have sucN: "T_SUC N" 
+    by simp
+  have predN: "T_PRED N" 
+    by simp
+  have ifzN: "T_IFZ N" 
+    by simp
+  have ztz: "pack_T T_ZERO 0 N" 
+    by (rule pack_T_N[OF _ nat0], simp)
+  have Ll: "load_T lhs N" 
+    by (rule load_T_N[OF lhs])
+  have Lr: "load_T rhs N" 
+    by (rule load_T_N[OF rhs])
+  have LLl: "load_T (load_T lhs) N" 
+    by (rule load_T_N[OF Ll])
+  have cxLLl: "cpx (load_T (load_T lhs)) N" 
+    by (rule cpx_terminates[OF LLl])
+  have cyLl: "cpy (load_T lhs) N" 
+    by (rule cpy_terminates[OF Ll])
+  have cycyLl: "cpy (cpy (load_T lhs)) N" 
+    by (rule cpy_terminates[OF cyLl])
+  have cxcyLl: "cpx (cpy (load_T lhs)) N" 
+    by (rule cpx_terminates[OF cyLl])
+  have cxLl: "cpx (load_T lhs) N" 
+    by (rule cpx_terminates[OF Ll])
+  have sucl: "pack_T T_SUC lhs N" 
+    by (rule pack_T_N[OF _ lhs], simp)
+  have sucr: "pack_T T_SUC rhs N" 
+    by (rule pack_T_N[OF _ rhs], simp)
+  have tgLL: "tag_T (load_T lhs) N" 
+    by (rule tag_T_N[OF Ll])
+
+  have e_lz: "(lhs = pack_T T_ZERO 0) B" 
+    by (rule eqBool[OF lhs ztz])
+  have e_rz: "(rhs = pack_T T_ZERO 0) B" 
+    by (rule eqBool[OF rhs ztz])
+  have g1: "(lhs = pack_T T_ZERO 0 \<and> rhs = pack_T T_ZERO 0) B" 
+    using e_lz e_rz by auto
+
+  have pr_rl: "\<langle>rhs, lhs\<rangle> N" 
+    using rhs lhs by simp
+  have pf2: "pack_F F_EQ \<langle>rhs, lhs\<rangle> N" 
+    by (rule pack_F_N[OF _ pr_rl], simp)
+  have j2: "(G \<tturnstile> pack_F F_EQ \<langle>rhs, lhs\<rangle>) N" 
+    using G pf2 by simp
+  have g2: "mem (G \<tturnstile> pack_F F_EQ \<langle>rhs, lhs\<rangle>) rest B" 
+    by (rule mem_bool[OF j2 rest])
+
+  have pr_LlLr: "\<langle>load_T lhs, load_T rhs\<rangle> N" 
+    using Ll Lr by simp
+  have pf3: "pack_F F_EQ \<langle>load_T lhs, load_T rhs\<rangle> N" 
+    by (rule pack_F_N[OF _ pr_LlLr], simp)
+  have j3: "(G \<tturnstile> pack_F F_EQ \<langle>load_T lhs, load_T rhs\<rangle>) N" 
+    using G pf3 by simp
+  have m3: "mem (G \<tturnstile> pack_F F_EQ \<langle>load_T lhs, load_T rhs\<rangle>) rest B" 
+    by (rule mem_bool[OF j3 rest])
+  have e_tgLs: "(tg_L = T_SUC) B" 
+    by (rule eqBool[OF tg_L sucN])
+  have e_tgRs: "(tg_R = T_SUC) B" 
+    by (rule eqBool[OF tg_R sucN])
+  have g3: "(tg_L = T_SUC \<and> tg_R = T_SUC \<and>
+             mem (G \<tturnstile> pack_F F_EQ \<langle>load_T lhs, load_T rhs\<rangle>) rest) B"
+    using e_tgLs e_tgRs m3 by auto
+
+  have pr_ss: "\<langle>pack_T T_SUC lhs, pack_T T_SUC rhs\<rangle> N" 
+    using sucl sucr by simp
+  have pf4: "pack_F F_EQ \<langle>pack_T T_SUC lhs, pack_T T_SUC rhs\<rangle> N" 
+    by (rule pack_F_N[OF _ pr_ss], simp)
+  have j4: "(G \<tturnstile> pack_F F_EQ \<langle>pack_T T_SUC lhs, pack_T T_SUC rhs\<rangle>) N" 
+    using G pf4 by simp
+  have g4: "mem (G \<tturnstile> pack_F F_EQ \<langle>pack_T T_SUC lhs, pack_T T_SUC rhs\<rangle>) rest B"
+    by (rule mem_bool[OF j4 rest])
+
+  have pr_rr: "\<langle>rhs, rhs\<rangle> N" 
+    using rhs by simp
+  have pfrr: "pack_F F_EQ \<langle>rhs, rhs\<rangle> N" 
+    by (rule pack_F_N[OF _ pr_rr], simp)
+  have jrr: "(G \<tturnstile> pack_F F_EQ \<langle>rhs, rhs\<rangle>) N" 
+    using G pfrr by simp
+  have mrr: "mem (G \<tturnstile> pack_F F_EQ \<langle>rhs, rhs\<rangle>) rest B" 
+    by (rule mem_bool[OF jrr rest])
+
+  have e_tgLp: "(tg_L = T_PRED) B" 
+    by (rule eqBool[OF tg_L predN])
+  have e_tgLLs: "(tag_T (load_T lhs) = T_SUC) B" 
+    by (rule eqBool[OF tgLL sucN])
+  have e_cx_r: "(cpx (load_T (load_T lhs)) = rhs) B" 
+    by (rule eqBool[OF cxLLl rhs])
+  have g5: "(tg_L = T_PRED \<and> tag_T (load_T lhs) = T_SUC \<and>
+             cpx (load_T (load_T lhs)) = rhs \<and>
+             mem (G \<tturnstile> pack_F F_EQ \<langle>rhs, rhs\<rangle>) rest) B"
+    using e_tgLp e_tgLLs e_cx_r mrr by auto
+
+  have pr_cxZ: "\<langle>cpx (load_T lhs), pack_T T_ZERO 0\<rangle> N" 
+    using cxLl ztz by simp
+  have pf_neq_cxZ: "pack_F F_NEQ \<langle>cpx (load_T lhs), pack_T T_ZERO 0\<rangle> N"
+    by (rule pack_F_N[OF _ pr_cxZ], simp)
+  have j_neq_cxZ: "(G \<tturnstile> pack_F F_NEQ \<langle>cpx (load_T lhs), pack_T T_ZERO 0\<rangle>) N"
+    using G pf_neq_cxZ by simp
+  have m6a: "mem (G \<tturnstile> pack_F F_NEQ \<langle>cpx (load_T lhs), pack_T T_ZERO 0\<rangle>) rest B"
+    by (rule mem_bool[OF j_neq_cxZ rest])
+  have pf_eq_cxZ: "pack_F F_EQ \<langle>cpx (load_T lhs), pack_T T_ZERO 0\<rangle> N"
+    by (rule pack_F_N[OF _ pr_cxZ], simp)
+  have j_eq_cxZ: "(G \<tturnstile> pack_F F_EQ \<langle>cpx (load_T lhs), pack_T T_ZERO 0\<rangle>) N"
+    using G pf_eq_cxZ by simp
+  have m7a: "mem (G \<tturnstile> pack_F F_EQ \<langle>cpx (load_T lhs), pack_T T_ZERO 0\<rangle>) rest B"
+    by (rule mem_bool[OF j_eq_cxZ rest])
+
+  have e_tgLi: "(tg_L = T_IFZ) B" 
+    by (rule eqBool[OF tg_L ifzN])
+  have e_r_cycy: "(rhs = cpy (cpy (load_T lhs))) B" 
+    by (rule eqBool[OF rhs cycyLl])
+  have g6: "(tg_L = T_IFZ \<and> rhs = cpy (cpy (load_T lhs)) \<and>
+             mem (G \<tturnstile> pack_F F_NEQ \<langle>cpx (load_T lhs), pack_T T_ZERO 0\<rangle>) rest \<and>
+             mem (G \<tturnstile> pack_F F_EQ \<langle>rhs, rhs\<rangle>) rest) B"
+    using e_tgLi e_r_cycy m6a mrr by auto
+
+  have e_r_cxcy: "(rhs = cpx (cpy (load_T lhs))) B" 
+    by (rule eqBool[OF rhs cxcyLl])
+  have g7: "(tg_L = T_IFZ \<and> rhs = cpx (cpy (load_T lhs)) \<and>
+             mem (G \<tturnstile> pack_F F_EQ \<langle>cpx (load_T lhs), pack_T T_ZERO 0\<rangle>) rest \<and>
+             mem (G \<tturnstile> pack_F F_EQ \<langle>rhs, rhs\<rangle>) rest) B"
+    using e_tgLi e_r_cxcy m7a mrr by auto
+
+  show ?thesis
+    apply (rule defE[OF check_eq_rules_def[where G=G and lhs=lhs and rhs=rhs
+                                             and tg_L=tg_L and tg_R=tg_R and rest=rest]])
+    apply (rule condTB[OF g1 true_bool])
+    apply (rule condTB[OF g2 true_bool])
+    apply (rule condTB[OF g3 true_bool])
+    apply (rule condTB[OF g4 true_bool])
+    apply (rule condTB[OF g5 true_bool])
+    apply (rule condTB[OF g6 true_bool])
+    apply (rule condTB[OF g7 true_bool false_bool])
+    done
+qed
+
+lemma check_neq_rules_bool [auto]:
+  assumes G: "G N" and lhs: "lhs N" and rhs: "rhs N"
+      and tg_L: "tg_L N" and tg_R: "tg_R N" and rest: "rest N"
+  shows "check_neq_rules G lhs rhs tg_L tg_R rest B"
+proof -
+  have sucN: "T_SUC N" 
+    by simp
+  have ztz: "pack_T T_ZERO 0 N" 
+    by (rule pack_T_N[OF _ nat0], simp)
+  have Ll: "load_T lhs N" 
+    by (rule load_T_N[OF lhs])
+  have Lr: "load_T rhs N" 
+    by (rule load_T_N[OF rhs])
+  have sucl: "pack_T T_SUC lhs N" 
+    by (rule pack_T_N[OF _ lhs], simp)
+  have sucr: "pack_T T_SUC rhs N" 
+    by (rule pack_T_N[OF _ rhs], simp)
+
+  have pr_rl: "\<langle>rhs, lhs\<rangle> N" 
+    using rhs lhs by simp
+  have pf1: "pack_F F_NEQ \<langle>rhs, lhs\<rangle> N" 
+    by (rule pack_F_N[OF _ pr_rl], simp)
+  have j1: "(G \<tturnstile> pack_F F_NEQ \<langle>rhs, lhs\<rangle>) N" 
+    using G pf1 by simp
+  have g1: "mem (G \<tturnstile> pack_F F_NEQ \<langle>rhs, lhs\<rangle>) rest B" 
+    by (rule mem_bool[OF j1 rest])
+
+  have pr_ll: "\<langle>load_T lhs, load_T lhs\<rangle> N" 
+    using Ll by simp
+  have pf2: "pack_F F_EQ \<langle>load_T lhs, load_T lhs\<rangle> N" 
+    by (rule pack_F_N[OF _ pr_ll], simp)
+  have j2: "(G \<tturnstile> pack_F F_EQ \<langle>load_T lhs, load_T lhs\<rangle>) N" 
+    using G pf2 by simp
+  have m2: "mem (G \<tturnstile> pack_F F_EQ \<langle>load_T lhs, load_T lhs\<rangle>) rest B" 
+    by (rule mem_bool[OF j2 rest])
+  have e_tgLs: "(tg_L = T_SUC) B" 
+    by (rule eqBool[OF tg_L sucN])
+  have e_rz: "(rhs = pack_T T_ZERO 0) B" 
+    by (rule eqBool[OF rhs ztz])
+  have g2: "(tg_L = T_SUC \<and> rhs = pack_T T_ZERO 0 \<and>
+             mem (G \<tturnstile> pack_F F_EQ \<langle>load_T lhs, load_T lhs\<rangle>) rest) B"
+    using e_tgLs e_rz m2 by auto
+
+  have pr_lr: "\<langle>load_T lhs, load_T rhs\<rangle> N" 
+    using Ll Lr by simp
+  have pf3: "pack_F F_NEQ \<langle>load_T lhs, load_T rhs\<rangle> N" 
+    by (rule pack_F_N[OF _ pr_lr], simp)
+  have j3: "(G \<tturnstile> pack_F F_NEQ \<langle>load_T lhs, load_T rhs\<rangle>) N" 
+    using G pf3 by simp
+  have m3: "mem (G \<tturnstile> pack_F F_NEQ \<langle>load_T lhs, load_T rhs\<rangle>) rest B" 
+    by (rule mem_bool[OF j3 rest])
+  have e_tgRs: "(tg_R = T_SUC) B" 
+    by (rule eqBool[OF tg_R sucN])
+  have g3: "(tg_L = T_SUC \<and> tg_R = T_SUC \<and>
+             mem (G \<tturnstile> pack_F F_NEQ \<langle>load_T lhs, load_T rhs\<rangle>) rest) B"
+    using e_tgLs e_tgRs m3 by auto
+
+  have pr_ss: "\<langle>pack_T T_SUC lhs, pack_T T_SUC rhs\<rangle> N" 
+    using sucl sucr by simp
+  have pf4: "pack_F F_NEQ \<langle>pack_T T_SUC lhs, pack_T T_SUC rhs\<rangle> N" 
+    by (rule pack_F_N[OF _ pr_ss], simp)
+  have j4: "(G \<tturnstile> pack_F F_NEQ \<langle>pack_T T_SUC lhs, pack_T T_SUC rhs\<rangle>) N" 
+    using G pf4 by simp
+  have g4: "mem (G \<tturnstile> pack_F F_NEQ \<langle>pack_T T_SUC lhs, pack_T T_SUC rhs\<rangle>) rest B"
+    by (rule mem_bool[OF j4 rest])
+
+  show ?thesis
+    apply (rule defE[OF check_neq_rules_def[where G=G and lhs=lhs and rhs=rhs
+                                             and tg_L=tg_L and tg_R=tg_R and rest=rest]])
+    apply (rule condTB[OF g1 true_bool])
+    apply (rule condTB[OF g2 true_bool])
+    apply (rule condTB[OF g3 true_bool])
+    apply (rule condTB[OF g4 true_bool false_bool])
+    done
+qed
+
+lemma check_ind_template_bool [auto]:
+  assumes f: "f N" and phi: "phi N" and a: "a N" and G: "G N"
+      and p: "p N" and i: "i N" and r: "rest N"
+  shows "check_ind_template f phi a G p i rest B"
+proof (rule ind[OF p])
+  have ztz: "pack_T T_ZERO 0 N" 
+    by (rule pack_T_N[OF _ nat0], simp)
+  show "check_ind_template f phi a G 0 i rest B"
+    apply (rule defE[OF check_ind_template_def[where p=0]], insert f phi a G i r)
+    apply simp
+    apply (rule condTB[OF _ true_bool false_bool])
+    using subst_F_N[OF nat0 i a] subst_F_N[OF nat0 i ztz] f phi ind_jdg_N[OF nat0 G i] r
+    by auto
+next
+  fix k assume k: "k N" and IH: "check_ind_template f phi a G k i rest B"
+  have ztz: "pack_T T_ZERO 0 N" 
+    by (rule pack_T_N[OF _ nat0], simp)
+  have skN: "S k N" 
+    by (rule natS[OF k])
+  have oneN: "(1::num) N" 
+    by simp
+  have grN: "(S k > 0) N"
+    by (unfold greater_def, rule sub_terminates[OF oneN leq_terminates[OF skN nat0]])
+  have g2B: "(S k > 0 = 1) B" 
+    by (rule eqBool[OF grN oneN])
+  have sk1: "S k - 1 = k" 
+    using k by simp
+  have RECB: "check_ind_template f phi a G (S k - 1) i rest B" 
+    using IH sk1 by simp
+  have innerB: "(if S k > 0 = 1 then check_ind_template f phi a G (S k - 1) i rest else False) B"
+    by (rule condTB[OF g2B RECB false_bool])
+  show "check_ind_template f phi a G (S k) i rest B"
+    apply (rule defE[OF check_ind_template_def[where p="S k"]])
+    apply (rule condTB[OF _ true_bool innerB])
+    using subst_F_N[OF skN i a] subst_F_N[OF skN i ztz] f phi ind_jdg_N[OF skN G i] r
+    by auto
+qed
+
+lemma find_ind_base_bool [auto]:
+  assumes J: "J N" and a: "a N" and rest: "rest N" and ptr: "ptr N"
+  shows "find_ind_base J a rest ptr B"
+proof (rule list_induct[OF ptr])
+  show "find_ind_base J a rest Nil B"
+    apply (rule defE[OF find_ind_base_def[where J=J and a=a and rest=rest and ptr=Nil]])
+    apply simp
+    done
+next
+  fix h t assume h: "h N" and t: "t N" and IH: "find_ind_base J a rest t B"
+  show "find_ind_base J a rest (Cons h t) B"
+  proof -
+    have htN: "h \<triangleright> t N" 
+      using h t by simp
+    have g0: "(h \<triangleright> t = \<emptyset>) B" 
+      apply (rule eqBool[OF htN]) 
+      apply simp 
+      done
+    have cJ: "conc_of J N" 
+      using J by simp
+    have ch: "conc_of h N" 
+      using h by simp
+    have hj: "hyp_of J N" 
+      using J by simp
+    have SJ: "J + 1 N" 
+      using J by simp
+    have eqh: "(hyp_of h = hyp_of J) B" 
+      using h J by simp
+    have rep: "rep_vars_F (conc_of J) (J + 1) N" 
+      by (rule rep_vars_F_N[OF cJ SJ])
+    have git: "check_ind_template (conc_of J) (conc_of h) a (hyp_of J)
+                 (rep_vars_F (conc_of J) (J + 1)) (J + 1) rest B"
+      by (rule check_ind_template_bool[OF cJ ch a hj rep SJ rest])
+    show "find_ind_base J a rest (h \<triangleright> t) B"
+      apply (rule defE[OF find_ind_base_def[where J=J and a=a and rest=rest and ptr="h \<triangleright> t"]])
+      apply (simp only: list_hd_cons[OF h t] list_tl_cons[OF h t])
+      apply (rule condTB[OF g0 false_bool])
+      apply (rule condTB[OF eqh _ IH])
+      apply (rule condTB[OF git true_bool IH])
+      done
+  qed
+qed
+
+lemma check_ind_bool [auto]:
+  assumes J: "J N" and r: "rest N"
+  shows "check_ind J rest B"
+proof -
+  have cJ: "conc_of J N" 
+    using J by simp
+  have hj: "hyp_of J N" 
+    using J by simp
+  have LcJ: "load_F (conc_of J) N" 
+    by (rule load_F_N[OF cJ])
+  have cx: "cpx (load_F (conc_of J)) N" 
+    by (rule cpx_terminates[OF LcJ])
+  have xx: "\<langle>cpx (load_F (conc_of J)), cpx (load_F (conc_of J))\<rangle> N" 
+    using cx by simp
+  have pf: "pack_F F_EQ \<langle>cpx (load_F (conc_of J)), cpx (load_F (conc_of J))\<rangle> N"
+    by (rule pack_F_N[OF _ xx], simp)
+  have jN: "(hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpx (load_F (conc_of J)), cpx (load_F (conc_of J))\<rangle>) N"
+    using hj pf by simp
+  have m: "mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpx (load_F (conc_of J)), cpx (load_F (conc_of J))\<rangle>) rest B"
+    by (rule mem_bool[OF jN r])
+  have fib: "find_ind_base J (cpx (load_F (conc_of J))) rest rest B"
+    by (rule find_ind_base_bool[OF J cx r r])
+  show ?thesis
+    apply (rule defE[OF check_ind_def[where J=J and rest=rest]])
+    apply (rule condTB[OF m fib false_bool])
+    done
+qed
+
+lemma app_y_bool [auto]:
+  assumes J: "J N" and d: "d N" and x: "x N" and y: "y N" and r: "rest N"
+      and dr: "d < len dfns = 1"
+  shows "app_y J d x y rest B"
+proof (rule ind[OF y])
+  show "app_y J d x 0 rest B"
+    apply (rule defE[OF app_y_def[where y=0]], insert J d x r)
+    apply simp
+    apply (rule condTB[OF _ true_bool false_bool])
+    apply (rule app_try_bool[OF J d x nat0 r dr])
+    done
+next
+  fix k assume k: "k N" and IH: "app_y J d x k rest B"
+  have skN: "S k N" 
+    by (rule natS[OF k])
+  have oneN: "(1::num) N" 
+    by simp
+  have grN: "(S k > 0) N"
+    by (unfold greater_def, rule sub_terminates[OF oneN leq_terminates[OF skN nat0]])
+  have g2B: "(S k > 0 = 1) B" 
+    by (rule eqBool[OF grN oneN])
+  have sk1: "S k - 1 = k" 
+    using k by simp
+  have RECB: "app_y J d x (S k - 1) rest B" 
+    using IH sk1 by simp
+  have innerB: "(if S k > 0 = 1 then app_y J d x (S k - 1) rest else False) B"
+    by (rule condTB[OF g2B RECB false_bool])
+  have gB: "app_try J d x (S k) rest B" 
+    by (rule app_try_bool[OF J d x skN r dr])
+  show "app_y J d x (S k) rest B"
+    apply (rule defE[OF app_y_def[where y="S k"]])
+    apply (rule condTB[OF gB true_bool innerB])
+    done
+qed
+
+lemma app_x_bool [auto]:
+  assumes J: "J N" and d: "d N" and x: "x N" and r: "rest N"
+      and dr: "d < len dfns = 1"
+  shows "app_x J d x rest B"
+proof -
+  have cJ: "conc_of J N" 
+    using J by simp
+  show ?thesis
+  proof (rule ind[OF x])
+    show "app_x J d 0 rest B"
+      apply (rule defE[OF app_x_def[where x=0]], insert J d r)
+      apply simp
+      apply (rule condTB[OF _ true_bool false_bool])
+      apply (rule app_y_bool[OF J d nat0 cJ r dr])
+      done
+  next
+    fix k assume k: "k N" and IH: "app_x J d k rest B"
+    have skN: "S k N" 
+      by (rule natS[OF k])
+    have oneN: "(1::num) N" 
+      by simp
+    have grN: "(S k > 0) N"
+      by (unfold greater_def, rule sub_terminates[OF oneN leq_terminates[OF skN nat0]])
+    have g2B: "(S k > 0 = 1) B" 
+      by (rule eqBool[OF grN oneN])
+    have sk1: "S k - 1 = k" 
+      using k by simp
+    have RECB: "app_x J d (S k - 1) rest B" 
+      using IH sk1 by simp
+    have innerB: "(if S k > 0 = 1 then app_x J d (S k - 1) rest else False) B"
+      by (rule condTB[OF g2B RECB false_bool])
+    have gB: "app_y J d (S k) (conc_of J) rest B" 
+      by (rule app_y_bool[OF J d skN cJ r dr])
+    show "app_x J d (S k) rest B"
+      apply (rule defE[OF app_x_def[where x="S k"]])
+      apply (rule condTB[OF gB true_bool innerB])
+      done
+  qed
+qed
+
+lemma app_d_bool [auto]:
+  assumes J: "J N" and d: "d N" and r: "rest N"
+  shows "app_d J d rest B"
+proof -
+  have ldN: "len dfns N" 
+    by (rule len_nat[OF dfns_N])
+  have oneN: "(1::num) N" 
+    by simp
+  have cJ: "conc_of J N" 
+    using J by simp
+  show ?thesis
+  proof (rule ind[OF d])
+    have g0: "(0 < len dfns = 1) B" 
+      by (rule eqBool[OF less_terminates[OF nat0 ldN] oneN])
+    have then0: "0 < len dfns = 1 \<Longrightarrow>
+                 (if app_x J 0 (conc_of J) rest then True else False) B"
+    proof -
+      assume hh: "0 < len dfns = 1"
+      have ax: "app_x J 0 (conc_of J) rest B" 
+        by (rule app_x_bool[OF J nat0 cJ r hh])
+      show "(if app_x J 0 (conc_of J) rest then True else False) B"
+        by (rule condTB[OF ax true_bool false_bool])
+    qed
+    show "app_d J 0 rest B"
+      apply (rule defE[OF app_d_def[where d=0]])
+      apply simp
+      apply (rule condTB'[OF g0 then0])
+       apply assumption
+      apply (rule false_bool)
+      done
+  next
+    fix k assume k: "k N" and IH: "app_d J k rest B"
+    have skN: "S k N" 
+      by (rule natS[OF k])
+    have grN: "(S k > 0) N"
+      by (unfold greater_def, rule sub_terminates[OF oneN leq_terminates[OF skN nat0]])
+    have g2B: "(S k > 0 = 1) B" 
+      by (rule eqBool[OF grN oneN])
+    have sk1: "S k - 1 = k" 
+      using k by simp
+    have RECB: "app_d J (S k - 1) rest B" 
+      using IH sk1 by simp
+    have innerB: "(if S k > 0 = 1 then app_d J (S k - 1) rest else False) B"
+      by (rule condTB[OF g2B RECB false_bool])
+    have gS: "(S k < len dfns = 1) B" 
+      by (rule eqBool[OF less_terminates[OF skN ldN] oneN])
+    have thenS: "S k < len dfns = 1 \<Longrightarrow>
+                 (if app_x J (S k) (conc_of J) rest then True
+                  else if S k > 0 = 1 then app_d J (S k - 1) rest else False) B"
+    proof -
+      assume hh: "S k < len dfns = 1"
+      have ax: "app_x J (S k) (conc_of J) rest B" 
+        by (rule app_x_bool[OF J skN cJ r hh])
+      show "(if app_x J (S k) (conc_of J) rest then True
+             else if S k > 0 = 1 then app_d J (S k - 1) rest else False) B"
+        by (rule condTB[OF ax true_bool innerB])
+    qed
+    show "app_d J (S k) rest B"
+      apply (rule defE[OF app_d_def[where d="S k"]])
+      apply (rule condTB'[OF gS thenS])
+       apply assumption
+      apply (rule innerB)
+      done
+  qed
+qed
+
+lemma check_app_bool [auto]:
+  assumes J: "J N" and r: "rest N"
+  shows "check_app J rest B"
+proof -
+  have oneN: "(1::num) N" 
+    by simp
+  have ld1: "len dfns - 1 N" 
+    by (rule sub_terminates[OF len_nat[OF dfns_N] oneN])
+  show ?thesis
+    apply (rule defE[OF check_app_def[where J=J and rest=rest]])
+    apply (rule app_d_bool[OF J ld1 r])
+    done
+qed
+
+lemma valid_step_bool [auto]:
+  assumes J: "J N" and r: "rest N"
+  shows "valid_step J rest B"
+proof -
+  have cJ: "conc_of J N" 
+    using J by simp
+  have hj: "hyp_of J N" 
+    using J by simp
+  have LcJ: "load_F (conc_of J) N" 
+    by (rule load_F_N[OF cJ])
+  have cx: "cpx (load_F (conc_of J)) N" 
+    by (rule cpx_terminates[OF LcJ])
+  have cy: "cpy (load_F (conc_of J)) N" 
+    by (rule cpy_terminates[OF LcJ])
+  have tgx: "tag_T (cpx (load_F (conc_of J))) N" 
+    by (rule tag_T_N[OF cx])
+  have tgy: "tag_T (cpy (load_F (conc_of J))) N" 
+    by (rule tag_T_N[OF cy])
+  have feqN: "F_EQ N" 
+    by simp
+
+  have g1: "mem (conc_of J) (hyp_of J) B" 
+    by (rule mem_bool[OF cJ hj])
+  have g2: "check_cut J rest B" 
+    by (rule check_cut_bool[OF J r])
+  have g3: "check_subst J rest B" 
+    by (rule check_subst_bool[OF J r])
+  have g4: "check_ind J rest B" 
+    by (rule check_ind_bool[OF J r])
+  have g5: "check_app J rest B" 
+    by (rule check_app_bool[OF J r])
+  have g6: "check_struct J rest B" 
+    by (rule check_struct_bool[OF J r])
+  have g7: "(tag_F (conc_of J) = F_EQ) B" 
+    by (rule eqBool[OF tag_F_N[OF cJ] feqN])
+  have beq: "check_eq_rules (hyp_of J) (cpx (load_F (conc_of J))) (cpy (load_F (conc_of J)))
+               (tag_T (cpx (load_F (conc_of J)))) (tag_T (cpy (load_F (conc_of J)))) rest B"
+    by (rule check_eq_rules_bool[OF hj cx cy tgx tgy r])
+  have bneq: "check_neq_rules (hyp_of J) (cpx (load_F (conc_of J))) (cpy (load_F (conc_of J)))
+               (tag_T (cpx (load_F (conc_of J)))) (tag_T (cpy (load_F (conc_of J)))) rest B"
+    by (rule check_neq_rules_bool[OF hj cx cy tgx tgy r])
+
+  show ?thesis
+    apply (rule defE[OF valid_step_def[where J=J and rest=rest]])
+    apply (rule condTB[OF g1 true_bool])
+    apply (rule condTB[OF g2 true_bool])
+    apply (rule condTB[OF g3 true_bool])
+    apply (rule condTB[OF g4 true_bool])
+    apply (rule condTB[OF g5 true_bool])
+    apply (rule condTB[OF g6 true_bool])
+    apply (rule condTB[OF g7 beq bneq])
+    done
+qed
+
+lemma check_list_bool [auto]:
+  assumes pfn: "pf N"
+  shows "check_list pf B"
+proof (rule list_induct[OF pfn])
+  show "check_list Nil B"
+    apply (rule defE[OF check_list_def[where pf=Nil]])
+    apply simp
+    done
+next
+  fix h t assume h: "h N" and t: "t N" and IH: "check_list t B"
+  show "check_list (Cons h t) B"
+  proof -
+    have htN: "h \<triangleright> t N" 
+      using h t by simp
+    have g0: "(h \<triangleright> t = \<emptyset>) B" 
+      apply (rule eqBool[OF htN]) 
+      apply simp 
+      done
+    have vs: "valid_step h t B" 
+      by (rule valid_step_bool[OF h t])
+    show "check_list (h \<triangleright> t) B"
+      apply (rule defE[OF check_list_def[where pf="h \<triangleright> t"]])
+      apply (simp only: list_hd_cons[OF h t] list_tl_cons[OF h t])
+      apply (rule condTB[OF g0 true_bool])
+      apply (rule condTB[OF vs IH false_bool])
+      done
+  qed
+qed
+
 lemma proof_is_bool: "p N \<Longrightarrow> J N \<Longrightarrow> is_valid_proof p J B"
-  sorry
+proof -
+  assume p: "p N" and J: "J N"
+  have g0: "(p = Nil) B" 
+    by (rule eqBool[OF p nil_nat])
+  have g1: "(list_hd p = J) B" 
+    by (rule eqBool[OF list_hd_nat[OF p] J])
+  have cl: "check_list p B" 
+    by (rule check_list_bool[OF p])
+  show "is_valid_proof p J B"
+    apply (rule defE[OF is_valid_proof_def[where pf=p and J=J]])
+    apply (rule condTB[OF g0 false_bool])
+    apply (rule condTB[OF g1 cl false_bool])
+    done
+qed
 
 lemma soundness_bridge: "is_valid_proof p J \<Longrightarrow> sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A"
   sorry
