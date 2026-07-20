@@ -460,7 +460,12 @@ apply (subst "a=b", assumption)
 apply (rule entailsI, simp)
 done
 
-
+lemma eq_impl_term2: "a = b \<Longrightarrow> b N"
+apply (rule entailsE[where a="a=b"])
+apply (unfold isNat_def)
+apply (subst "a=b", assumption)
+apply (rule entailsI, simp)
+done
 
 
 lemma [simp]: "\<not>c \<Longrightarrow> b N \<Longrightarrow> d N \<Longrightarrow> (if c then a else b) = d \<longleftrightarrow> b = d"
@@ -4807,7 +4812,7 @@ axiomatization len :: "List \<Rightarrow> num" where
 
   (* every formula of G' occurs in G *)
 axiomatization subset :: "List \<Rightarrow> List \<Rightarrow> o" where
-  subhyp_def: "subset G' G :=
+  subset_def: "subset G' G :=
     if G' = Nil then True
     else mem (list_hd G') G \<and> subset (list_tl G') G"
 
@@ -5052,6 +5057,17 @@ proof -
     by (rule forallE[OF all i_nat])
   hence "(i < len xs = 1) \<longrightarrow> (nth i xs N)" using i_nat by (rule implE)
   thus "nth i xs N" using lt by (rule implE)
+qed
+
+lemma subset_bool [auto]:
+  assumes A: "A N" and G: "G N"
+  shows "subset A G B"
+proof (rule list_induct[OF A])
+  show "subset Nil G B" sorry
+next
+  fix h t assume h: "h N" and t: "t N" and IH: "subset t G B"
+  show "subset (Cons h t) G B"
+    sorry
 qed
 
 end (* End of theory *)

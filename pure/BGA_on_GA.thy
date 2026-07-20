@@ -745,11 +745,49 @@ proof -
     using a b apply simp+
     done
   from h[unfolded sat_def] show "eval a A = eval b A"
-    using tg ld a b sorry
+  proof -
+  have step: "eval (hyp_of (load_F (mk_eq a b))) A
+            = eval (conc_of (load_F (mk_eq a b))) A"
+    by (rule cond_thenE[OF tg h[unfolded sat_def]])
+  from step show "eval a A = eval b A"
+    using a b apply (simp add: ld)
+    apply (rule eq_impl_term2)
+    apply simp
+    done
+qed
 qed
 
 lemma sat_neqE': "a N \<Longrightarrow> b N \<Longrightarrow> sat (mk_neq a b) A \<Longrightarrow> eval a A \<noteq> eval b A"
-  sorry
+proof -
+  assume a: "a N" and b: "b N" and h: "sat (mk_neq a b) A"
+  have p: "\<langle>a, b\<rangle> N" using a b by simp
+  have tg: "tag_F (mk_neq a b) = F_NEQ"
+    unfolding mk_neq_def apply (rule tag_pack_F)
+    using a b apply simp+
+    done
+  have tg_ne: "\<not> (tag_F (mk_neq a b) = F_EQ)"
+    using tg by simp
+  have ld: "load_F (mk_neq a b) = \<langle>a, b\<rangle>"
+    unfolding mk_neq_def apply (rule load_pack_F)
+    using a b apply simp+
+    done
+  have step: "eval (hyp_of (load_F (mk_neq a b))) A
+            \<noteq> eval (conc_of (load_F (mk_neq a b))) A"
+    by (rule notcond_thenE[OF tg_ne h[unfolded sat_def]])
+  from step show "eval a A \<noteq> eval b A"
+    using a b by (simp add: ld)
+qed
+
+lemma find_struct_bool [auto]:
+  assumes J: "J N" and G: "G N" and ptr: "ptr N"
+  shows "find_struct J G ptr B"
+proof (rule list_induct[OF ptr])
+  show "find_struct J G Nil B" by (rule defE[OF find_struct_def[where ptr=Nil]], simp)
+next
+  fix h t assume h: "h N" and t: "t N" and IH: "find_struct J G t B"
+  show "find_struct J G (Cons h t) B"
+    by (rule defE[OF find_struct_def[where ptr="Cons h t"]], insert J G h t IH, simp+)
+qed
 
 lemma proof_is_bool: "p N \<Longrightarrow> J N \<Longrightarrow> is_valid_proof p J B"
   sorry
