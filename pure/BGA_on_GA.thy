@@ -1253,6 +1253,52 @@ next
     using subst_F_N[OF natS[OF k] i a] subst_F_N[OF natS[OF k] i b] phi f by auto
 qed
 
+lemma find_phi_bool [auto]:
+  assumes J: "J N" and a: "a N" and b: "b N" and ptr: "ptr N"
+  shows "find_phi J a b ptr B"
+proof (rule list_induct[OF ptr])
+  show "find_phi J a b Nil B"
+    apply (rule defE[OF find_phi_def[where J=J and a=a and b=b and ptr=Nil]])
+    apply simp
+    done
+next
+  fix h t assume h: "h N" and t: "t N" and IH: "find_phi J a b t B"
+  show "find_phi J a b (Cons h t) B"
+  proof -
+    have htN: "h \<triangleright> t N" using h t by simp
+    have g1: "(h \<triangleright> t = \<emptyset>) B" apply (rule eqBool[OF htN]) apply simp done
+
+    have eq1: "(hyp_of h = hyp_of J) B" using h J by simp
+    
+    have cy_J: "conc_of J N" using J by simp
+    have cy_h: "conc_of h N" using h by simp
+    have SJ: "S J N" using J by simp
+    
+    have rep: "rep_vars_F (conc_of J) (S J) N" 
+      by (rule rep_vars_F_N[OF cy_J SJ])
+    
+    have eq2: "check_template (conc_of J) (conc_of h) a b (rep_vars_F (conc_of J) (S J)) (S J) B"
+      apply (rule check_template_bool)
+      apply (rule cy_J)
+      apply (rule cy_h)
+      apply (rule a)
+        apply (rule b)
+      apply (rule SJ)
+      apply (rule rep)
+      done
+      
+    have g2: "(hyp_of h = hyp_of J \<and> check_template (conc_of J) (conc_of h) a b (rep_vars_F (conc_of J) (S J)) (S J)) B"
+      using eq1 eq2 by simp
+
+    show "find_phi J a b (h \<triangleright> t) B"
+      apply (rule defE[OF find_phi_def[where J=J and a=a and b=b and ptr="h \<triangleright> t"]])
+      apply (simp only: list_hd_cons[OF h t] list_tl_cons[OF h t] one_plus_suc[OF J])
+      apply (rule condTB[OF g1 false_bool])
+      apply (rule condTB[OF g2 true_bool IH])
+      done
+  qed
+qed
+
 lemma app_try_bool [auto]:
   assumes J: "J N" and d: "d N" and x: "x N" and y: "y N" and r: "rest N"
       and dr: "d < len dfns = 1"
@@ -1275,7 +1321,7 @@ proof (rule defE[OF app_try_def[where J=J and d=d and x=x and y=y and rest=rest]
   have m1: "mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>x, x\<rangle>) rest B" by (rule mem_bool[OF jxx r])
   have m2: "mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>y, y\<rangle>) rest B" by (rule mem_bool[OF jyy r])
   have fp: "find_phi J (subst_body (nth d dfns) x y) (pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle>) rest B"
-    sorry
+           by (rule find_phi_bool[OF J sb pT r])
   show "(mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>x, x\<rangle>) rest
          \<and> mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>y, y\<rangle>) rest
          \<and> find_phi J (subst_body (nth d dfns) x y) (pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle>) rest) B"
