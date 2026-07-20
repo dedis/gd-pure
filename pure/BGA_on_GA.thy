@@ -1360,7 +1360,97 @@ next
     by (rule defE[OF find_struct_def[where ptr="Cons h t"]], insert J G h t IH, simp+)
 qed
 
+lemma find_cut_bool [auto]:
+  assumes J: "J N" and rest: "rest N" and ptr: "ptr N"
+  shows "find_cut J rest ptr B"
+proof (rule list_induct[OF ptr])
+  show "find_cut J rest Nil B"
+    apply (rule defE[OF find_cut_def[where J=J and rest=rest and ptr=Nil]])
+    apply simp
+    done
+next
+  fix h t assume h: "h N" and t: "t N" and IH: "find_cut J rest t B"
+  show "find_cut J rest (Cons h t) B"
+  proof -
+    have htN: "h \<triangleright> t N" using h t by simp
+    have g0: "(h \<triangleright> t = \<emptyset>) B" apply (rule eqBool[OF htN]) apply simp done
+    have g1: "(hyp_of h = hyp_of J) B" using h J by simp
+    have cc: "conc_of h \<triangleright> hyp_of J \<tturnstile> conc_of J N" using h J by simp
+    have m: "mem (conc_of h \<triangleright> hyp_of J \<tturnstile> conc_of J) rest B"
+      by (rule mem_bool[OF cc rest])
+    show "find_cut J rest (h \<triangleright> t) B"
+      apply (rule defE[OF find_cut_def[where J=J and rest=rest and ptr="h \<triangleright> t"]])
+      apply (simp only: list_hd_cons[OF h t] list_tl_cons[OF h t])
+      apply (rule condTB[OF g0 false_bool])
+      apply (rule condTB[OF g1 _ IH])
+      apply (rule condTB[OF m true_bool IH])
+      done
+  qed
+qed
 
+lemma check_cut_bool [auto]:
+  assumes J: "J N" and rest: "rest N"
+  shows "check_cut J rest B"
+  apply (rule defE[OF check_cut_def[where J=J and rest=rest]])
+  apply (rule find_cut_bool[OF J rest rest])
+  done
+
+lemma find_eq_bool [auto]:
+  assumes J: "J N" and rest: "rest N" and ptr: "ptr N"
+  shows "find_eq J rest ptr B"
+proof (rule list_induct[OF ptr])
+  show "find_eq J rest Nil B"
+    apply (rule defE[OF find_eq_def[where J=J and rest=rest and ptr=Nil]])
+    apply simp
+    done
+next
+  fix h t assume h: "h N" and t: "t N" and IH: "find_eq J rest t B"
+  show "find_eq J rest (Cons h t) B"
+  proof -
+    have htN: "h \<triangleright> t N" using h t by simp
+    have g0: "(h \<triangleright> t = \<emptyset>) B" apply (rule eqBool[OF htN]) apply simp done
+
+    have ch: "conc_of h N" using h by simp
+    have eqh: "(hyp_of h = hyp_of J) B" using h J by simp
+    have tgh: "tag_F (conc_of h) N" by (rule tag_F_N[OF ch])
+    have feqN: "F_EQ N" by simp
+    have eqtg: "(tag_F (conc_of h) = F_EQ) B" by (rule eqBool[OF tgh feqN])
+    have g1: "(hyp_of h = hyp_of J \<and> tag_F (conc_of h) = F_EQ) B"
+      using eqh eqtg by simp
+
+    have Lch: "load_F (conc_of h) N" by (rule load_F_N[OF ch])
+    have cxh: "cpx (load_F (conc_of h)) N" by (rule cpx_terminates[OF Lch])
+    have cyh: "cpy (load_F (conc_of h)) N" by (rule cpy_terminates[OF Lch])
+    have gphi: "find_phi J (cpx (load_F (conc_of h))) (cpy (load_F (conc_of h))) rest B"
+      by (rule find_phi_bool[OF J cxh cyh rest])
+
+    show "find_eq J rest (h \<triangleright> t) B"
+      apply (rule defE[OF find_eq_def[where J=J and rest=rest and ptr="h \<triangleright> t"]])
+      apply (simp only: list_hd_cons[OF h t] list_tl_cons[OF h t])
+      apply (rule condTB[OF g0 false_bool])
+      apply (rule condTB[OF g1 _ IH])
+      apply (rule condTB[OF gphi true_bool IH])
+      done
+  qed
+qed
+
+lemma check_subst_bool [auto]:
+  assumes J: "J N" and rest: "rest N"
+  shows "check_subst J rest B"
+  apply (rule defE[OF check_subst_def[where J=J and rest=rest]])
+  apply (rule find_eq_bool[OF J rest rest])
+  done
+
+lemma check_struct_bool [auto]:
+  assumes J: "J N" and rest: "rest N"
+  shows "check_struct J rest B"
+proof -
+  have hj: "hyp_of J N" using J by simp
+  show ?thesis
+    apply (rule defE[OF check_struct_def[where J=J and rest=rest]])
+    apply (rule find_struct_bool[OF J hj rest])
+    done
+qed
 
 lemma proof_is_bool: "p N \<Longrightarrow> J N \<Longrightarrow> is_valid_proof p J B"
   sorry
