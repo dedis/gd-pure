@@ -207,15 +207,15 @@ locale bga_bijective_encoding =
   fixes pack_F :: "fmtag \<Rightarrow> fm \<Rightarrow> fm"
 
 (* Fixing Definition*)
-fixes dfns :: "dfn"
-
+  fixes dfns :: "dfn"
+  assumes dfns_N: "dfns N"
   (* AXIOMS *)
   (*Habeas Quid for the Encoder *)
   assumes pack_F_N: "\<lbrakk>t N; L N\<rbrakk> \<Longrightarrow> pack_F t L N"
   assumes tag_F_N:  "f N \<Longrightarrow> tag_F f N"
   assumes load_F_N: "f N \<Longrightarrow> load_F f N"
 
-  assumes pack_T_N: "\<lbrakk>t N; L N\<rbrakk> \<Longrightarrow> pack_T t L N"
+  assumes pack_T_N: "\<lbrakk>t N; L N\<rbrakk> \<Longrightarrow> (pack_T t L) N"
   assumes tag_T_N:  "t N \<Longrightarrow> tag_T t N"
   assumes load_T_N: "t N \<Longrightarrow> load_T t N"
 
@@ -234,6 +234,8 @@ fixes dfns :: "dfn"
   (* This will require load of atomic terms(without arguments) to return 0 *)
   assumes decrease_F: "\<lbrakk>f N; f \<noteq> 0 \<rbrakk> \<Longrightarrow> load_F f < f = 1"
   assumes decrease_T: "\<lbrakk>t N; t \<noteq> 0\<rbrakk> \<Longrightarrow> load_T t < t = 1"
+
+  assumes tag_T_zero: "tag_T 0 = T_ZERO"
 
   (*Monotone assumptions for Bounding *)
   assumes mono_pack_T: "(x \<le> y = 1) \<Longrightarrow> (pack_T tg x \<le> pack_T tg y =1)"
@@ -397,8 +399,8 @@ locale bga_subst_rule = bga_subst +
       if find_phi J (cpx (load_F (conc_of (list_hd ptr)))) (cpy (load_F (conc_of (list_hd ptr)))) rest then True
       else find_eq J rest (list_tl ptr)
     else find_eq J rest (list_tl ptr)"
-
   fixes check_subst    :: "jdg \<Rightarrow> pf \<Rightarrow> o"
+
 (* checking the substitution rule *)
 assumes check_subst_def: "check_subst J rest := find_eq J rest rest"
 
@@ -423,7 +425,7 @@ Proof Rules:
 
 *)
 
-fixes check_eq_rules  :: "hyp \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> tmtag \<Rightarrow> tmtag \<Rightarrow> pf \<Rightarrow> o"
+  fixes check_eq_rules  :: "hyp \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> tmtag \<Rightarrow> tmtag \<Rightarrow> pf \<Rightarrow> o"
 (* Equality Rules
 1. \<Gamma> \<turnstile> 0 N
 2. \<Gamma> \<turnstile> a=b \<Longrightarrow> \<Gamma> \<turnstile> b=a
@@ -757,6 +759,405 @@ proof -
 qed
 qed
 
+
+lemma subst_T_N:
+  assumes t: "t N" and j: "j N" and v: "v N"
+  shows "subst_T t j v N"
+proof (rule strong_induction[where a=t])
+  show "t N" by (rule t)
+next
+  show "subst_T 0 j v N"
+      proof -
+    have zN: "pack_T T_ZERO 0 N"
+      apply (rule pack_T_N) 
+       apply simp 
+      done
+    have g1: "\<not> (tag_T 0 = T_VAR)" 
+      by (simp add: tag_T_zero)
+    have g2: "tag_T 0 = T_ZERO"     
+      by (rule tag_T_zero)
+    have red: "subst_T 0 j v = pack_T T_ZERO 0"
+      apply (rule defE[OF subst_T_def[where t=0 and j=j and v=v]])
+      apply (rule condI2Eq[OF g1 zN])
+      apply (rule condI1Eq[OF g2 zN])
+      using zN apply simp
+      done
+    show "subst_T 0 j v N" using red zN by simp
+  qed
+next
+  fix x assume x: "x N" and IH: "\<And>y. y N \<Longrightarrow> y \<le> x = 1 \<Longrightarrow> subst_T y j v N"
+  have sxN:  "S x N"          
+    by (rule natS[OF x])
+  have sxnz: "S x \<noteq> 0"        
+    by (rule sucNonZero[OF x])
+  have L:    "load_T (S x) N" 
+    by (rule load_T_N[OF sxN])
+  have Lx:   "load_T (S x) \<le> x = 1"
+    by (rule le_suc_implies_leq[OF decrease_T[OF sxN sxnz] L x])
+  have cxL:  "cpx (load_T (S x)) N" 
+    by (rule cpx_terminates[OF L])
+  have cyL:  "cpy (load_T (S x)) N" 
+    by (rule cpy_terminates[OF L])
+  have cxLx: "cpx (load_T (S x)) \<le> x = 1"
+    by (rule leq_trans[OF cxL L x cpx_mono[OF L] Lx])
+  have cyLx: "cpy (load_T (S x)) \<le> x = 1"
+    by (rule leq_trans[OF cyL L x cpy_mono[OF L] Lx])
+  have cxcyL: "cpx (cpy (load_T (S x))) N" 
+    by (rule cpx_terminates[OF cyL])
+  have cycyL: "cpy (cpy (load_T (S x))) N" 
+    by (rule cpy_terminates[OF cyL])
+  have cxcyLx: "cpx (cpy (load_T (S x))) \<le> x = 1"
+    by (rule leq_trans[OF cxcyL cyL x cpx_mono[OF cyL] cyLx])
+  have cycyLx: "cpy (cpy (load_T (S x))) \<le> x = 1"
+    by (rule leq_trans[OF cycyL cyL x cpy_mono[OF cyL] cyLx])
+  have r0: "subst_T (load_T (S x)) j v N"             
+    by (rule IH[OF L Lx])
+  have r1: "subst_T (cpx (load_T (S x))) j v N"       
+    by (rule IH[OF cxL cxLx])
+  have r2: "subst_T (cpx (cpy (load_T (S x)))) j v N" 
+    by (rule IH[OF cxcyL cxcyLx])
+  have r3: "subst_T (cpy (cpy (load_T (S x)))) j v N" 
+    by (rule IH[OF cycyL cycyLx])  
+    (* guards *)
+  have tgN:   "tag_T (S x) N"             
+    by (rule tag_T_N[OF sxN])
+  have gVAR:  "(tag_T (S x) = T_VAR) B"   
+    apply (rule eqBool[OF tgN]) 
+    apply simp 
+    done
+  have gZERO: "(tag_T (S x) = T_ZERO) B"  
+    apply (rule eqBool[OF tgN]) 
+    apply simp 
+    done
+  have gSUC:  "(tag_T (S x) = T_SUC) B"   
+    apply (rule eqBool[OF tgN]) 
+    apply simp 
+    done
+  have gPRED: "(tag_T (S x) = T_PRED) B"  
+    apply (rule eqBool[OF tgN]) 
+    apply simp 
+    done
+  have gIFZ:  "(tag_T (S x) = T_IFZ) B"   
+    apply (rule eqBool[OF tgN]) 
+    apply simp 
+    done
+  (* the six branches are all N *)
+  have A1N: "(if load_T (S x) = j then v else S x) N"
+    apply (rule condT[OF _ v sxN]) 
+    apply (rule eqBool[OF L j]) 
+    done
+  have A2N: "pack_T T_ZERO 0 N"
+    apply (rule pack_T_N) 
+     apply simp 
+    done
+  have A3N: "pack_T T_SUC (subst_T (load_T (S x)) j v) N"
+    apply (rule pack_T_N)
+     apply simp
+    apply (rule r0) 
+    done
+  have A4N: "pack_T T_PRED (subst_T (load_T (S x)) j v) N"
+    apply (rule pack_T_N)
+     apply simp
+    apply (rule r0)
+    done
+  have iffN: "\<langle>subst_T (cpx (load_T (S x))) j v,
+               \<langle>subst_T (cpx (cpy (load_T (S x)))) j v,
+                subst_T (cpy (cpy (load_T (S x)))) j v\<rangle>\<rangle> N"
+    using r1 r2 r3
+    by simp
+  have A5N: "pack_T T_IFZ \<langle>subst_T (cpx (load_T (S x))) j v,
+               \<langle>subst_T (cpx (cpy (load_T (S x)))) j v,
+                subst_T (cpy (cpy (load_T (S x)))) j v\<rangle>\<rangle> N"
+    apply (rule pack_T_N)
+    apply simp
+    apply (rule r1)
+    apply (rule r2)
+    apply (rule r3)
+    done
+
+  have A6N: "pack_T T_APP \<langle>cpx (load_T (S x)),
+               \<langle>subst_T (cpx (cpy (load_T (S x)))) j v,
+                subst_T (cpy (cpy (load_T (S x)))) j v\<rangle>\<rangle> N"
+    apply (rule pack_T_N)
+     apply simp
+    apply (rule L)
+    apply (rule r2)
+    apply (rule r3)
+    done
+
+  show "subst_T (S x) j v N"
+    apply (rule defE[OF subst_T_def[where t="S x" and j=j and v=v]])
+    apply (rule condT[OF gVAR A1N])
+    apply (rule condT[OF gZERO A2N])
+    apply (rule condT[OF gSUC A3N])
+    apply (rule condT[OF gPRED A4N])
+    apply (rule condT[OF gIFZ A5N])
+    apply (rule A6N)
+    done
+qed
+
+lemma subst_body_N:
+  assumes b: "b N" and xa: "x N" and ya: "y N"
+  shows "subst_body b x y N"
+proof (rule strong_induction[where a=b])
+  show "b N"
+    by (rule b)
+next
+  show "subst_body 0 x y N"
+    by (rule defE[OF subst_body_def[where b=0 and x=x and y=y]],
+        simp add: tag_T_zero)
+next
+  fix w assume w: "w N" and IH: "\<And>z. z N \<Longrightarrow> z \<le> w = 1 \<Longrightarrow> subst_body z x y N"
+  have swN:  "S w N"          using w
+    by simp
+  have swnz: "S w \<noteq> 0"       
+    by (rule sucNonZero[OF w])
+  have L:    "load_T (S w) N"
+    by (rule load_T_N[OF swN])
+  have Lw:   "load_T (S w) \<le> w = 1"
+    by (rule le_suc_implies_leq[OF decrease_T[OF swN swnz] L w])
+  have cxL: "cpx (load_T (S w)) N" using L
+    by simp
+  have cyL: "cpy (load_T (S w)) N" using L
+    by simp
+  have cxLw: "cpx (load_T (S w)) \<le> w = 1"
+    by (rule leq_trans[OF cxL L w cpx_mono[OF L] Lw])
+  have cyLw: "cpy (load_T (S w)) \<le> w = 1"
+    by (rule leq_trans[OF cyL L w cpy_mono[OF L] Lw])
+  have cxcyL: "cpx (cpy (load_T (S w))) N" using cyL
+    by simp
+  have cycyL: "cpy (cpy (load_T (S w))) N" using cyL
+    by simp
+  have cxcyLw: "cpx (cpy (load_T (S w))) \<le> w = 1"
+    by (rule leq_trans[OF cxcyL cyL w cpx_mono[OF cyL] cyLw])
+  have cycyLw: "cpy (cpy (load_T (S w))) \<le> w = 1"
+    by (rule leq_trans[OF cycyL cyL w cpy_mono[OF cyL] cyLw])
+  have r0: "subst_body (load_T (S w)) x y N"           
+    by (rule IH[OF L Lw])
+  have r1: "subst_body (cpx (load_T (S w))) x y N"     
+    by (rule IH[OF cxL cxLw])
+  have r2: "subst_body (cpx (cpy (load_T (S w)))) x y N"
+    by (rule IH[OF cxcyL cxcyLw])
+  have r3: "subst_body (cpy (cpy (load_T (S w)))) x y N"
+    by (rule IH[OF cycyL cycyLw])
+  have tgN:   "tag_T (S w) N"            
+    by (rule tag_T_N[OF swN])
+  have gVAR:  "(tag_T (S w) = T_VAR) B"   
+    apply (rule eqBool[OF tgN]) 
+    apply simp 
+    done
+  have gZERO: "(tag_T (S w) = T_ZERO) B"  
+    apply (rule eqBool[OF tgN]) 
+    apply simp 
+    done
+  have gSUC:  "(tag_T (S w) = T_SUC) B"   
+    apply (rule eqBool[OF tgN]) 
+    apply simp 
+    done
+  have gPRED: "(tag_T (S w) = T_PRED) B"  
+    apply (rule eqBool[OF tgN]) 
+    apply simp 
+    done
+  have gIFZ:  "(tag_T (S w) = T_IFZ) B"   
+    apply (rule eqBool[OF tgN]) 
+    apply simp 
+    done
+  
+  have ldN: "load_T (S w) N" by (rule L)
+  have gL0: "(load_T (S w) = 0) B" 
+    apply (rule eqBool[OF ldN]) 
+    apply simp 
+    done
+  have gL1: "(load_T (S w) = 1) B" 
+    apply (rule eqBool[OF ldN]) 
+    apply simp 
+    done
+  
+  have A1N: "(if load_T (S w) = 0 then x else if load_T (S w) = 1 then y else S w) N"
+    apply (rule condT[OF gL0 xa])
+    apply (rule condT[OF gL1 ya swN])
+    done
+  have A2N: "S w N" 
+    by (rule swN)
+  
+  have A3N: "pack_T T_SUC (subst_body (load_T (S w)) x y) N"
+    apply (rule pack_T_N) 
+     apply simp 
+    apply (rule r0) 
+    done
+    
+  have A4N: "pack_T T_PRED (subst_body (load_T (S w)) x y) N"
+    apply (rule pack_T_N) 
+     apply simp 
+    apply (rule r0) 
+    done
+    
+  have iffN: "\<langle>subst_body (cpx (load_T (S w))) x y,
+               \<langle>subst_body (cpx (cpy (load_T (S w)))) x y,
+                subst_body (cpy (cpy (load_T (S w)))) x y\<rangle>\<rangle> N"
+    using r1 r2 r3 by simp
+
+  have A5N: "pack_T T_IFZ \<langle>subst_body (cpx (load_T (S w))) x y,
+               \<langle>subst_body (cpx (cpy (load_T (S w)))) x y,
+                subst_body (cpy (cpy (load_T (S w)))) x y\<rangle>\<rangle> N"
+    apply (rule pack_T_N)
+    apply simp
+    apply (rule r1)
+    apply (rule r2)
+    apply (rule r3)
+    done
+
+  have A6N: "pack_T T_APP \<langle>cpx (load_T (S w)),
+               \<langle>subst_body (cpx (cpy (load_T (S w)))) x y,
+                subst_body (cpy (cpy (load_T (S w)))) x y\<rangle>\<rangle> N"
+    apply (rule pack_T_N)
+    apply simp
+    apply (rule L)
+    apply (rule r2)
+    apply (rule r3)
+    done
+
+  show "subst_body (S w) x y N"
+    apply (rule defE[OF subst_body_def[where b="S w" and x=x and y=y]])
+    apply (rule condT[OF gVAR A1N])
+    apply (rule condT[OF gZERO A2N])
+    apply (rule condT[OF gSUC A3N])
+    apply (rule condT[OF gPRED A4N])
+    apply (rule condT[OF gIFZ A5N])
+    apply (rule A6N)
+    done
+qed
+
+(* ===================== rep_vars_T_N (same skeleton, no j/v) ===================== *)
+lemma rep_vars_T_N:
+  assumes t: "t N" and i: "i N"
+  shows "rep_vars_T t i N"
+proof (rule strong_induction[where a=t])
+  show "t N" by (rule t)
+next
+  show "rep_vars_T 0 i N"
+    by (rule defE[OF rep_vars_T_def[where t=0 and i=i]],
+        simp add: tag_T_zero pack_T_N)                 (* T_ZERO branch -> pack_T T_VAR i *)
+next
+  fix x assume x: "x N" and IH: "\<And>y. y N \<Longrightarrow> y \<le> x = 1 \<Longrightarrow> rep_vars_T y i N"
+  have sxN:  "S x N"          using x by simp
+  have sxnz: "\<not> (S x = 0)"    using x by simp
+  have L:    "load_T (S x) N" by (rule load_T_N[OF sxN])
+  have Lx:   "load_T (S x) \<le> x = 1"
+    by (rule le_suc_implies_leq[OF decrease_T[OF sxN sxnz] L x])
+  have cxL: "cpx (load_T (S x)) N" using L by simp
+  have cyL: "cpy (load_T (S x)) N" using L by simp
+  have cxLx: "cpx (load_T (S x)) \<le> x = 1"
+    by (rule leq_trans[OF cpx_mono[OF L] Lx]; simp add: cxL L x)
+  have cyLx: "cpy (load_T (S x)) \<le> x = 1"
+    by (rule leq_trans[OF cpy_mono[OF L] Lx]; simp add: cyL L x)
+  have cxcyL: "cpx (cpy (load_T (S x))) N" using cyL by simp
+  have cycyL: "cpy (cpy (load_T (S x))) N" using cyL by simp
+  have cxcyLx: "cpx (cpy (load_T (S x))) \<le> x = 1"
+    by (rule leq_trans[OF cpx_mono[OF cyL] cyLx]; simp add: cxcyL cyL x)
+  have cycyLx: "cpy (cpy (load_T (S x))) \<le> x = 1"
+    by (rule leq_trans[OF cpy_mono[OF cyL] cyLx]; simp add: cycyL cyL x)
+  have r0: "rep_vars_T (load_T (S x)) i N"            by (rule IH[OF L Lx])
+  have r1: "rep_vars_T (cpx (load_T (S x))) i N"      by (rule IH[OF cxL cxLx])
+  have r2: "rep_vars_T (cpx (cpy (load_T (S x)))) i N" by (rule IH[OF cxcyL cxcyLx])
+  have r3: "rep_vars_T (cpy (cpy (load_T (S x)))) i N" by (rule IH[OF cycyL cycyLx])
+  show "rep_vars_T (S x) i N"
+    apply (rule defE[OF rep_vars_T_def[where t="S x" and i=i]])
+    apply (insert x i sxN L cxL r0 r1 r2 r3)
+    apply (auto intro: pack_T_N)
+    done
+qed
+
+(* ===================== the one-step F versions ===================== *)
+lemma subst_F_N:
+  assumes f: "f N" and j: "j N" and v: "v N"
+  shows "subst_F f j v N"
+  apply (rule defE[OF subst_F_def[where f=f and j=j and v=v]])
+  apply (insert f j v subst_T_N[OF _ j v] pack_F_N)
+  apply (auto intro: pack_F_N subst_T_N)
+  done
+
+lemma rep_vars_F_N:
+  assumes f: "f N" and i: "i N"
+  shows "rep_vars_F f i N"
+  apply (rule defE[OF rep_vars_F_def[where f=f and i=i]])
+  apply (insert f i rep_vars_T_N[OF _ i] pack_F_N)
+  apply (auto intro: pack_F_N rep_vars_T_N)
+  done
+
+(* ===================== subset_bool (list-rec, mem_bool template) ===================== *)
+lemma subset_bool [auto]:
+  assumes A: "A N" and G: "G N"
+  shows "subset A G B"
+proof (rule list_induct[OF A])
+  show "subset Nil G B" by (rule defE[OF subset_def[where A=Nil]], simp)
+next
+  fix h t assume h: "h N" and t: "t N" and IH: "subset t G B"
+  show "subset (Cons h t) G B"
+    by (rule defE[OF subset_def[where A="Cons h t"]], insert G h t IH, simp+)
+qed
+
+lemma subst_F_N:    "\<lbrakk>f N; j N; v N\<rbrakk> \<Longrightarrow> subst_F f j v N"
+  sorry
+
+lemma subst_body_N: "\<lbrakk>b N; x N; y N\<rbrakk> \<Longrightarrow> subst_body b x y N"
+  sorry
+
+lemma rep_vars_F_N: "\<lbrakk>f N; i N\<rbrakk> \<Longrightarrow> rep_vars_F f i N"
+  sorry
+
+lemma check_template_bool [auto]:
+  assumes f: "f N" and phi: "phi N" and a: "a N" and b: "b N" and i: "i N" and p: "p N"
+  shows "check_template f phi a b p i B"
+proof (rule ind[OF p])
+  show "check_template f phi a b 0 i B"
+    apply (rule defE[OF check_template_def[where p=0]], insert f phi a b i)
+    apply simp
+    apply (rule condTB[OF _ true_bool false_bool])
+    using subst_F_N[OF nat0 i a] subst_F_N[OF nat0 i b] phi f by auto
+next
+  fix k assume k: "k N" and IH: "check_template f phi a b k i B"
+  show "check_template f phi a b (S k) i B"
+    apply (rule defE[OF check_template_def[where p="S k"]], insert f phi a b i k IH)
+    apply simp
+    apply (rule condTB[OF _ true_bool IH])
+    using subst_F_N[OF natS[OF k] i a] subst_F_N[OF natS[OF k] i b] phi f by auto
+
+qed
+
+lemma app_try_bool [auto]:
+  assumes J: "J N" and d: "d N" and x: "x N" and y: "y N" and r: "rest N"
+      and dr: "d < len dfns = 1"
+  shows "app_try J d x y rest B"
+proof (rule defE[OF app_try_def[where J=J and d=d and x=x and y=y and rest=rest]])
+  (* nat-ness of the two equality judgements  (\<TTurnstile> is \<langle>_,_\<rangle>, F_EQ \<equiv> 0) *)
+  have hj:  "hyp_of J N"             using J by simp
+  have xx:  "\<langle>x, x\<rangle> N"              using x by simp
+  have yy:  "\<langle>y, y\<rangle> N"              using y by simp
+  have pfx: "pack_F F_EQ \<langle>x, x\<rangle> N"  by (rule pack_F_N[OF _ xx], simp)
+  have pfy: "pack_F F_EQ \<langle>y, y\<rangle> N"  by (rule pack_F_N[OF _ yy], simp)
+  have jxx: "(hyp_of J \<tturnstile> pack_F F_EQ \<langle>x, x\<rangle>) N" using hj pfx by simp
+  have jyy: "(hyp_of J \<tturnstile> pack_F F_EQ \<langle>y, y\<rangle>) N" using hj pfy by simp
+  (* nat-ness of the find_phi arguments  (T_APP \<equiv> 5) *)
+  have ndf: "nth d dfns N"
+    using dfns_N dr apply (rule nth_in_range_N)
+    done
+
+  have sb:  "subst_body (nth d dfns) x y N" by (rule subst_body_N[OF ndf x y])
+  have dxy: "\<langle>d, \<langle>x, y\<rangle>\<rangle> N"                 using d x y by simp
+  have pT:  "pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle> N"    by (rule pack_T_N[OF _ dxy], simp)
+  (* booleanness of the three conjuncts *)
+  have m1: "mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>x, x\<rangle>) rest B" by (rule mem_bool[OF jxx r])
+  have m2: "mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>y, y\<rangle>) rest B" by (rule mem_bool[OF jyy r])
+  have fp: "find_phi J (subst_body (nth d dfns) x y) (pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle>) rest B"
+           by (rule find_phi_bool[OF J sb pT r])
+  (* combine via the anonymous [auto] conjunction-booleanness lemma (GD.thy line 2981) *)
+  show "(mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>x, x\<rangle>) rest
+         \<and> mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>y, y\<rangle>) rest
+         \<and> find_phi J (subst_body (nth d dfns) x y) (pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle>) rest) B"
+    using m1 m2 fp by auto
+qed
+
 lemma sat_neqE': "a N \<Longrightarrow> b N \<Longrightarrow> sat (mk_neq a b) A \<Longrightarrow> eval a A \<noteq> eval b A"
 proof -
   assume a: "a N" and b: "b N" and h: "sat (mk_neq a b) A"
@@ -788,6 +1189,8 @@ next
   show "find_struct J G (Cons h t) B"
     by (rule defE[OF find_struct_def[where ptr="Cons h t"]], insert J G h t IH, simp+)
 qed
+
+
 
 lemma proof_is_bool: "p N \<Longrightarrow> J N \<Longrightarrow> is_valid_proof p J B"
   sorry

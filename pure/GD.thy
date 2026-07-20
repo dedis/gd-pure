@@ -4210,6 +4210,40 @@ proof (simp add: cpy_suc)+
       by (cases bool: "cpx xa = 0", simp+)
 qed
 
+
+lemma cpx_mono [simp]: "x N \<Longrightarrow> cpx x \<le> x = 1"
+apply (induct x)
+proof (simp add: cpx_suc)+
+  case (Step xa)
+  show "x N \<Longrightarrow> xa N \<Longrightarrow> cpx xa \<le> xa = 1 \<Longrightarrow>
+        (if cpx xa = 0 then S(cpy xa) else P(cpx xa)) \<le> (S xa) = 1"
+  proof -
+    assume xN: "x N" and xaN: "xa N" and IH: "cpx xa \<le> xa = 1"
+    have cxN: "cpx xa N" using xaN by (rule cpx_terminates)
+    have bB: "(cpx xa = 0) B" by (rule eqBool[OF cxN nat0])
+    show "(if cpx xa = 0 then S(cpy xa) else P(cpx xa)) \<le> (S xa) = 1"
+    proof (rule disjE1[OF bB[unfolded bJudg_def]])
+      assume z: "cpx xa = 0"
+      have r: "(if cpx xa = 0 then S(cpy xa) else P(cpx xa)) = S(cpy xa)"
+        by (rule condI1[OF z natS[OF cpy_terminates[OF xaN]]])
+      have m: "S(cpy xa) \<le> S xa = 1"
+        by (rule leq_monotone_suc[OF cpy_terminates[OF xaN] xaN cpy_mono[OF xaN]])
+      show "(if cpx xa = 0 then S(cpy xa) else P(cpx xa)) \<le> (S xa) = 1"
+        using r m by simp
+    next
+      assume nz: "\<not> (cpx xa = 0)"
+      have r: "(if cpx xa = 0 then S(cpy xa) else P(cpx xa)) = P(cpx xa)"
+        by (rule condI2[OF nz natP[OF cxN]])
+      have s1: "cpx xa \<le> S xa = 1"
+        by (rule leq_trans[OF cxN xaN natS[OF xaN] IH leq_suc[OF xaN]])
+      have s2: "P(cpx xa) \<le> S xa = 1"
+        by (rule leq_trans[OF natP[OF cxN] cxN natS[OF xaN] pred_leq[OF cxN] s1])
+      show "(if cpx xa = 0 then S(cpy xa) else P(cpx xa)) \<le> (S xa) = 1"
+        using r s2 by simp
+    qed
+  qed
+qed
+
 lemma cpy_strict_mono [simp]: "x N \<Longrightarrow> cpy (S x) < (S x) = 1"
 proof (induct strong x)
   case Base
@@ -5070,4 +5104,7 @@ next
     sorry
 qed
 
+
+
+find_theorems name: "cpy_mono"
 end (* End of theory *)
