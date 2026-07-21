@@ -1342,7 +1342,6 @@ proof (rule defE[OF app_try_def[where J=J and d=d and x=x and y=y and rest=rest]
     using dfns_N dr 
     apply (rule nth_in_range_N)
     done
-
   have sb:  "subst_body (nth d dfns) x y N" 
     by (rule subst_body_N[OF ndf x y])
   have dxy: "\<langle>d, \<langle>x, y\<rangle>\<rangle> N"                 
@@ -1455,7 +1454,6 @@ next
       apply (rule eqBool[OF htN]) 
       apply simp 
       done
-
     have ch: "conc_of h N" 
       using h by simp
     have eqh: "(hyp_of h = hyp_of J) B" 
@@ -1506,8 +1504,6 @@ proof -
     apply (rule find_struct_bool[OF J hj rest])
     done
 qed
-
-
 
 (* Habeas quid for the induction step judgment  *)
 lemma ind_jdg_N:
@@ -1687,7 +1683,6 @@ proof -
     by (rule pack_T_N[OF _ lhs], simp)
   have sucr: "pack_T T_SUC rhs N" 
     by (rule pack_T_N[OF _ rhs], simp)
-
   have pr_rl: "\<langle>rhs, lhs\<rangle> N" 
     using rhs lhs by simp
   have pf1: "pack_F F_NEQ \<langle>rhs, lhs\<rangle> N" 
@@ -1696,7 +1691,6 @@ proof -
     using G pf1 by simp
   have g1: "mem (G \<tturnstile> pack_F F_NEQ \<langle>rhs, lhs\<rangle>) rest B" 
     by (rule mem_bool[OF j1 rest])
-
   have pr_ll: "\<langle>load_T lhs, load_T lhs\<rangle> N" 
     using Ll by simp
   have pf2: "pack_F F_EQ \<langle>load_T lhs, load_T lhs\<rangle> N" 
@@ -2114,12 +2108,18 @@ lemma soundness_bridge: "is_valid_proof p J \<Longrightarrow> sat_hyp (hyp_of J)
 
 sublocale consistent mk_eq mk_neq dfns is_valid_proof eval sat sat_hyp
 proof (unfold_locales)
-  show "\<And>a b.   a N \<Longrightarrow> b N \<Longrightarrow> mk_eq a b N"                         by (rule mk_eq_N')
-  show "\<And>a b.   a N \<Longrightarrow> b N \<Longrightarrow> mk_neq a b N"                        by (rule mk_neq_N')
-  show "\<And>p J.   p N \<Longrightarrow> J N \<Longrightarrow> is_valid_proof p J B"                by (rule proof_is_bool)
-  show "\<And>A.     sat_hyp Nil A"                                          by (rule sat_hyp_nil')
-  show "\<And>a b A. a N \<Longrightarrow> b N \<Longrightarrow> sat (mk_eq a b) A \<Longrightarrow> eval a A = eval b A"   by (rule sat_eqE')
-  show "\<And>a b A. a N \<Longrightarrow> b N \<Longrightarrow> sat (mk_neq a b) A \<Longrightarrow> eval a A \<noteq> eval b A"  by (rule sat_neqE')
+  show "\<And>a b.   a N \<Longrightarrow> b N \<Longrightarrow> mk_eq a b N"                         
+    by (rule mk_eq_N')
+  show "\<And>a b.   a N \<Longrightarrow> b N \<Longrightarrow> mk_neq a b N"                        
+    by (rule mk_neq_N')
+  show "\<And>p J.   p N \<Longrightarrow> J N \<Longrightarrow> is_valid_proof p J B"                
+    by (rule proof_is_bool)
+  show "\<And>A.     sat_hyp Nil A"                                          
+    by (rule sat_hyp_nil')
+  show "\<And>a b A. a N \<Longrightarrow> b N \<Longrightarrow> sat (mk_eq a b) A \<Longrightarrow> eval a A = eval b A"   
+    by (rule sat_eqE')
+  show "\<And>a b A. a N \<Longrightarrow> b N \<Longrightarrow> sat (mk_neq a b) A \<Longrightarrow> eval a A \<noteq> eval b A"  
+    by (rule sat_neqE')
   show "\<And>p J A. is_valid_proof p J \<Longrightarrow> sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A"
     by (rule soundness_bridge)
 qed
