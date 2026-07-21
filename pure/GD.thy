@@ -5093,18 +5093,156 @@ proof -
   thus "nth i xs N" using lt by (rule implE)
 qed
 
+lemma iff_refl:
+  assumes aB: "a B"
+  shows "a \<longleftrightarrow> a"
+  apply (rule iffI)
+  using aB apply simp+
+  done
+
+lemma mem_cons [simp]:
+  assumes h: "h N" and t: "t N" and x: "x N"
+  shows "mem x (Cons h t) \<longleftrightarrow> (if h = x then True else mem x t)"
+proof -
+  have ne: "\<not> (Cons h t = Nil)" using h t by auto
+  have hd: "list_hd (Cons h t) = h" using h t by simp
+  have tl: "list_tl (Cons h t) = t" using h t by simp
+  have htN: "Cons h t N" using h t by simp
+  have eB: "(if list_hd (Cons h t) = x then True else mem x (list_tl (Cons h t))) B"
+    by (rule condTB[OF eqBool[OF list_hd_nat[OF htN] x] true_bool
+                       mem_bool[OF x list_tl_nat[OF htN]]])
+  have step: "mem x (Cons h t) \<longleftrightarrow>
+              (if list_hd (Cons h t) = x then True else mem x (list_tl (Cons h t)))"
+    apply (rule defE[OF mem_def[where G = "Cons h t"]])
+    apply (rule condI2B[OF ne eB])
+    done
+  show ?thesis 
+    using hd tl eB apply (simp add: step)
+    apply (rule iff_refl)
+    apply simp
+    done
+qed
+
 lemma subset_bool [auto]:
   assumes A: "A N" and G: "G N"
   shows "subset A G B"
 proof (rule list_induct[OF A])
-  show "subset Nil G B" sorry
+  show "subset Nil G B"
+  proof -
+    have nn: "Nil = Nil" using nil_nat by simp
+    have step: "subset Nil G \<longleftrightarrow> True"
+      apply (rule defE[OF subset_def[where G' = Nil]])
+      apply (rule condI1B[OF nn true_bool])
+      done
+    show "subset Nil G B" using step true_bool by simp
+  qed
 next
   fix h t assume h: "h N" and t: "t N" and IH: "subset t G B"
   show "subset (Cons h t) G B"
-    sorry
+  proof -
+    have htN: "Cons h t N" using h t by simp
+    have cnB: "(Cons h t = Nil) B" by (rule eqBool[OF htN nil_nat])
+    have conjB: "(mem h G \<and> subset t G) B" using mem_bool[OF h G] IH by auto
+    show "subset (Cons h t) G B"
+      apply (rule defE[OF subset_def[where G' = "Cons h t"]])
+      apply (simp only: list_hd_cons[OF h t] list_tl_cons[OF h t])
+      apply (rule condTB[OF cnB true_bool conjB])
+      done
+  qed
 qed
 
+lemma subset_cons [simp]:
+  assumes h: "h N" and t: "t N" and G: "G N"
+  shows "subset (Cons h t) G \<longleftrightarrow> (mem h G \<and> subset t G)"
+proof -
+  have ne: "\<not> (Cons h t = Nil)" using h t by auto
+  have hd: "list_hd (Cons h t) = h" using h t by simp
+  have tl: "list_tl (Cons h t) = t" using h t by simp
+  have htN: "Cons h t N" using h t by simp
+  have eB: "(mem (list_hd (Cons h t)) G \<and> subset (list_tl (Cons h t)) G) B"
+    using mem_bool[OF list_hd_nat[OF htN] G] subset_bool[OF list_tl_nat[OF htN] G] by auto
+  have step: "subset (Cons h t) G \<longleftrightarrow>
+              (mem (list_hd (Cons h t)) G \<and> subset (list_tl (Cons h t)) G)"
+    apply (rule defE[OF subset_def[where G' = "Cons h t"]])
+    apply (rule condI2B[OF ne eB])
+    done
+  show ?thesis
+    using hd tl eB apply (simp add: step)
+    apply (rule iff_refl)
+    apply simp
+    done
+qed
 
+(* Note: G' N added; structural induction on G' requires habeas quid. *)
+lemma subset_mem:
+  assumes f: "f N" and G': "G' N" and G: "G N"
+  shows "subset G' G \<Longrightarrow> mem f G' \<Longrightarrow> mem f G"
+proof -
+  have main: "subset G' G \<longrightarrow> mem f G' \<longrightarrow> mem f G"
+  proof (rule list_induct[OF G', where Q = "\<lambda>z. subset z G \<longrightarrow> mem f z \<longrightarrow> mem f G"])
+    show "subset Nil G \<longrightarrow> mem f Nil \<longrightarrow> mem f G"
+    proof (rule implI)
+      show "subset Nil G B" by (rule subset_bool[OF nil_nat G])
+    next
+      assume "subset Nil G"
+      show "mem f Nil \<longrightarrow> mem f G"
+      proof (rule implI)
+        show "mem f Nil B" by (rule mem_bool[OF f nil_nat])
+      next
+        assume mn: "mem f Nil"
+        show "mem f G" by (rule exF[OF mn mem_nil])
+      qed
+    qed
+  next
+    fix h t assume h: "h N" and t: "t N"
+      and IH: "subset t G \<longrightarrow> mem f t \<longrightarrow> mem f G"
+    show "subset (Cons h t) G \<longrightarrow> mem f (Cons h t) \<longrightarrow> mem f G"
+    proof -
+      have htN: "Cons h t N" using h t by simp
+      show ?thesis
+      proof (rule implI)
+        show "subset (Cons h t) G B" by (rule subset_bool[OF htN G])
+      next
+        assume s: "subset (Cons h t) G"
+        show "mem f (Cons h t) \<longrightarrow> mem f G"
+        proof (rule implI)
+          show "mem f (Cons h t) B" by (rule mem_bool[OF f htN])
+        next
+          assume m: "mem f (Cons h t)"
+          have s': "mem h G \<and> subset t G" using s h t G by simp
+          have hmG: "mem h G" 
+            using s' apply (rule conjE1)
+            done
+          have subt: "subset t G" 
+            using s' apply (rule conjE2)
+            done
+          have m2: "if h = f then True else mem f t" using m h t f by simp
+          show "mem f G"
+          proof (rule cases_bool[where q = "h = f"])
+            show "(h = f) B" by (rule eqBool[OF h f])
+          next
+            assume hf: "h = f"
+            from hmG hf show "mem f G" by simp
+          next
+            assume nhf: "\<not> (h = f)"
+            have mft: "mem f t"
+            proof -
+              have "(if h = f then True else mem f t) \<longleftrightarrow> mem f t"
+                by (rule condI2B[OF nhf mem_bool[OF f t]])
+              thus "mem f t" using m2 by simp
+            qed
+            have "mem f t \<longrightarrow> mem f G" by (rule implE[OF IH subt])
+            from implE[OF this mft] show "mem f G" .
+          qed
+        qed
+      qed
+    qed
+  qed
+  show "subset G' G \<Longrightarrow> mem f G' \<Longrightarrow> mem f G"
+  proof -
+    assume s: "subset G' G" and m: "mem f G'"
+    from implE[OF implE[OF main s] m] show "mem f G" .
+  qed
+qed
 
-find_theorems name: "cpy_mono"
 end (* End of theory *)

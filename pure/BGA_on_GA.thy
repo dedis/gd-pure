@@ -714,12 +714,9 @@ proof -
     apply (rule implE[where a = "f \<in> G"]) apply (rule imp) apply (rule f_in) done
 qed
 
-lemma subhyp_mem: "(f N) \<Longrightarrow> subhyp G' G \<Longrightarrow> f \<in> G' \<Longrightarrow> f \<in> G"
-  sorry
-
-lemma sat_hyp_subhyp: "subhyp G' G \<Longrightarrow> G' N \<Longrightarrow> sat_hyp G A \<Longrightarrow> sat_hyp G' A"
+lemma sat_hyp_subset: "subset G' G \<Longrightarrow> G' N \<Longrightarrow> sat_hyp G A \<Longrightarrow> sat_hyp G' A"
 proof -
-  assume sub: "subhyp G' G" and G'_nat: "G' N" and satG: "sat_hyp G A"
+  assume sub: "subset G' G" and G'_nat: "G' N" and satG: "sat_hyp G A"
   show "sat_hyp G' A"
     unfolding sat_hyp_def
     apply (rule forallI)
@@ -729,7 +726,7 @@ proof -
   proof -
     fix f
     assume f_nat: "f N" and f_in': "f \<in> G'"
-    have fG: "f \<in> G" using f_nat sub f_in' by (rule subhyp_mem)
+    have fG: "f \<in> G" using f_nat sub f_in' by (rule subset_mem)
     show "sat f A" using f_nat fG satG by (rule sat_hyp_mem)
   qed
 qed
@@ -1513,31 +1510,7 @@ proof -
     done
 qed
 
-(* Lazy conditional booleanness *)
-lemma condTB':
-  assumes c_bool: "c B" and a_bool: "c \<Longrightarrow> a B" and b_bool: "\<not>c \<Longrightarrow> b B"
-  shows "(if c then a else b) B"
-  apply (rule cases_bool[where q = "c"])
-    apply (rule c_bool)
-proof -
-  show "c \<Longrightarrow> (if c then a else b) B"
-  proof -
-    assume cc: "c"
-    have e: "(if c then a else b) \<longleftrightarrow> a" 
-      by (rule condI1B[OF cc a_bool[OF cc]])
-    show "(if c then a else b) B" 
-      using a_bool[OF cc] e by simp
-  qed
-next
-  show "\<not>c \<Longrightarrow> (if c then a else b) B"
-  proof -
-    assume nc: "\<not>c"
-    have e: "(if c then a else b) \<longleftrightarrow> b" 
-      by (rule condI2B[OF nc b_bool[OF nc]])
-    show "(if c then a else b) B" 
-      using b_bool[OF nc] e by simp
-  qed
-qed
+
 
 (* Habeas quid for the induction step judgment  *)
 lemma ind_jdg_N:
