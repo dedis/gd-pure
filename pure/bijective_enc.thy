@@ -3,19 +3,34 @@ theory bijective_enc
 begin
 
 
-section \<open>1.   concrete encoders \<close>
+section \<open>1.   concrete encoders (Cantor-pairing based -- injective)\<close>
 
-definition tag_T  :: "tm \<Rightarrow> tmtag"        where "tag_T  t   \<equiv> 0"
-definition load_T :: "tm \<Rightarrow> tm"           where "load_T t   \<equiv> 0"
-definition pack_T :: "tmtag \<Rightarrow> tm \<Rightarrow> tm"   where "pack_T t L \<equiv> 0"
-definition tag_F  :: "fm \<Rightarrow> fmtag"        where "tag_F  f   \<equiv> 0"
-definition load_F :: "fm \<Rightarrow> tm"           where "load_F f   \<equiv> 0"
-definition pack_F :: "fmtag \<Rightarrow> fm \<Rightarrow> fm"   where "pack_F t L \<equiv> 0"
+definition swap01 :: "num \<Rightarrow> num" where
+  "swap01 t \<equiv> if t = 0 then 1 else if t = 1 then 0 else t"
+
+definition tag_T  :: "tm \<Rightarrow> tmtag"        where "tag_T  n    \<equiv> swap01 (cpx n)"
+definition load_T :: "tm \<Rightarrow> tm"           where "load_T n    \<equiv> cpy n"
+definition pack_T :: "tmtag \<Rightarrow> tm \<Rightarrow> tm"   where "pack_T tg L \<equiv> \<langle>swap01 tg, L\<rangle>"
+definition tag_F  :: "fm \<Rightarrow> fmtag"        where "tag_F  n    \<equiv> cpx n"
+definition load_F :: "fm \<Rightarrow> tm"           where "load_F n    \<equiv> cpy n"
+definition pack_F :: "fmtag \<Rightarrow> fm \<Rightarrow> fm"   where "pack_F tg L \<equiv> \<langle>tg, L\<rangle>"
+
+lemma swap01_0 [simp]: "swap01 0 = 1"
+  unfolding swap01_def by (cases bool: "(0::num) = 0", simp+)
+
+lemma swap01_N [simp, auto]: "t N \<Longrightarrow> swap01 t N"
+  unfolding swap01_def
+  apply (cases bool: "t = 0", simp+)
+  done
+
+lemma swap01_inv [simp]: "t N \<Longrightarrow> swap01 (swap01 t) = t"
+  unfolding swap01_def
+  apply (cases bool: "t = 0", simp+)
+  apply (cases bool: "t = 1", simp+)
+  done
 
 
 section \<open>2.  Concrete definitions of every derived function\<close>
-text \<open>Bodies copied from the ':=' assumptions of the locales in
-      BGA_on_GA.thy.\<close>
 
 axiomatization
   eval               :: "tm \<Rightarrow> asn \<Rightarrow> val"                              and
@@ -255,30 +270,145 @@ axiomatization dfns :: "dfn" where dfns_N: "dfns N"
 
 section \<open>3.  Encoder obligations\<close>
 
-lemma pack_F_N: "\<lbrakk>t N; L N\<rbrakk> \<Longrightarrow> pack_F t L N"                 sorry
-lemma tag_F_N:  "f N \<Longrightarrow> tag_F f N"                          sorry
-lemma load_F_N: "f N \<Longrightarrow> load_F f N"                         sorry
-lemma pack_T_N: "\<lbrakk>t N; L N\<rbrakk> \<Longrightarrow> (pack_T t L) N"              sorry
-lemma tag_T_N:  "t N \<Longrightarrow> tag_T t N"                          sorry
-lemma load_T_N: "t N \<Longrightarrow> load_T t N"                         sorry
+lemma pack_F_N:
+  assumes t: "t N" and L: "L N" shows "pack_F t L N"
+  unfolding pack_F_def by (rule cpair_terminates[OF t L])
 
-lemma tag_pack_F:  "\<lbrakk>t N; L N\<rbrakk> \<Longrightarrow> tag_F (pack_F t L) = t"   sorry
-lemma load_pack_F: "\<lbrakk>t N; L N\<rbrakk> \<Longrightarrow> load_F (pack_F t L) = L"  sorry
-lemma tag_pack_T:  "\<lbrakk>t N; L N\<rbrakk> \<Longrightarrow> tag_T (pack_T t L) = t"   sorry
-lemma load_pack_T: "\<lbrakk>t N; L N\<rbrakk> \<Longrightarrow> load_T (pack_T t L) = L"  sorry
+lemma tag_F_N:
+  assumes f: "f N" shows "tag_F f N"
+  unfolding tag_F_def by (rule cpx_terminates[OF f])
 
-lemma pack_tag_F:  "f N \<Longrightarrow> pack_F (tag_F f) (load_F f) = f"  sorry
-lemma pack_tag_T:  "t N \<Longrightarrow> pack_T (tag_T t) (load_T t) = t"  sorry
+lemma load_F_N:
+  assumes f: "f N" shows "load_F f N"
+  unfolding load_F_def by (rule cpy_terminates[OF f])
 
-lemma decrease_F: "\<lbrakk>f N; f \<noteq> 0\<rbrakk> \<Longrightarrow> load_F f < f = 1"       sorry
-lemma decrease_T: "\<lbrakk>t N; t \<noteq> 0\<rbrakk> \<Longrightarrow> load_T t < t = 1"       sorry
-lemma tag_T_zero: "tag_T 0 = T_ZERO"                       sorry
+lemma pack_T_N:
+  assumes t: "t N" and L: "L N" shows "pack_T t L N"
+  unfolding pack_T_def by (rule cpair_terminates[OF swap01_N[OF t] L])
 
-lemma mono_pack_T: "(x \<le> y = 1) \<Longrightarrow> (pack_T tg x \<le> pack_T tg y = 1)" sorry
-lemma mono_pack_F: "(x \<le> y = 1) \<Longrightarrow> (pack_F tg x \<le> pack_F tg y = 1)" sorry
+lemma tag_T_N:
+  assumes t: "t N" shows "tag_T t N"
+  unfolding tag_T_def by (rule swap01_N[OF cpx_terminates[OF t]])
+
+lemma load_T_N:
+  assumes t: "t N" shows "load_T t N"
+  unfolding load_T_def by (rule cpy_terminates[OF t])
+
+lemma tag_pack_F:
+  assumes t: "t N" and L: "L N" shows "tag_F (pack_F t L) = t"
+  unfolding tag_F_def pack_F_def by (rule cpx_proj[OF t L])
+
+lemma load_pack_F:
+  assumes t: "t N" and L: "L N" shows "load_F (pack_F t L) = L"
+  unfolding load_F_def pack_F_def by (rule cpy_proj[OF t L])
+
+lemma tag_pack_T:
+  assumes t: "t N" and L: "L N" shows "tag_T (pack_T t L) = t"
+  unfolding tag_T_def pack_T_def
+  using t by (simp add: cpx_proj[OF swap01_N[OF t] L] swap01_inv[OF t])
+
+lemma load_pack_T:
+  assumes t: "t N" and L: "L N" shows "load_T (pack_T t L) = L"
+  unfolding load_T_def pack_T_def by (rule cpy_proj[OF swap01_N[OF t] L])
+
+lemma pack_tag_F:
+  assumes f: "f N" shows "pack_F (tag_F f) (load_F f) = f"
+  unfolding pack_F_def tag_F_def load_F_def
+  apply (rule eqSym) using f apply auto done
+
+lemma pack_tag_T:
+  assumes t: "t N" shows "pack_T (tag_T t) (load_T t) = t"
+  unfolding pack_T_def tag_T_def load_T_def
+  apply (simp only: swap01_inv[OF cpx_terminates[OF t]])
+  apply (rule eqSym) using t apply auto done
+
+lemma decrease_F:
+  assumes f: "f N" and nz: "f \<noteq> 0" shows "load_F f < f = 1"
+  unfolding load_F_def using f nz by simp
+
+lemma decrease_T:
+  assumes t: "t N" and nz: "t \<noteq> 0" shows "load_T t < t = 1"
+  unfolding load_T_def using t nz by simp
+
+lemma tag_T_zero: "tag_T 0 = T_ZERO"
+  unfolding tag_T_def by simp
+
+(* single successor step: \<langle>a,k\<rangle> \<le> \<langle>a,S k\<rangle>, from cpair_suc + leq_monotone_add_r *)
+lemma pair_step:
+  assumes a: "a N" and k: "k N"
+  shows "\<langle>a, k\<rangle> \<le> \<langle>a, S k\<rangle> = 1"
+proof -
+  have ak: "\<langle>a, k\<rangle> N"       by (rule cpair_terminates[OF a k])
+  have sk: "S k N"          by (rule natS[OF k])
+  have one: "(1::num) N"    by simp
+  have aka:  "\<langle>a, k\<rangle> + a N"          using ak a by simp
+  have akask: "\<langle>a, k\<rangle> + a + S k N"   using aka sk by simp
+  have s1: "\<langle>a, k\<rangle> \<le> \<langle>a, k\<rangle> = 1"                     by (rule leq_refl[OF ak])
+  have s2: "\<langle>a, k\<rangle> \<le> \<langle>a, k\<rangle> + a = 1"                 by (rule leq_monotone_add_r[OF s1 ak ak a])
+  have s3: "\<langle>a, k\<rangle> \<le> \<langle>a, k\<rangle> + a + S k = 1"           by (rule leq_monotone_add_r[OF s2 ak aka sk])
+  have s4: "\<langle>a, k\<rangle> \<le> \<langle>a, k\<rangle> + a + S k + 1 = 1"       by (rule leq_monotone_add_r[OF s3 ak akask one])
+  have e:  "\<langle>a, S k\<rangle> = \<langle>a, k\<rangle> + a + S k + 1"          by (rule cpair_suc[OF a k])
+  show ?thesis using s4 e by simp
+qed
+
+lemma pair_mono_2:
+  assumes a: "a N" and x: "x N" and y: "y N" and h: "x \<le> y = 1"
+  shows "\<langle>a, x\<rangle> \<le> \<langle>a, y\<rangle> = 1"
+proof -
+  have one: "(1::num) N" by simp
+  have main: "(x \<le> y = 1) \<longrightarrow> (\<langle>a, x\<rangle> \<le> \<langle>a, y\<rangle> = 1)"
+  proof (rule ind[where a = y])
+    show "y N" by (rule y)
+  next
+    show "(x \<le> 0 = 1) \<longrightarrow> (\<langle>a, x\<rangle> \<le> \<langle>a, 0\<rangle> = 1)"
+    proof (rule implI)
+      show "(x \<le> 0 = 1) B" by (rule eqBool[OF leq_terminates[OF x nat0] one])
+    next
+      assume x0: "x \<le> 0 = 1"
+      have "x = 0" by (rule leq_0[OF x x0])
+      thus "\<langle>a, x\<rangle> \<le> \<langle>a, 0\<rangle> = 1"
+        by (simp add: leq_refl[OF cpair_terminates[OF a nat0]])
+    qed
+  next
+    fix k assume k: "k N" and IH: "(x \<le> k = 1) \<longrightarrow> (\<langle>a, x\<rangle> \<le> \<langle>a, k\<rangle> = 1)"
+    show "(x \<le> S k = 1) \<longrightarrow> (\<langle>a, x\<rangle> \<le> \<langle>a, S k\<rangle> = 1)"
+    proof (rule implI)
+      show "(x \<le> S k = 1) B" by (rule eqBool[OF leq_terminates[OF x natS[OF k]] one])
+    next
+      assume xsk: "x \<le> S k = 1"
+      have ax:  "\<langle>a, x\<rangle> N"   by (rule cpair_terminates[OF a x])
+      have ak:  "\<langle>a, k\<rangle> N"   by (rule cpair_terminates[OF a k])
+      have ask: "\<langle>a, S k\<rangle> N" by (rule cpair_terminates[OF a natS[OF k]])
+      have step: "\<langle>a, k\<rangle> \<le> \<langle>a, S k\<rangle> = 1" by (rule pair_step[OF a k])
+      show "\<langle>a, x\<rangle> \<le> \<langle>a, S k\<rangle> = 1"
+      proof (rule cases_bool[where q = "x \<le> k = 1"])
+        show "(x \<le> k = 1) B" by (rule eqBool[OF leq_terminates[OF x k] one])
+      next
+        assume xk: "x \<le> k = 1"
+        have xy: "\<langle>a, x\<rangle> \<le> \<langle>a, k\<rangle> = 1" by (rule implE[OF IH xk])
+        show "\<langle>a, x\<rangle> \<le> \<langle>a, S k\<rangle> = 1" by (rule leq_trans[OF ax ak ask xy step])
+      next
+        assume nxk: "\<not> (x \<le> k = 1)"
+        have "x = S k" by (rule leq_suc_not_leq_implies_eq[OF x k nxk xsk])
+        thus "\<langle>a, x\<rangle> \<le> \<langle>a, S k\<rangle> = 1" by (simp add: leq_refl[OF ask])
+      qed
+    qed
+  qed
+  show ?thesis by (rule implE[OF main h])
+qed
+
+lemma mono_pack_T:
+  assumes tg: "tg N" and x: "x N" and y: "y N" and h: "x \<le> y = 1"
+  shows "pack_T tg x \<le> pack_T tg y = 1"
+  unfolding pack_T_def by (rule pair_mono_2[OF swap01_N[OF tg] x y h])
+
+lemma mono_pack_F:
+  assumes tg: "tg N" and x: "x N" and y: "y N" and h: "x \<le> y = 1"
+  shows "pack_F tg x \<le> pack_F tg y = 1"
+  unfolding pack_F_def by (rule pair_mono_2[OF tg x y h])
 
 
-section \<open>4.  Interpret bga_full -- transfers `consistent` to this instance\<close>
+section \<open>4.  Interpret bga_full. transfers `consistent` to this instance\<close>
 
 interpretation conc: bga_full
   tag_T load_T pack_T tag_F load_F pack_F dfns
