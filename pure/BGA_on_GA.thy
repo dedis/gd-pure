@@ -26,9 +26,6 @@ abbreviation emptyH :: "hyp" ("\<emptyset>")
 abbreviation cons  :: "fm \<Rightarrow> List \<Rightarrow> List" (infixr "\<triangleright>" 65)
   where "f \<triangleright> G \<equiv> Cons f G"
 
-abbreviation hyp_in  :: "fm \<Rightarrow> hyp \<Rightarrow> o" (infixr "\<in>" 75)
-  where "f \<in> G \<equiv> mem f G"
-
 locale suff_syntax =
   (*Encoding  *)
   fixes mk_eq :: "tm \<Rightarrow> tm \<Rightarrow> fm"
@@ -714,9 +711,9 @@ proof -
     apply (rule implE[where a = "f \<in> G"]) apply (rule imp) apply (rule f_in) done
 qed
 
-lemma sat_hyp_subset: "subset G' G \<Longrightarrow> G' N \<Longrightarrow> sat_hyp G A \<Longrightarrow> sat_hyp G' A"
+lemma sat_hyp_subset: "subset G' G \<Longrightarrow> G' N \<Longrightarrow> G N \<Longrightarrow> sat_hyp G A \<Longrightarrow> sat_hyp G' A"
 proof -
-  assume sub: "subset G' G" and G'_nat: "G' N" and satG: "sat_hyp G A"
+  assume sub: "subset G' G" and G'_nat: "G' N" and satG: "sat_hyp G A" and G_nat: "G N"
   show "sat_hyp G' A"
     unfolding sat_hyp_def
     apply (rule forallI)
@@ -726,7 +723,7 @@ proof -
   proof -
     fix f
     assume f_nat: "f N" and f_in': "f \<in> G'"
-    have fG: "f \<in> G" using f_nat sub f_in' by (rule subset_mem)
+    have fG: "f \<in> G" using f_nat G'_nat G_nat sub f_in' by (rule subset_mem)
     show "sat f A" using f_nat fG satG by (rule sat_hyp_mem)
   qed
 qed

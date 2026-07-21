@@ -4811,7 +4811,7 @@ apply (rule eqSym)
 apply (assumption+)
   done
 
-axiomatization mem :: "num \<Rightarrow> List \<Rightarrow> o" where
+axiomatization mem :: "num \<Rightarrow> List \<Rightarrow> o" (infixr "\<in>" 75) where
   mem_def: "mem x G := if G = Nil then False
                        else if list_hd G = x then True
                        else mem x (list_tl G)"
@@ -5242,6 +5242,33 @@ proof -
   proof -
     assume s: "subset G' G" and m: "mem f G'"
     from implE[OF implE[OF main s] m] show "mem f G" .
+  qed
+qed
+
+
+(* Lazy conditional booleanness *)
+lemma condTB':
+  assumes c_bool: "c B" and a_bool: "c \<Longrightarrow> a B" and b_bool: "\<not>c \<Longrightarrow> b B"
+  shows "(if c then a else b) B"
+  apply (rule cases_bool[where q = "c"])
+    apply (rule c_bool)
+proof -
+  show "c \<Longrightarrow> (if c then a else b) B"
+  proof -
+    assume cc: "c"
+    have e: "(if c then a else b) \<longleftrightarrow> a" 
+      by (rule condI1B[OF cc a_bool[OF cc]])
+    show "(if c then a else b) B" 
+      using a_bool[OF cc] e by simp
+  qed
+next
+  show "\<not>c \<Longrightarrow> (if c then a else b) B"
+  proof -
+    assume nc: "\<not>c"
+    have e: "(if c then a else b) \<longleftrightarrow> b" 
+      by (rule condI2B[OF nc b_bool[OF nc]])
+    show "(if c then a else b) B" 
+      using b_bool[OF nc] e by simp
   qed
 qed
 
