@@ -204,8 +204,26 @@ locale bga_bijective_encoding =
   fixes pack_F :: "fmtag \<Rightarrow> fm \<Rightarrow> fm"
 
 (* Fixing Definition*)
-  fixes dfns :: "dfn"
-  assumes dfns_N: "dfns N"
+  fixes fresh_T :: "num \<Rightarrow> tm \<Rightarrow> o"
+  fixes fresh_F :: "num \<Rightarrow> fm \<Rightarrow> o"
+  fixes fresh_H :: "num \<Rightarrow> hyp \<Rightarrow> o"
+
+  assumes fresh_T_def:
+    "fresh_T k t :=
+       if tag_T t = T_VAR then load_T t < k = 1
+       else if tag_T t = T_ZERO then True
+       else if tag_T t = T_SUC then fresh_T k (load_T t)
+       else if tag_T t = T_PRED then fresh_T k (load_T t)
+       else if tag_T t = T_IFZ then
+         fresh_T k (cpx (load_T t)) \<and>
+         fresh_T k (cpx (cpy (load_T t))) \<and>
+         fresh_T k (cpy (cpy (load_T t)))
+       else if tag_T t = T_APP then
+         fresh_T k (cpx (cpy (load_T t))) \<and>
+         fresh_T k (cpy (cpy (load_T t)))
+       else False"
+  assumes fresh_F_def: "fresh_F k f := fresh_T k (cpx (load_F f)) \<and> fresh_T k (cpy (load_F f))"
+  assumes fresh_H_def: "fresh_H k G := if G = Nil then True else fresh_F k (list_hd G) \<and> fresh_H k (list_tl G)"
   (* AXIOMS *)
   (*Habeas Quid for the Encoder *)
   assumes pack_F_N: "\<lbrakk>t N; L N\<rbrakk> \<Longrightarrow> pack_F t L N"
@@ -237,9 +255,189 @@ locale bga_bijective_encoding =
   (*Monotone assumptions for Bounding *)
   assumes mono_pack_T: "(x \<le> y = 1) \<Longrightarrow> (pack_T tg x \<le> pack_T tg y =1)"
   assumes mono_pack_F: "(x \<le> y = 1) \<Longrightarrow> (pack_F tg x \<le> pack_F tg y =1)"
+begin
 
+lemma fresh_T_bool [auto]:
+  assumes k: "k N"
+      and t: "t N"
+  shows "fresh_T k t B"
+proof (rule strong_induction[where a=t])
+  show "t N"
+    using t .
+next
+  show "fresh_T k 0 B"
+    apply (rule defE[OF fresh_T_def[where k=k and t=0]])
+    apply (simp add: tag_T_zero)
+    done
+next
+  fix w
+  assume w: "w N"
+     and IH: "\<And>z. z N \<Longrightarrow> z \<le> w = 1 \<Longrightarrow> fresh_T k z B"
+  have swN: "S w N"
+    using w by simp
+  have swnz: "S w \<noteq> 0"
+    by (rule sucNonZero[OF w])
+  have L: "load_T (S w) N"
+    by (rule load_T_N[OF swN])
+  have Lw: "load_T (S w) \<le> w = 1"
+    by (rule le_suc_implies_leq[OF decrease_T[OF swN swnz] L w])
+  have cxL: "cpx (load_T (S w)) N"
+    using L by simp
+  have cyL: "cpy (load_T (S w)) N"
+    using L by simp
+  have cxLw: "cpx (load_T (S w)) \<le> w = 1"
+    by (rule leq_trans[OF cxL L w cpx_mono[OF L] Lw])
+  have cyLw: "cpy (load_T (S w)) \<le> w = 1"
+    by (rule leq_trans[OF cyL L w cpy_mono[OF L] Lw])
+  have cxcyL: "cpx (cpy (load_T (S w))) N"
+    using cyL by simp
+  have cycyL: "cpy (cpy (load_T (S w))) N"
+    using cyL by simp
+  have cxcyLw: "cpx (cpy (load_T (S w))) \<le> w = 1"
+    by (rule leq_trans[OF cxcyL cyL w cpx_mono[OF cyL] cyLw])
+  have cycyLw: "cpy (cpy (load_T (S w))) \<le> w = 1"
+    by (rule leq_trans[OF cycyL cyL w cpy_mono[OF cyL] cyLw])
+  have r0: "fresh_T k (load_T (S w)) B"
+    by (rule IH[OF L Lw])
+  have r1: "fresh_T k (cpx (load_T (S w))) B"
+    by (rule IH[OF cxL cxLw])
+  have r2: "fresh_T k (cpx (cpy (load_T (S w)))) B"
+    by (rule IH[OF cxcyL cxcyLw])
+  have r3: "fresh_T k (cpy (cpy (load_T (S w)))) B"
+    by (rule IH[OF cycyL cycyLw])
+  have tgN: "tag_T (S w) N"
+    by (rule tag_T_N[OF swN])
+  have gVAR: "(tag_T (S w) = T_VAR) B"
+    by (rule eqBool[OF tgN], simp)
+  have gZERO: "(tag_T (S w) = T_ZERO) B"
+    by (rule eqBool[OF tgN], simp)
+  have gSUC: "(tag_T (S w) = T_SUC) B"
+    by (rule eqBool[OF tgN], simp)
+  have gPRED: "(tag_T (S w) = T_PRED) B"
+    by (rule eqBool[OF tgN], simp)
+  have gIFZ: "(tag_T (S w) = T_IFZ) B"
+    by (rule eqBool[OF tgN], simp)
+  have gAPP: "(tag_T (S w) = T_APP) B"
+    by (rule eqBool[OF tgN], simp)
+  have oneN: "(1::num) N"
+    by simp
+  have ltN: "load_T (S w) < k N"
+    by (rule less_terminates[OF L k])
+  have varB: "(load_T (S w) < k = 1) B"
+    by (rule eqBool[OF ltN oneN])
+  have ifzB:
+    "(fresh_T k (cpx (load_T (S w))) \<and>
+      fresh_T k (cpx (cpy (load_T (S w)))) \<and>
+      fresh_T k (cpy (cpy (load_T (S w))))) B"
+    using r1 r2 r3 by auto
+  have appB:
+    "(fresh_T k (cpx (cpy (load_T (S w)))) \<and>
+      fresh_T k (cpy (cpy (load_T (S w))))) B"
+    using r2 r3 by auto
+  show "fresh_T k (S w) B"
+    apply (rule defE[OF fresh_T_def[where k=k and t="S w"]])
+    apply (rule condTB[OF gVAR varB])
+    apply (rule condTB[OF gZERO true_bool])
+    apply (rule condTB[OF gSUC r0])
+    apply (rule condTB[OF gPRED r0])
+    apply (rule condTB[OF gIFZ ifzB])
+    apply (rule condTB[OF gAPP appB false_bool])
+    done
+qed
 
-locale bga_semantics = bga_bijective_encoding +
+lemma fresh_F_bool [auto]:
+  assumes k: "k N" and f: "f N"
+  shows "fresh_F k f B"
+proof -
+  have L: "load_F f N"
+    by (rule load_F_N[OF f])
+  have l: "cpx (load_F f) N"
+    by (rule cpx_terminates[OF L])
+  have r: "cpy (load_F f) N"
+    by (rule cpy_terminates[OF L])
+  have fl: "fresh_T k (cpx (load_F f)) B"
+    by (rule fresh_T_bool[OF k l])
+  have fr: "fresh_T k (cpy (load_F f)) B"
+    by (rule fresh_T_bool[OF k r])
+  show ?thesis
+    apply (rule defE[OF fresh_F_def[where k=k and f=f]])
+    using fl fr by auto
+qed
+
+lemma fresh_H_bool [auto]:
+  assumes k: "k N" and G: "G N"
+  shows "fresh_H k G B"
+proof (rule list_induct[OF G])
+  show "fresh_H k Nil B"
+    apply (rule defE[OF fresh_H_def[where k=k and G=Nil]])
+    apply simp
+    done
+next
+  fix h t
+  assume h: "h N" and t: "t N" and IH: "fresh_H k t B"
+  have ht: "h \<triangleright> t N"
+    using h t by simp
+  have nilB: "(h \<triangleright> t = Nil) B"
+    by (rule eqBool[OF ht nil_nat])
+  have fh: "fresh_F k h B"
+    by (rule fresh_F_bool[OF k h])
+  have conjB: "(fresh_F k h \<and> fresh_H k t) B"
+    using fh IH by auto
+  show "fresh_H k (h \<triangleright> t) B"
+    apply (rule defE[OF fresh_H_def[where k=k and G="h \<triangleright> t"]])
+    apply (simp only: list_hd_cons[OF h t] list_tl_cons[OF h t])
+    apply (rule condTB[OF nilB true_bool conjB])
+    done
+qed
+
+end
+
+locale bga_dfns = bga_bijective_encoding + 
+  fixes dfns :: "dfn"
+  fixes dfn_is :: "dfn \<Rightarrow> num \<Rightarrow> tm \<Rightarrow> o"
+  assumes dfns_N: "dfns N"
+  (* lazy range check instea of direct conjunction which makes it kind of awkward to work with *)
+  assumes dfn_is_def: "dfn_is d k b := if d < len dfns = 1 then nth d dfns = b \<and> fresh_T k b else False"
+begin
+lemma dfn_is_bool [auto]:
+  assumes d: "d N"
+      and k: "k N"
+      and b: "b N"
+  shows "dfn_is d k b B"
+proof -
+  have ldN: "len dfns N"
+    by (rule len_nat[OF dfns_N])
+  have oneN: "(1::num) N"
+    by simp
+  have ltN: "d < len dfns N"
+    by (rule less_terminates[OF d ldN])
+  have rangeB: "(d < len dfns = 1) B"
+    by (rule eqBool[OF ltN oneN])
+  show "dfn_is d k b B"
+  proof (rule defE[OF dfn_is_def[where d=d and k=k and b=b]])
+    show "(if d < len dfns = 1 then  nth d dfns = b \<and> fresh_T k b  else False) B"
+    proof (rule condTB'[OF rangeB])
+      assume dr: "d < len dfns = 1"
+      have nthN: "nth d dfns N"
+        using dfns_N dr
+        by (rule nth_in_range_N)
+      have eqB: "(nth d dfns = b) B"
+        by (rule eqBool[OF nthN b])
+      have freshB: "fresh_T k b B"
+        by (rule fresh_T_bool[OF k b])
+      show "(nth d dfns = b \<and> fresh_T k b) B"
+        using eqB freshB by auto
+    next
+      assume "\<not> d < len dfns = 1"
+      show "False B"
+        by (rule false_bool)
+    qed
+  qed
+qed
+
+end
+
+locale bga_semantics = bga_dfns  +
   (* Semantics *)
   (* eval takes in a term, assignments and definition list
  and returns the valuation of that term*)
@@ -276,6 +474,137 @@ definition sat :: "num \<Rightarrow> num  \<Rightarrow> o" where
 
 definition sat_hyp :: "hyp \<Rightarrow> asn \<Rightarrow> o" where
   "sat_hyp G A \<equiv> \<forall>f. (mem f G) \<longrightarrow> (sat f A)"
+end
+
+context bga_semantics 
+begin 
+
+lemma sat_hyp_nil': "sat_hyp Nil A"
+  unfolding sat_hyp_def
+  apply (rule forallI)
+  apply (rule implI)
+   apply simp
+proof - 
+  fix f
+  assume f_nat: "f N"
+  assume f_in_empty: "f \<in> \<emptyset>"
+  show "sat f A"
+    apply (rule exF[where P = "f \<in> \<emptyset>"])
+     apply (rule f_in_empty)
+    apply (rule mem_nil)
+    done
+qed
+
+lemma sat_hyp_mem: "f N \<Longrightarrow> f \<in> G \<Longrightarrow> sat_hyp G A \<Longrightarrow> sat f A"
+  unfolding sat_hyp_def
+proof -
+  assume f_nat: "f N" and f_in: "f \<in> G" and all: "\<forall>g. g \<in> G \<longrightarrow> sat g A"
+  have imp: "f \<in> G \<longrightarrow> sat f A"
+    apply (rule forallE[where a = f]) apply (rule all) apply (rule f_nat) done
+  show "sat f A"
+    apply (rule implE[where a = "f \<in> G"]) apply (rule imp) apply (rule f_in) done
+qed
+
+lemma sat_hyp_consI:
+  assumes f: "f N"
+      and G: "G N"
+      and sf: "sat f A"
+      and sG: "sat_hyp G A"
+  shows "sat_hyp (f \<triangleright> G) A"
+proof -
+  show ?thesis
+    unfolding sat_hyp_def
+  proof (rule forallI)
+    fix g
+    assume g: "g N"
+    show "g \<in> (f \<triangleright> G) \<longrightarrow> sat g A"
+    proof (rule implI)
+      show "g \<in> (f \<triangleright> G) B"
+        by (rule mem_bool[OF g], use f G in simp)
+    next
+      assume mem: "g \<in> (f \<triangleright> G)"
+      have split: "g \<in> (f \<triangleright> G) \<longleftrightarrow> (if f = g then True else g \<in> G)"
+        by (rule mem_cons[OF f G g])
+      have to_cond: "g \<in> (f \<triangleright> G) \<longrightarrow> (if f = g then True else g \<in> G)"
+        by (rule iffE1[OF split])
+      have cond: "if f = g then True else g \<in> G"
+        by (rule implE[OF to_cond mem])
+      show "sat g A"
+      proof (rule cases_bool[where q="f = g"])
+        show "(f = g) B"
+          by (rule eqBool[OF f g])
+      next
+        assume fg: "f = g"
+        show "sat g A"
+          using fg sf
+          by (rule eqSubst[where a=f and b=g])
+      next
+        assume fg: "\<not> f = g"
+        have gG: "g \<in> G"
+          using fg cond
+          by (rule notcond_thenE)
+        show "sat g A"
+          using g gG sG
+          by (rule sat_hyp_mem)
+      qed
+    qed
+  qed
+qed
+
+lemma sat_hyp_subset: "subset G' G \<Longrightarrow> G' N \<Longrightarrow> G N \<Longrightarrow> sat_hyp G A \<Longrightarrow> sat_hyp G' A"
+proof -
+  assume sub: "subset G' G" and G'_nat: "G' N" and satG: "sat_hyp G A" and G_nat: "G N"
+  show "sat_hyp G' A"
+    unfolding sat_hyp_def
+    apply (rule forallI)
+    apply (rule implI)
+     apply (simp add: G'_nat)
+    apply (rule G'_nat)
+  proof -
+    fix f
+    assume f_nat: "f N" and f_in': "f \<in> G'"
+    have fG: "f \<in> G" using f_nat G'_nat G_nat sub f_in' by (rule subset_mem)
+    show "sat f A" using f_nat fG satG by (rule sat_hyp_mem)
+  qed
+qed
+
+lemma eval_zero [simp]:
+  "eval (pack_T T_ZERO 0) A = 0"
+proof -
+  have z: "pack_T T_ZERO 0 N"
+    by (rule pack_T_N[OF _ nat0], simp)
+  have tg: "tag_T (pack_T T_ZERO 0) = T_ZERO"
+    by (rule tag_pack_T[OF _ nat0], simp)
+  show ?thesis
+    apply (rule defE[OF eval_def[
+      where t="pack_T T_ZERO 0" and A=A]])
+    using tg z
+    apply simp
+    done
+qed
+
+lemma eval_suc [simp]:
+  assumes t: "t N"
+      and e: "eval t A N"
+  shows "eval (pack_T T_SUC t) A = S (eval t A)"
+proof -
+  have tg: "tag_T (pack_T T_SUC t) = T_SUC"
+    by (rule tag_pack_T[OF _ t], simp)
+  have ld:
+    "load_T (pack_T T_SUC t) = t"
+    by (rule load_pack_T[OF _ t], simp)
+  have tsN: "T_SUC N"
+    by simp
+  have rhsN: "S (eval t A) N"
+    by (rule natS[OF e])
+  show ?thesis
+    apply (rule defE[OF eval_def[
+      where t="pack_T T_SUC t" and A=A]])
+    using tg ld tsN rhsN
+    apply simp
+    done
+qed
+
 end
 
 locale bga_subst = bga_bijective_encoding +
@@ -320,6 +649,121 @@ locale bga_subst = bga_bijective_encoding +
       pack_T T_APP \<langle>cpx (load_T b),
                \<langle>subst_body (cpx (cpy (load_T b))) x y,
                 subst_body (cpy (cpy (load_T b))) x y\<rangle>\<rangle>"
+
+
+locale bga_subst_semantics = bga_semantics + bga_subst +
+  fixes asn_put :: "asn \<Rightarrow> num \<Rightarrow> val \<Rightarrow> asn"
+
+  assumes sat_subst_F: "\<lbrakk>f N; i N; s N\<rbrakk> \<Longrightarrow> sat (subst_F f i s) A \<longleftrightarrow> sat f (asn_put A i (eval s A))"
+  assumes sat_hyp_put: "\<lbrakk>G N; i N; v N; fresh_H i G; sat_hyp G A\<rbrakk> \<Longrightarrow> sat_hyp G (asn_put A i v)"
+  assumes eval_var_put: "\<lbrakk>i N; v N\<rbrakk> \<Longrightarrow> eval (pack_T T_VAR i) (asn_put A i v) = v"
+  assumes asn_put_overwrite: "\<lbrakk>i N; v N; w N\<rbrakk> \<Longrightarrow> asn_put (asn_put A i v) i w = asn_put A i w"
+begin
+
+lemma nat_ind_sound:
+  assumes p: "p N"
+      and i: "i N"
+      and a: "a N"
+      and G: "G N"
+      and fresh: "fresh_H i G"
+      and satG: "sat_hyp G A"
+      and base: "sat (subst_F p i (pack_T T_ZERO 0)) A"
+      and step: "\<And>C. sat_hyp (pack_F F_EQ \<langle>pack_T T_VAR i, pack_T T_VAR i\<rangle> \<triangleright> p \<triangleright> G) C
+                  \<Longrightarrow> sat (subst_F p i (pack_T T_SUC (pack_T T_VAR i))) C"
+      and an: "eval a A N"
+  shows "sat (subst_F p i a) A"
+proof -
+  let ?z = "pack_T T_ZERO 0"
+  let ?vi = "pack_T T_VAR i"
+  let ?svi = "pack_T T_SUC ?vi"
+  have zN: "?z N"
+    by (rule pack_T_N[OF _ nat0], simp)
+  have viN: "?vi N"
+    by (rule pack_T_N[OF _ i], simp)
+  have sviN: "?svi N"
+    by (rule pack_T_N[OF _ viN], simp)
+  have main: "\<And>n. n N \<Longrightarrow> sat p (asn_put A i n)"
+  proof -
+    fix n
+    assume n: "n N"
+    show "sat p (asn_put A i n)"
+    proof (rule ind[OF n])
+      have sub0: "sat (subst_F p i ?z) A \<longleftrightarrow> sat p (asn_put A i (eval ?z A))"
+        by (rule sat_subst_F[OF p i zN])
+      have sub0E: "sat (subst_F p i ?z) A \<longrightarrow> sat p (asn_put A i (eval ?z A))"
+        using sub0
+        by (rule iffE1)
+      have p0: "sat p (asn_put A i (eval ?z A))"
+        using sub0E base
+        by (rule implE)
+      have ez: "eval ?z A = 0"
+        by (rule eval_zero)
+      show "sat p (asn_put A i 0)"
+        using ez p0 by (rule eqSubst[where Q="\<lambda>v. sat p (asn_put A i v)"])
+    next
+      fix m
+      assume m: "m N"
+         and IH: "sat p (asn_put A i m)"
+      let ?Am = "asn_put A i m"
+      have Gm: "sat_hyp G ?Am"
+        using G i m fresh satG by (rule sat_hyp_put)
+      have ev: "eval ?vi ?Am = m"
+        by (rule eval_var_put[OF i m])
+      have me: "m = eval ?vi ?Am"
+        using ev by (rule eqSym)
+      have evN: "eval ?vi ?Am N"
+        using me m by (rule eqSubst[where Q="\<lambda>v. v N"])
+      have vvN: "\<langle>?vi, ?vi\<rangle> N"
+        using viN by simp
+      have eqN: "pack_F F_EQ \<langle>?vi, ?vi\<rangle> N"
+        by (rule pack_F_N[OF _ vvN], simp)
+      have tgEq: "tag_F (pack_F F_EQ \<langle>?vi, ?vi\<rangle>) = F_EQ"
+        by (rule tag_pack_F[OF _ vvN], simp)
+      have ldEq: "load_F (pack_F F_EQ \<langle>?vi, ?vi\<rangle>) = \<langle>?vi, ?vi\<rangle>"
+        by (rule load_pack_F[OF _ vvN], simp)
+      have satvi: "sat (pack_F F_EQ \<langle>?vi, ?vi\<rangle>) ?Am"
+        unfolding sat_def using tgEq ldEq viN evN by simp
+      have pG: "sat_hyp (p \<triangleright> G) ?Am"
+        using p G IH Gm by (rule sat_hyp_consI)
+      have pGN: "p \<triangleright> G N"
+        using p G by simp
+      have stepG: "sat_hyp (pack_F F_EQ \<langle>?vi, ?vi\<rangle> \<triangleright> p \<triangleright> G) ?Am"
+        using eqN pGN satvi pG by (rule sat_hyp_consI)
+      have ss: "sat (subst_F p i ?svi) ?Am"
+        using stepG by (rule step)
+      have subS: "sat (subst_F p i ?svi) ?Am \<longleftrightarrow> sat p (asn_put ?Am i (eval ?svi ?Am))"
+        by (rule sat_subst_F[OF p i sviN])
+      have subSE: "sat (subst_F p i ?svi) ?Am \<longrightarrow> sat p (asn_put ?Am i (eval ?svi ?Am))"
+        using subS by (rule iffE1)
+      have ps: "sat p (asn_put ?Am i (eval ?svi ?Am))"
+        using subSE ss by (rule implE)
+      have es0: "eval ?svi ?Am = S (eval ?vi ?Am)"
+        using viN evN by (rule eval_suc)
+      have sem: "S (eval ?vi ?Am) = S m"
+        using ev by (rule sucCong)
+      have es: "eval ?svi ?Am = S m"
+        using es0 sem by (rule eq_trans)
+      have ps': "sat p (asn_put ?Am i (S m))"
+        using es ps by (rule eqSubst[where Q="\<lambda>v. sat p(asn_put (asn_put A i m) i v)"])
+      have Sm: "S m N"
+        by (rule natS[OF m])
+      have ow: "asn_put ?Am i (S m) = asn_put A i (S m)"
+        by (rule asn_put_overwrite[OF i m Sm])
+      show "sat p (asn_put A i (S m))"
+        using ow ps' by (rule eqSubst[where Q="\<lambda>C. sat p C"])
+    qed
+  qed
+  have pa: "sat p (asn_put A i (eval a A))"
+    using an by (rule main)
+  have subA: "sat (subst_F p i a) A \<longleftrightarrow> sat p (asn_put A i (eval a A))"
+    by (rule sat_subst_F[OF p i a])
+  have subAE: "sat p (asn_put A i (eval a A)) \<longrightarrow> sat (subst_F p i a) A"
+    using subA by (rule iffE2)
+  show ?thesis
+    using subAE pa by (rule implE)
+qed
+
+end
 
 locale bga_subst_rule = bga_subst +
 
@@ -510,7 +954,7 @@ assumes find_ind_base_def: "find_ind_base J a rest ptr :=
   fixes check_ind       :: "jdg \<Rightarrow> pf \<Rightarrow> o"
   (* check_ind triggers the search if the Habeas Quid premise \<Gamma> \<turnstile> a N (encoded as a=a) exists *)
   assumes check_ind_def: "check_ind J rest :=
-    if mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpx (load_F (conc_of J)), cpx (load_F (conc_of J))\<rangle>) rest then
+    if fresh_H (J + 1) (hyp_of J) \<and> mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpx (load_F (conc_of J)), cpx (load_F (conc_of J))\<rangle>) rest then
        find_ind_base J (cpx (load_F (conc_of J))) rest rest
     else False"
 
@@ -541,7 +985,7 @@ fixes check_cut   :: "jdg \<Rightarrow> pf \<Rightarrow> o"
   fixes check_struct :: "jdg \<Rightarrow> pf \<Rightarrow> o"
   assumes check_struct_def: "check_struct J rest := find_struct J (hyp_of J) rest"
 
-locale bga_app_rule = bga_subst_rule +
+locale bga_app_rule = bga_subst_rule + bga_dfns + 
 
 (*
 J d x y
@@ -552,6 +996,7 @@ checks if
 *)
 fixes app_try :: "jdg \<Rightarrow> num \<Rightarrow> num \<Rightarrow> num \<Rightarrow> pf \<Rightarrow> o"
   assumes app_try_def: "app_try J d x y rest :=
+    dfn_is d 2 (nth d dfns) \<and>
     mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>x, x\<rangle>) rest \<and> 
     mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>y, y\<rangle>) rest \<and>  
     find_phi J (subst_body (nth d dfns) x y) (pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle>) rest"
@@ -660,7 +1105,7 @@ assumes is_valid_proof_def: "is_valid_proof pf J :=
     else if list_hd pf = J then check_list pf
     else False"
 
-locale bga_full = bga_semantics + bga_proof_check
+locale bga_full = bga_subst_semantics + bga_proof_check
 begin
 
 definition mk_eq :: "num \<Rightarrow> num \<Rightarrow> num" where
@@ -686,48 +1131,6 @@ lemma mk_neq_N':
   using a_nat b_nat  apply simp+
   done
 
-lemma sat_hyp_nil': "sat_hyp Nil A"
-  unfolding sat_hyp_def
-  apply (rule forallI)
-  apply (rule implI)
-   apply simp
-proof - 
-  fix f
-  assume f_nat: "f N"
-  assume f_in_empty: "f \<in> \<emptyset>"
-  show "sat f A"
-    apply (rule exF[where P = "f \<in> \<emptyset>"])
-     apply (rule f_in_empty)
-    apply (rule mem_nil)
-    done
-qed
-lemma sat_hyp_mem: "f N \<Longrightarrow> f \<in> G \<Longrightarrow> sat_hyp G A \<Longrightarrow> sat f A"
-  unfolding sat_hyp_def
-proof -
-  assume f_nat: "f N" and f_in: "f \<in> G" and all: "\<forall>g. g \<in> G \<longrightarrow> sat g A"
-  have imp: "f \<in> G \<longrightarrow> sat f A"
-    apply (rule forallE[where a = f]) apply (rule all) apply (rule f_nat) done
-  show "sat f A"
-    apply (rule implE[where a = "f \<in> G"]) apply (rule imp) apply (rule f_in) done
-qed
-
-lemma sat_hyp_subset: "subset G' G \<Longrightarrow> G' N \<Longrightarrow> G N \<Longrightarrow> sat_hyp G A \<Longrightarrow> sat_hyp G' A"
-proof -
-  assume sub: "subset G' G" and G'_nat: "G' N" and satG: "sat_hyp G A" and G_nat: "G N"
-  show "sat_hyp G' A"
-    unfolding sat_hyp_def
-    apply (rule forallI)
-    apply (rule implI)
-     apply (simp add: G'_nat)
-    apply (rule G'_nat)
-  proof -
-    fix f
-    assume f_nat: "f N" and f_in': "f \<in> G'"
-    have fG: "f \<in> G" using f_nat G'_nat G_nat sub f_in' by (rule subset_mem)
-    show "sat f A" using f_nat fG satG by (rule sat_hyp_mem)
-  qed
-qed
-
 lemma sat_eqE': "a N \<Longrightarrow> b N \<Longrightarrow> sat (mk_eq a b) A \<Longrightarrow> eval a A = eval b A"
 proof -
   assume a: "a N" and b: "b N" and h: "sat (mk_eq a b) A"
@@ -752,7 +1155,6 @@ proof -
     done
 qed
 qed
-
 
 lemma subst_T_N:
   assumes t: "t N" and j: "j N" and v: "v N"
@@ -1342,6 +1744,8 @@ proof (rule defE[OF app_try_def[where J=J and d=d and x=x and y=y and rest=rest]
     using dfns_N dr 
     apply (rule nth_in_range_N)
     done
+  have di: "dfn_is d 2 (nth d dfns) B"
+    by (rule dfn_is_bool[OF d _ ndf], simp)
   have sb:  "subst_body (nth d dfns) x y N" 
     by (rule subst_body_N[OF ndf x y])
   have dxy: "\<langle>d, \<langle>x, y\<rangle>\<rangle> N"                 
@@ -1354,10 +1758,9 @@ proof (rule defE[OF app_try_def[where J=J and d=d and x=x and y=y and rest=rest]
     by (rule mem_bool[OF jyy r])
   have fp: "find_phi J (subst_body (nth d dfns) x y) (pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle>) rest B"
            by (rule find_phi_bool[OF J sb pT r])
-  show "(mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>x, x\<rangle>) rest
-         \<and> mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>y, y\<rangle>) rest
-         \<and> find_phi J (subst_body (nth d dfns) x y) (pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle>) rest) B"
-    using m1 m2 fp by auto
+  show "dfn_is d T_SUC (nth d dfns) \<and> (hyp_of J \<tturnstile> pack_F F_EQ (x \<tturnstile> x)) \<in> rest \<and>
+    (hyp_of J \<tturnstile> pack_F F_EQ (y \<tturnstile> y)) \<in> rest \<and> find_phi J (subst_body (nth d dfns) x y) (pack_T T_APP (d \<tturnstile> (x \<tturnstile> y))) rest B "
+    using di m1 m2 fp by simp
 qed
 
 lemma sat_neqE': "a N \<Longrightarrow> b N \<Longrightarrow> sat (mk_neq a b) A \<Longrightarrow> eval a A \<noteq> eval b A"
@@ -1841,11 +2244,17 @@ proof -
     using hj pf by simp
   have m: "mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpx (load_F (conc_of J)), cpx (load_F (conc_of J))\<rangle>) rest B"
     by (rule mem_bool[OF jN r])
+  have SJ: "J + 1 N"
+    using J by simp
+  have fresh: "fresh_H (J + 1) (hyp_of J) B"
+    by (rule fresh_H_bool[OF SJ hj])
+  have guard: "(fresh_H (J + 1) (hyp_of J) \<and> mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpx (load_F (conc_of J)), cpx (load_F (conc_of J))\<rangle>) rest) B"
+    using fresh m by auto
   have fib: "find_ind_base J (cpx (load_F (conc_of J))) rest rest B"
     by (rule find_ind_base_bool[OF J cx r r])
   show ?thesis
     apply (rule defE[OF check_ind_def[where J=J and rest=rest]])
-    apply (rule condTB[OF m fib false_bool])
+    apply (rule condTB[OF guard fib false_bool])
     done
 qed
 
