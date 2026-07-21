@@ -439,7 +439,7 @@ Proof Rules:
             mem (G \<tturnstile> pack_F F_EQ \<langle>load_T lhs, load_T rhs\<rangle>) rest then True
     else if mem (G \<tturnstile> pack_F F_EQ \<langle>pack_T T_SUC lhs, pack_T T_SUC rhs\<rangle>) rest then True
     else if tg_L = T_PRED \<and> tag_T (load_T lhs) = T_SUC \<and> 
-            cpx (load_T (load_T lhs)) = rhs \<and> 
+            (load_T (load_T lhs)) = rhs \<and> 
             mem (G \<tturnstile> pack_F F_EQ \<langle>rhs, rhs\<rangle>) rest then True
     else if tg_L = T_IFZ \<and> rhs = cpy (cpy (load_T lhs)) \<and> 
             mem (G \<tturnstile> pack_F F_NEQ \<langle>cpx (load_T lhs), pack_T T_ZERO 0\<rangle>) rest \<and>
@@ -1615,10 +1615,10 @@ proof -
     by (rule eqBool[OF tg_L predN])
   have e_tgLLs: "(tag_T (load_T lhs) = T_SUC) B" 
     by (rule eqBool[OF tgLL sucN])
-  have e_cx_r: "(cpx (load_T (load_T lhs)) = rhs) B" 
-    by (rule eqBool[OF cxLLl rhs])
+  have e_cx_r: "(load_T (load_T lhs) = rhs) B" 
+    by (rule eqBool[OF LLl rhs])
   have g5: "(tg_L = T_PRED \<and> tag_T (load_T lhs) = T_SUC \<and>
-             cpx (load_T (load_T lhs)) = rhs \<and>
+             (load_T (load_T lhs)) = rhs \<and>
              mem (G \<tturnstile> pack_F F_EQ \<langle>rhs, rhs\<rangle>) rest) B"
     using e_tgLp e_tgLLs e_cx_r mrr by auto
 
