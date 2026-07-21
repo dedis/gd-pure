@@ -304,7 +304,12 @@ axiomatization where
   condE3: \<open>\<lbrakk>(if c then a else b) N\<rbrakk> \<Longrightarrow> (c B)\<close> and
   condE1B: \<open>\<lbrakk>c;  (if c then d else e) B\<rbrakk> \<Longrightarrow> (d B)\<close> and
   condE2B: \<open>\<lbrakk>\<not>c;  (if c then d else e) B\<rbrakk> \<Longrightarrow> (e B)\<close> and
-  condE3B: \<open>\<lbrakk>(if c then d else e) B\<rbrakk> \<Longrightarrow> (c B)\<close>
+  condE3B: \<open>\<lbrakk>(if c then d else e) B\<rbrakk> \<Longrightarrow> (c B)\<close> and
+  (* lazy conditional rules *) 
+  cond_thenQ_E: "c \<Longrightarrow> Q (if c then a else b) \<Longrightarrow> Q a" and
+  cond_thenQ_I: "c \<Longrightarrow> Q a \<Longrightarrow> Q (if c then a else b)" and
+  cond_elseQ_E: "\<not> c \<Longrightarrow> Q (if c then a else b) \<Longrightarrow> Q b" and
+  cond_elseQ_I: "\<not> c \<Longrightarrow> Q b \<Longrightarrow> Q (if c then a else b)"
 
 lemma condI1BEq:
   assumes c_holds: "c"
