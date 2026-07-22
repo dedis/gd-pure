@@ -4178,12 +4178,104 @@ lemma find_phi_sound:
   sorry *)
 
 
-lemma check_list_sound:
-  assumes pf: "pf N" and chk: "check_list pf"
-      and J: "J N" and Jm: "mem J pf"
+
+lemma check_list_induct:
+  assumes pf: "pf N"
+      and base: "\<And>J A. check_list Nil \<Longrightarrow> J N \<Longrightarrow> mem J Nil \<Longrightarrow>
+                   sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A"
+      and step: "\<And>h t. h N \<Longrightarrow> t N \<Longrightarrow>
+                   (\<And>J A. check_list t \<Longrightarrow> J N \<Longrightarrow> mem J t \<Longrightarrow>
+                      sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A) \<Longrightarrow>
+                   (\<And>J A. check_list (Cons h t) \<Longrightarrow> J N \<Longrightarrow> mem J (Cons h t) \<Longrightarrow>
+                      sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A)"
+  shows "\<And>J A. check_list pf \<Longrightarrow> J N \<Longrightarrow> mem J pf \<Longrightarrow>
+                sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A"
+  sorry
+
+
+lemma valid_step_sound:
+  assumes J: "J N" and rest: "rest N"
+      and vs: "valid_step J rest"
+      and prev: "\<And>K A2. K N \<Longrightarrow> mem K rest \<Longrightarrow>
+                   sat_hyp (hyp_of K) A2 \<Longrightarrow> sat (conc_of K) A2"
       and satG: "sat_hyp (hyp_of J) A"
   shows "sat (conc_of J) A"
   sorry
+
+lemma check_list_sound:
+  assumes pf: "pf N"
+  shows "\<And>J A. check_list pf \<Longrightarrow> J N \<Longrightarrow> mem J pf \<Longrightarrow>
+                sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A"
+proof (rule check_list_induct[OF pf])
+  show "\<And>J A. check_list Nil \<Longrightarrow> J N \<Longrightarrow> mem J Nil \<Longrightarrow>
+               sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A"
+  proof -
+    fix J A
+    assume "check_list Nil" and "J N" and m: "mem J Nil"
+       and "sat_hyp (hyp_of J) A"
+    show "sat (conc_of J) A" by (rule exF[OF m mem_nil])
+  qed
+next
+  fix h t
+  assume h: "h N" and t: "t N"
+     and IH: "\<And>J A. check_list t \<Longrightarrow> J N \<Longrightarrow> mem J t \<Longrightarrow>
+                 sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A"
+  show "\<And>J A. check_list (h \<triangleright> t) \<Longrightarrow> J N \<Longrightarrow> mem J (h \<triangleright> t) \<Longrightarrow>
+               sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A"
+  proof -
+    fix J A
+    assume cl: "check_list (h \<triangleright> t)" and J: "J N"
+       and mJ: "mem J (h \<triangleright> t)" and satG: "sat_hyp (hyp_of J) A"
+
+    have hne: "\<not> (h \<triangleright> t = Nil)" using h t by auto
+    have R: "if h \<triangleright> t = Nil then True
+             else if valid_step (list_hd (h \<triangleright> t)) (list_tl (h \<triangleright> t))
+                  then check_list (list_tl (h \<triangleright> t)) else False"
+      using cl by (rule defI[OF check_list_def])
+    have R': "if h \<triangleright> t = Nil then True
+              else if valid_step h t then check_list t else False"
+      using R by (simp only: list_hd_cons[OF h t] list_tl_cons[OF h t])
+    have R1: "if valid_step h t then check_list t else False"
+      using hne R' by (rule notcond_thenE)
+
+    show "sat (conc_of J) A"
+    proof (rule cases_bool[where q = "valid_step h t"])
+      show "valid_step h t B" by (rule valid_step_bool[OF h t])
+    next
+      assume vs: "valid_step h t"
+      have clt: "check_list t" using vs R1 by (rule cond_thenE)
+      have mJ': "if h = J then True else mem J t"
+        using mJ h t J by (simp add: mem_cons[OF h t J])
+      show "sat (conc_of J) A"
+      proof (rule cases_bool[where q = "h = J"])
+        show "(h = J) B" by (rule eqBool[OF h J])
+      next
+        assume hJ: "h = J"
+        have satGh: "sat_hyp (hyp_of h) A"
+          by (rule eqSubst[where Q = "\<lambda>z. sat_hyp (hyp_of z) A",
+                           OF eqSym[OF hJ] satG])
+        have sh: "sat (conc_of h) A"
+        proof (rule valid_step_sound[OF h t vs])
+          fix K A2
+          assume K: "K N" and mK: "mem K t" and sK: "sat_hyp (hyp_of K) A2"
+          show "sat (conc_of K) A2" using clt K mK sK by (rule IH)
+        next
+          show "sat_hyp (hyp_of h) A" by (rule satGh)
+        qed
+        show "sat (conc_of J) A"
+          by (rule eqSubst[where Q = "\<lambda>z. sat (conc_of z) A", OF hJ sh])
+      next
+        assume nhJ: "\<not> (h = J)"
+        have mJt: "mem J t" using nhJ mJ' by (rule notcond_thenE)
+        show "sat (conc_of J) A" using clt J mJt satG by (rule IH)
+      qed
+    next
+      assume nvs: "\<not> valid_step h t"
+      have F: "False" using nvs R1 by (rule notcond_thenE)
+      show "sat (conc_of J) A" by (rule exF[OF F not_false])
+    qed
+  qed
+qed
 
 lemma soundness_bridge:
   assumes vp: "is_valid_proof p J"
