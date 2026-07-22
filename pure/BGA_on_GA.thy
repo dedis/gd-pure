@@ -4177,8 +4177,6 @@ lemma find_phi_sound:
   shows "sat (conc_of J) A"
   sorry *)
 
-
-
 lemma check_list_induct:
   assumes pf: "pf N"
       and base: "\<And>J A. check_list Nil \<Longrightarrow> J N \<Longrightarrow> mem J Nil \<Longrightarrow>
@@ -4192,6 +4190,74 @@ lemma check_list_induct:
                 sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A"
   sorry
 
+lemma check_cut_sound:
+  assumes J: "J N" and rest: "rest N"
+      and chk: "check_cut J rest"
+      and prev: "\<And>K A2. K N \<Longrightarrow> mem K rest \<Longrightarrow>
+                   sat_hyp (hyp_of K) A2 \<Longrightarrow> sat (conc_of K) A2"
+      and satG: "sat_hyp (hyp_of J) A"
+  shows "sat (conc_of J) A"
+  sorry
+
+lemma check_subst_sound:
+  assumes J: "J N" and rest: "rest N"
+      and chk: "check_subst J rest"
+      and prev: "\<And>K A2. K N \<Longrightarrow> mem K rest \<Longrightarrow>
+                   sat_hyp (hyp_of K) A2 \<Longrightarrow> sat (conc_of K) A2"
+      and satG: "sat_hyp (hyp_of J) A"
+  shows "sat (conc_of J) A"
+  sorry
+
+lemma check_ind_sound:
+  assumes J: "J N" and rest: "rest N"
+      and chk: "check_ind J rest"
+      and prev: "\<And>K A2. K N \<Longrightarrow> mem K rest \<Longrightarrow>
+                   sat_hyp (hyp_of K) A2 \<Longrightarrow> sat (conc_of K) A2"
+      and satG: "sat_hyp (hyp_of J) A"
+  shows "sat (conc_of J) A"
+  sorry
+
+lemma check_app_sound:
+  assumes J: "J N" and rest: "rest N"
+      and chk: "check_app J rest"
+      and prev: "\<And>K A2. K N \<Longrightarrow> mem K rest \<Longrightarrow>
+                   sat_hyp (hyp_of K) A2 \<Longrightarrow> sat (conc_of K) A2"
+      and satG: "sat_hyp (hyp_of J) A"
+  shows "sat (conc_of J) A"
+  sorry
+
+lemma check_struct_sound:
+  assumes J: "J N" and rest: "rest N"
+      and chk: "check_struct J rest"
+      and prev: "\<And>K A2. K N \<Longrightarrow> mem K rest \<Longrightarrow>
+                   sat_hyp (hyp_of K) A2 \<Longrightarrow> sat (conc_of K) A2"
+      and satG: "sat_hyp (hyp_of J) A"
+  shows "sat (conc_of J) A"
+  sorry
+
+lemma check_eq_rules_sound:
+  assumes J: "J N" and rest: "rest N"
+      and tg: "tag_F (conc_of J) = F_EQ"
+      and chk: "check_eq_rules (hyp_of J) (cpx (load_F (conc_of J)))
+                  (cpy (load_F (conc_of J))) (tag_T (cpx (load_F (conc_of J))))
+                  (tag_T (cpy (load_F (conc_of J)))) rest"
+      and prev: "\<And>K A2. K N \<Longrightarrow> mem K rest \<Longrightarrow>
+                   sat_hyp (hyp_of K) A2 \<Longrightarrow> sat (conc_of K) A2"
+      and satG: "sat_hyp (hyp_of J) A"
+  shows "sat (conc_of J) A"
+  sorry
+
+lemma check_neq_rules_sound:
+  assumes J: "J N" and rest: "rest N"
+      and tg: "\<not> tag_F (conc_of J) = F_EQ"
+      and chk: "check_neq_rules (hyp_of J) (cpx (load_F (conc_of J)))
+                  (cpy (load_F (conc_of J))) (tag_T (cpx (load_F (conc_of J))))
+                  (tag_T (cpy (load_F (conc_of J)))) rest"
+      and prev: "\<And>K A2. K N \<Longrightarrow> mem K rest \<Longrightarrow>
+                   sat_hyp (hyp_of K) A2 \<Longrightarrow> sat (conc_of K) A2"
+      and satG: "sat_hyp (hyp_of J) A"
+  shows "sat (conc_of J) A"
+  sorry
 
 lemma valid_step_sound:
   assumes J: "J N" and rest: "rest N"
@@ -4200,7 +4266,165 @@ lemma valid_step_sound:
                    sat_hyp (hyp_of K) A2 \<Longrightarrow> sat (conc_of K) A2"
       and satG: "sat_hyp (hyp_of J) A"
   shows "sat (conc_of J) A"
-  sorry
+proof -
+  have cJ: "conc_of J N" using J by simp
+  have hJ: "hyp_of J N" using J by simp
+  have feqN: "F_EQ N" by simp
+  have R0:
+    "if mem (conc_of J) (hyp_of J) then True
+     else if check_cut J rest then True
+     else if check_subst J rest then True
+     else if check_ind J rest then True
+     else if check_app J rest then True
+     else if check_struct J rest then True
+     else if tag_F (conc_of J) = F_EQ then
+       check_eq_rules (hyp_of J) (cpx (load_F (conc_of J))) (cpy (load_F (conc_of J)))
+         (tag_T (cpx (load_F (conc_of J)))) (tag_T (cpy (load_F (conc_of J)))) rest
+     else
+       check_neq_rules (hyp_of J) (cpx (load_F (conc_of J))) (cpy (load_F (conc_of J)))
+         (tag_T (cpx (load_F (conc_of J)))) (tag_T (cpy (load_F (conc_of J)))) rest"
+    using vs by (rule defI[OF valid_step_def])
+  show ?thesis
+  proof (rule cases_bool[where q = "mem (conc_of J) (hyp_of J)"])
+    show "mem (conc_of J) (hyp_of J) B" by (rule mem_bool[OF cJ hJ])
+  next
+    assume g0: "mem (conc_of J) (hyp_of J)"
+    show ?thesis by (rule sat_hyp_mem[OF cJ g0 satG])
+  next
+    assume n0: "\<not> mem (conc_of J) (hyp_of J)"
+    have R1:
+      "if check_cut J rest then True
+       else if check_subst J rest then True
+       else if check_ind J rest then True
+       else if check_app J rest then True
+       else if check_struct J rest then True
+       else if tag_F (conc_of J) = F_EQ then
+         check_eq_rules (hyp_of J) (cpx (load_F (conc_of J))) (cpy (load_F (conc_of J)))
+           (tag_T (cpx (load_F (conc_of J)))) (tag_T (cpy (load_F (conc_of J)))) rest
+       else
+         check_neq_rules (hyp_of J) (cpx (load_F (conc_of J))) (cpy (load_F (conc_of J)))
+           (tag_T (cpx (load_F (conc_of J)))) (tag_T (cpy (load_F (conc_of J)))) rest"
+      using n0 R0 by (rule notcond_thenE)
+    show ?thesis
+    proof (rule cases_bool[where q = "check_cut J rest"])
+      show "check_cut J rest B" by (rule check_cut_bool[OF J rest])
+    next
+      assume g1: "check_cut J rest"
+      show ?thesis by (rule check_cut_sound[OF J rest g1 prev satG])
+    next
+      assume n1: "\<not> check_cut J rest"
+      have R2:
+        "if check_subst J rest then True
+         else if check_ind J rest then True
+         else if check_app J rest then True
+         else if check_struct J rest then True
+         else if tag_F (conc_of J) = F_EQ then
+           check_eq_rules (hyp_of J) (cpx (load_F (conc_of J))) (cpy (load_F (conc_of J)))
+             (tag_T (cpx (load_F (conc_of J)))) (tag_T (cpy (load_F (conc_of J)))) rest
+         else
+           check_neq_rules (hyp_of J) (cpx (load_F (conc_of J))) (cpy (load_F (conc_of J)))
+             (tag_T (cpx (load_F (conc_of J)))) (tag_T (cpy (load_F (conc_of J)))) rest"
+        using n1 R1 by (rule notcond_thenE)
+      show ?thesis
+      proof (rule cases_bool[where q = "check_subst J rest"])
+        show "check_subst J rest B" by (rule check_subst_bool[OF J rest])
+      next
+        assume g2: "check_subst J rest"
+        show ?thesis by (rule check_subst_sound[OF J rest g2 prev satG])
+      next
+        assume n2: "\<not> check_subst J rest"
+        have R3:
+          "if check_ind J rest then True
+           else if check_app J rest then True
+           else if check_struct J rest then True
+           else if tag_F (conc_of J) = F_EQ then
+             check_eq_rules (hyp_of J) (cpx (load_F (conc_of J))) (cpy (load_F (conc_of J)))
+               (tag_T (cpx (load_F (conc_of J)))) (tag_T (cpy (load_F (conc_of J)))) rest
+           else
+             check_neq_rules (hyp_of J) (cpx (load_F (conc_of J))) (cpy (load_F (conc_of J)))
+               (tag_T (cpx (load_F (conc_of J)))) (tag_T (cpy (load_F (conc_of J)))) rest"
+          using n2 R2 by (rule notcond_thenE)
+        show ?thesis
+        proof (rule cases_bool[where q = "check_ind J rest"])
+          show "check_ind J rest B" by (rule check_ind_bool[OF J rest])
+        next
+          assume g3: "check_ind J rest"
+          show ?thesis by (rule check_ind_sound[OF J rest g3 prev satG])
+        next
+          assume n3: "\<not> check_ind J rest"
+          have R4:
+            "if check_app J rest then True
+             else if check_struct J rest then True
+             else if tag_F (conc_of J) = F_EQ then
+               check_eq_rules (hyp_of J) (cpx (load_F (conc_of J))) (cpy (load_F (conc_of J)))
+                 (tag_T (cpx (load_F (conc_of J)))) (tag_T (cpy (load_F (conc_of J)))) rest
+             else
+               check_neq_rules (hyp_of J) (cpx (load_F (conc_of J))) (cpy (load_F (conc_of J)))
+                 (tag_T (cpx (load_F (conc_of J)))) (tag_T (cpy (load_F (conc_of J)))) rest"
+            using n3 R3 by (rule notcond_thenE)
+          show ?thesis
+          proof (rule cases_bool[where q = "check_app J rest"])
+            show "check_app J rest B" by (rule check_app_bool[OF J rest])
+          next
+            assume g4: "check_app J rest"
+            show ?thesis by (rule check_app_sound[OF J rest g4 prev satG])
+          next
+            assume n4: "\<not> check_app J rest"
+            have R5:
+              "if check_struct J rest then True
+               else if tag_F (conc_of J) = F_EQ then
+                 check_eq_rules (hyp_of J) (cpx (load_F (conc_of J))) (cpy (load_F (conc_of J)))
+                   (tag_T (cpx (load_F (conc_of J)))) (tag_T (cpy (load_F (conc_of J)))) rest
+               else
+                 check_neq_rules (hyp_of J) (cpx (load_F (conc_of J))) (cpy (load_F (conc_of J)))
+                   (tag_T (cpx (load_F (conc_of J)))) (tag_T (cpy (load_F (conc_of J)))) rest"
+              using n4 R4 by (rule notcond_thenE)
+            show ?thesis
+            proof (rule cases_bool[where q = "check_struct J rest"])
+              show "check_struct J rest B" by (rule check_struct_bool[OF J rest])
+            next
+              assume g5: "check_struct J rest"
+              show ?thesis by (rule check_struct_sound[OF J rest g5 prev satG])
+            next
+              assume n5: "\<not> check_struct J rest"
+              have R6:
+                "if tag_F (conc_of J) = F_EQ then
+                   check_eq_rules (hyp_of J) (cpx (load_F (conc_of J))) (cpy (load_F (conc_of J)))
+                     (tag_T (cpx (load_F (conc_of J)))) (tag_T (cpy (load_F (conc_of J)))) rest
+                 else
+                   check_neq_rules (hyp_of J) (cpx (load_F (conc_of J))) (cpy (load_F (conc_of J)))
+                     (tag_T (cpx (load_F (conc_of J)))) (tag_T (cpy (load_F (conc_of J)))) rest"
+                using n5 R5 by (rule notcond_thenE)
+              show ?thesis
+              proof (rule cases_bool[where q = "tag_F (conc_of J) = F_EQ"])
+                show "(tag_F (conc_of J) = F_EQ) B"
+                  by (rule eqBool[OF tag_F_N[OF cJ] feqN])
+              next
+                assume g6: "tag_F (conc_of J) = F_EQ"
+                have C6:
+                  "check_eq_rules (hyp_of J) (cpx (load_F (conc_of J)))
+                     (cpy (load_F (conc_of J))) (tag_T (cpx (load_F (conc_of J))))
+                     (tag_T (cpy (load_F (conc_of J)))) rest"
+                  using g6 R6 by (rule cond_thenE)
+                show ?thesis
+                  by (rule check_eq_rules_sound[OF J rest g6 C6 prev satG])
+              next
+                assume n6: "\<not> tag_F (conc_of J) = F_EQ"
+                have C6:
+                  "check_neq_rules (hyp_of J) (cpx (load_F (conc_of J)))
+                     (cpy (load_F (conc_of J))) (tag_T (cpx (load_F (conc_of J))))
+                     (tag_T (cpy (load_F (conc_of J)))) rest"
+                  using n6 R6 by (rule notcond_thenE)
+                show ?thesis
+                  by (rule check_neq_rules_sound[OF J rest n6 C6 prev satG])
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
 
 lemma check_list_sound:
   assumes pf: "pf N"
