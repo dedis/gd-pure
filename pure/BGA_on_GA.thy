@@ -4804,6 +4804,69 @@ proof -
     done
 qed
 
+lemma sat_formula_eqI:
+  assumes tg: "tag_F f = F_EQ"
+      and eq: "eval (cpx (load_F f)) A = eval (cpy (load_F f)) A"
+  shows "sat f A"
+proof -
+  have eqB: "(eval (cpx (load_F f)) A = eval (cpy (load_F f)) A) B"
+    by (rule eqBool[OF eq_impl_term[OF eq] eq_impl_term2[OF eq]])
+  have iff: "(if tag_F f = 0 then eval (cpx (load_F f)) A = eval (cpy (load_F f)) A
+              else eval (cpx (load_F f)) A \<noteq> eval (cpy (load_F f)) A)
+             \<longleftrightarrow> (eval (cpx (load_F f)) A = eval (cpy (load_F f)) A)"
+    by (rule condI1B[OF tg eqB])
+  have imp: "(eval (cpx (load_F f)) A = eval (cpy (load_F f)) A)
+             \<longrightarrow> (if tag_F f = 0 then eval (cpx (load_F f)) A = eval (cpy (load_F f)) A
+                  else eval (cpx (load_F f)) A \<noteq> eval (cpy (load_F f)) A)"
+    by (rule iffE2[OF iff])
+  have goal_if: "if tag_F f = 0 then eval (cpx (load_F f)) A = eval (cpy (load_F f)) A
+                 else eval (cpx (load_F f)) A \<noteq> eval (cpy (load_F f)) A"
+    by (rule implE[OF imp eq])
+  show "sat f A" unfolding sat_def by (rule goal_if)
+qed
+
+lemma neq_prem:
+  assumes hJ: "hyp_of J N" and rest: "rest N"
+      and a: "a N" and b: "b N"
+      and m: "mem (hyp_of J \<tturnstile> pack_F F_NEQ \<langle>a, b\<rangle>) rest"
+      and prev: "\<And>K A2. K N \<Longrightarrow> mem K rest \<Longrightarrow>
+                   sat_hyp (hyp_of K) A2 \<Longrightarrow> sat (conc_of K) A2"
+      and satG: "sat_hyp (hyp_of J) A"
+  shows "eval a A \<noteq> eval b A"
+proof -
+  have ab: "\<langle>a, b\<rangle> N" using a b by simp
+  have X: "pack_F F_NEQ \<langle>a, b\<rangle> N" by (rule pack_F_N[OF _ ab], simp)
+  have KN: "(hyp_of J \<tturnstile> pack_F F_NEQ \<langle>a, b\<rangle>) N" using hJ X by simp
+  have hK: "hyp_of (hyp_of J \<tturnstile> pack_F F_NEQ \<langle>a, b\<rangle>) = hyp_of J"
+    by (rule cpx_proj[OF hJ X])
+  have cK: "conc_of (hyp_of J \<tturnstile> pack_F F_NEQ \<langle>a, b\<rangle>) = pack_F F_NEQ \<langle>a, b\<rangle>"
+    by (rule cpy_proj[OF hJ X])
+  have sK: "sat_hyp (hyp_of (hyp_of J \<tturnstile> pack_F F_NEQ \<langle>a, b\<rangle>)) A"
+    using hK satG by simp
+  have s0: "sat (conc_of (hyp_of J \<tturnstile> pack_F F_NEQ \<langle>a, b\<rangle>)) A"
+    using KN m sK by (rule prev)
+  have s: "sat (pack_F F_NEQ \<langle>a, b\<rangle>) A" using cK s0 by simp
+  have tgX: "tag_F (pack_F F_NEQ \<langle>a, b\<rangle>) = F_NEQ"
+    by (rule tag_pack_F[OF _ ab], simp)
+  have ntg: "\<not> tag_F (pack_F F_NEQ \<langle>a, b\<rangle>) = F_EQ"
+    using tgX by simp
+  have ldX: "load_F (pack_F F_NEQ \<langle>a, b\<rangle>) = \<langle>a, b\<rangle>"
+    by (rule load_pack_F[OF _ ab], simp)
+  have E: "eval (cpx (load_F (pack_F F_NEQ \<langle>a, b\<rangle>))) A
+         \<noteq> eval (cpy (load_F (pack_F F_NEQ \<langle>a, b\<rangle>))) A"
+    by (rule sat_formula_neqE[OF X ntg s])
+  have ldXs: "\<langle>a, b\<rangle> = load_F (pack_F F_NEQ \<langle>a, b\<rangle>)" using ldX by (rule eqSym)
+  have px: "cpx (load_F (pack_F F_NEQ \<langle>a, b\<rangle>)) = a"
+    using ldXs cpx_proj[OF a b] by (rule eqSubst[where Q = "\<lambda>t. cpx t = a"])
+  have py: "cpy (load_F (pack_F F_NEQ \<langle>a, b\<rangle>)) = b"
+    using ldXs cpy_proj[OF a b] by (rule eqSubst[where Q = "\<lambda>t. cpy t = b"])
+  have E1: "eval a A \<noteq> eval (cpy (load_F (pack_F F_NEQ \<langle>a, b\<rangle>))) A"
+    using px E
+    by (rule eqSubst[where Q = "\<lambda>t. eval t A \<noteq> eval (cpy (load_F (pack_F F_NEQ \<langle>a, b\<rangle>))) A"])
+  show "eval a A \<noteq> eval b A"
+    using py E1 by (rule eqSubst[where Q = "\<lambda>t. eval a A \<noteq> eval t A"])
+qed
+
 lemma check_eq_rules_sound:
   assumes J: "J N" and rest: "rest N"
       and tg: "tag_F (conc_of J) = F_EQ"
@@ -4814,7 +4877,488 @@ lemma check_eq_rules_sound:
                    sat_hyp (hyp_of K) A2 \<Longrightarrow> sat (conc_of K) A2"
       and satG: "sat_hyp (hyp_of J) A"
   shows "sat (conc_of J) A"
-  sorry
+proof -
+  have cJ: "conc_of J N" using J by simp
+  have hJ: "hyp_of J N" using J by simp
+  have lcJ: "load_F (conc_of J) N" using cJ by (rule load_F_N)
+  have aN: "cpx (load_F (conc_of J)) N" using lcJ by (rule cpx_terminates)
+  have bN: "cpy (load_F (conc_of J)) N" using lcJ by (rule cpy_terminates)
+  have tgA: "tag_T (cpx (load_F (conc_of J))) N" using aN by (rule tag_T_N)
+  have tgB: "tag_T (cpy (load_F (conc_of J))) N" using bN by (rule tag_T_N)
+  have ztzN: "pack_T T_ZERO 0 N" by (rule pack_T_N[OF _ nat0], simp)
+  have Ll: "load_T (cpx (load_F (conc_of J))) N" using aN by (rule load_T_N)
+  have Lr: "load_T (cpy (load_F (conc_of J))) N" using bN by (rule load_T_N)
+  have LLl: "load_T (load_T (cpx (load_F (conc_of J)))) N" using Ll by (rule load_T_N)
+  have cxLl: "cpx (load_T (cpx (load_F (conc_of J)))) N" using Ll by (rule cpx_terminates)
+  have cyLl: "cpy (load_T (cpx (load_F (conc_of J)))) N" using Ll by (rule cpy_terminates)
+  have cycyLl: "cpy (cpy (load_T (cpx (load_F (conc_of J))))) N"
+    using cyLl by (rule cpy_terminates)
+  have cxcyLl: "cpx (cpy (load_T (cpx (load_F (conc_of J))))) N"
+    using cyLl by (rule cpx_terminates)
+  have sucl: "pack_T T_SUC (cpx (load_F (conc_of J))) N" by (rule pack_T_N[OF _ aN], simp)
+  have sucr: "pack_T T_SUC (cpy (load_F (conc_of J))) N" by (rule pack_T_N[OF _ bN], simp)
+  have tgLL: "tag_T (load_T (cpx (load_F (conc_of J)))) N" using Ll by (rule tag_T_N)
+  have sucN: "T_SUC N" by simp
+  have predN: "T_PRED N" by simp
+  have ifzN: "T_IFZ N" by simp
+
+  \<comment> \<open>booleanness of each guard\<close>
+  have e_lz: "(cpx (load_F (conc_of J)) = pack_T T_ZERO 0) B" by (rule eqBool[OF aN ztzN])
+  have e_rz: "(cpy (load_F (conc_of J)) = pack_T T_ZERO 0) B" by (rule eqBool[OF bN ztzN])
+  have g1B: "(cpx (load_F (conc_of J)) = pack_T T_ZERO 0 \<and>
+              cpy (load_F (conc_of J)) = pack_T T_ZERO 0) B"
+    using e_lz e_rz by auto
+
+  have pr_ba: "\<langle>cpy (load_F (conc_of J)), cpx (load_F (conc_of J))\<rangle> N" using bN aN by simp
+  have pf2: "pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpx (load_F (conc_of J))\<rangle> N"
+    by (rule pack_F_N[OF _ pr_ba], simp)
+  have j2: "(hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpx (load_F (conc_of J))\<rangle>) N"
+    using hJ pf2 by simp
+  have g2B: "mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpx (load_F (conc_of J))\<rangle>) rest B"
+    by (rule mem_bool[OF j2 rest])
+
+  have pr_LlLr: "\<langle>load_T (cpx (load_F (conc_of J))), load_T (cpy (load_F (conc_of J)))\<rangle> N"
+    using Ll Lr by simp
+  have pf3: "pack_F F_EQ \<langle>load_T (cpx (load_F (conc_of J))), load_T (cpy (load_F (conc_of J)))\<rangle> N"
+    by (rule pack_F_N[OF _ pr_LlLr], simp)
+  have j3: "(hyp_of J \<tturnstile> pack_F F_EQ \<langle>load_T (cpx (load_F (conc_of J))), load_T (cpy (load_F (conc_of J)))\<rangle>) N"
+    using hJ pf3 by simp
+  have m3B: "mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>load_T (cpx (load_F (conc_of J))), load_T (cpy (load_F (conc_of J)))\<rangle>) rest B"
+    by (rule mem_bool[OF j3 rest])
+  have e_tgLs: "(tag_T (cpx (load_F (conc_of J))) = T_SUC) B" by (rule eqBool[OF tgA sucN])
+  have e_tgRs: "(tag_T (cpy (load_F (conc_of J))) = T_SUC) B" by (rule eqBool[OF tgB sucN])
+  have g3B: "(tag_T (cpx (load_F (conc_of J))) = T_SUC \<and> tag_T (cpy (load_F (conc_of J))) = T_SUC \<and>
+              mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>load_T (cpx (load_F (conc_of J))), load_T (cpy (load_F (conc_of J)))\<rangle>) rest) B"
+    using e_tgLs e_tgRs m3B by auto
+
+  have pr_ss: "\<langle>pack_T T_SUC (cpx (load_F (conc_of J))), pack_T T_SUC (cpy (load_F (conc_of J)))\<rangle> N"
+    using sucl sucr by simp
+  have pf4: "pack_F F_EQ \<langle>pack_T T_SUC (cpx (load_F (conc_of J))), pack_T T_SUC (cpy (load_F (conc_of J)))\<rangle> N"
+    by (rule pack_F_N[OF _ pr_ss], simp)
+  have j4: "(hyp_of J \<tturnstile> pack_F F_EQ \<langle>pack_T T_SUC (cpx (load_F (conc_of J))), pack_T T_SUC (cpy (load_F (conc_of J)))\<rangle>) N"
+    using hJ pf4 by simp
+  have g4B: "mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>pack_T T_SUC (cpx (load_F (conc_of J))), pack_T T_SUC (cpy (load_F (conc_of J)))\<rangle>) rest B"
+    by (rule mem_bool[OF j4 rest])
+
+  have pr_bb: "\<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle> N" using bN by simp
+  have pfbb: "pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle> N"
+    by (rule pack_F_N[OF _ pr_bb], simp)
+  have jbb: "(hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) N"
+    using hJ pfbb by simp
+  have mbbB: "mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest B"
+    by (rule mem_bool[OF jbb rest])
+
+  have e_tgLp: "(tag_T (cpx (load_F (conc_of J))) = T_PRED) B" by (rule eqBool[OF tgA predN])
+  have e_tgLLs: "(tag_T (load_T (cpx (load_F (conc_of J)))) = T_SUC) B" by (rule eqBool[OF tgLL sucN])
+  have e_LL_r: "(load_T (load_T (cpx (load_F (conc_of J)))) = cpy (load_F (conc_of J))) B"
+    by (rule eqBool[OF LLl bN])
+  have g5B: "(tag_T (cpx (load_F (conc_of J))) = T_PRED \<and>
+              tag_T (load_T (cpx (load_F (conc_of J)))) = T_SUC \<and>
+              load_T (load_T (cpx (load_F (conc_of J)))) = cpy (load_F (conc_of J)) \<and>
+              mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest) B"
+    using e_tgLp e_tgLLs e_LL_r mbbB by auto
+
+  have pr_cxZ: "\<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle> N"
+    using cxLl ztzN by simp
+  have pf_neq_cxZ: "pack_F F_NEQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle> N"
+    by (rule pack_F_N[OF _ pr_cxZ], simp)
+  have j_neq_cxZ: "(hyp_of J \<tturnstile> pack_F F_NEQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle>) N"
+    using hJ pf_neq_cxZ by simp
+  have m6aB: "mem (hyp_of J \<tturnstile> pack_F F_NEQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle>) rest B"
+    by (rule mem_bool[OF j_neq_cxZ rest])
+  have pf_eq_cxZ: "pack_F F_EQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle> N"
+    by (rule pack_F_N[OF _ pr_cxZ], simp)
+  have j_eq_cxZ: "(hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle>) N"
+    using hJ pf_eq_cxZ by simp
+  have m7aB: "mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle>) rest B"
+    by (rule mem_bool[OF j_eq_cxZ rest])
+
+  have e_tgLi: "(tag_T (cpx (load_F (conc_of J))) = T_IFZ) B" by (rule eqBool[OF tgA ifzN])
+  have e_r_cycy: "(cpy (load_F (conc_of J)) = cpy (cpy (load_T (cpx (load_F (conc_of J)))))) B"
+    by (rule eqBool[OF bN cycyLl])
+  have g6B: "(tag_T (cpx (load_F (conc_of J))) = T_IFZ \<and>
+              cpy (load_F (conc_of J)) = cpy (cpy (load_T (cpx (load_F (conc_of J))))) \<and>
+              mem (hyp_of J \<tturnstile> pack_F F_NEQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle>) rest \<and>
+              mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest) B"
+    using e_tgLi e_r_cycy m6aB mbbB by auto
+
+  have e_r_cxcy: "(cpy (load_F (conc_of J)) = cpx (cpy (load_T (cpx (load_F (conc_of J)))))) B"
+    by (rule eqBool[OF bN cxcyLl])
+  have g7B: "(tag_T (cpx (load_F (conc_of J))) = T_IFZ \<and>
+              cpy (load_F (conc_of J)) = cpx (cpy (load_T (cpx (load_F (conc_of J))))) \<and>
+              mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle>) rest \<and>
+              mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest) B"
+    using e_tgLi e_r_cxcy m7aB mbbB by auto
+
+  \<comment> \<open>unfold the checker into its if-cascade\<close>
+  have R0:
+    "if cpx (load_F (conc_of J)) = pack_T T_ZERO 0 \<and> cpy (load_F (conc_of J)) = pack_T T_ZERO 0 then True
+     else if mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpx (load_F (conc_of J))\<rangle>) rest then True
+     else if tag_T (cpx (load_F (conc_of J))) = T_SUC \<and> tag_T (cpy (load_F (conc_of J))) = T_SUC \<and>
+             mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>load_T (cpx (load_F (conc_of J))), load_T (cpy (load_F (conc_of J)))\<rangle>) rest then True
+     else if mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>pack_T T_SUC (cpx (load_F (conc_of J))), pack_T T_SUC (cpy (load_F (conc_of J)))\<rangle>) rest then True
+     else if tag_T (cpx (load_F (conc_of J))) = T_PRED \<and> tag_T (load_T (cpx (load_F (conc_of J)))) = T_SUC \<and>
+             load_T (load_T (cpx (load_F (conc_of J)))) = cpy (load_F (conc_of J)) \<and>
+             mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest then True
+     else if tag_T (cpx (load_F (conc_of J))) = T_IFZ \<and> cpy (load_F (conc_of J)) = cpy (cpy (load_T (cpx (load_F (conc_of J))))) \<and>
+             mem (hyp_of J \<tturnstile> pack_F F_NEQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle>) rest \<and>
+             mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest then True
+     else if tag_T (cpx (load_F (conc_of J))) = T_IFZ \<and> cpy (load_F (conc_of J)) = cpx (cpy (load_T (cpx (load_F (conc_of J))))) \<and>
+             mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle>) rest \<and>
+             mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest then True
+     else False"
+    using chk by (rule defI[OF check_eq_rules_def])
+
+  have main: "eval (cpx (load_F (conc_of J))) A = eval (cpy (load_F (conc_of J))) A"
+  proof (rule cases_bool[where q = "cpx (load_F (conc_of J)) = pack_T T_ZERO 0 \<and> cpy (load_F (conc_of J)) = pack_T T_ZERO 0"])
+    show "(cpx (load_F (conc_of J)) = pack_T T_ZERO 0 \<and> cpy (load_F (conc_of J)) = pack_T T_ZERO 0) B"
+      by (rule g1B)
+  next
+    assume g1: "cpx (load_F (conc_of J)) = pack_T T_ZERO 0 \<and> cpy (load_F (conc_of J)) = pack_T T_ZERO 0"
+    have l0: "cpx (load_F (conc_of J)) = pack_T T_ZERO 0" using g1 by (rule conjE1)
+    have r0: "cpy (load_F (conc_of J)) = pack_T T_ZERO 0" using g1 by (rule conjE2)
+    have l0S: "pack_T T_ZERO 0 = cpx (load_F (conc_of J))" using l0 by (rule eqSym)
+    have lz: "eval (cpx (load_F (conc_of J))) A = 0"
+      using l0S eval_zero by (rule eqSubst[where Q = "\<lambda>t. eval t A = 0"])
+    have r0S: "pack_T T_ZERO 0 = cpy (load_F (conc_of J))" using r0 by (rule eqSym)
+    have rz: "eval (cpy (load_F (conc_of J))) A = 0"
+      using r0S eval_zero by (rule eqSubst[where Q = "\<lambda>t. eval t A = 0"])
+    have rz': "0 = eval (cpy (load_F (conc_of J))) A" using rz by (rule eqSym)
+    show "eval (cpx (load_F (conc_of J))) A = eval (cpy (load_F (conc_of J))) A"
+      using lz rz' by (rule eq_trans)
+  next
+    assume n1: "\<not> (cpx (load_F (conc_of J)) = pack_T T_ZERO 0 \<and> cpy (load_F (conc_of J)) = pack_T T_ZERO 0)"
+    have R1:
+      "if mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpx (load_F (conc_of J))\<rangle>) rest then True
+       else if tag_T (cpx (load_F (conc_of J))) = T_SUC \<and> tag_T (cpy (load_F (conc_of J))) = T_SUC \<and>
+               mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>load_T (cpx (load_F (conc_of J))), load_T (cpy (load_F (conc_of J)))\<rangle>) rest then True
+       else if mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>pack_T T_SUC (cpx (load_F (conc_of J))), pack_T T_SUC (cpy (load_F (conc_of J)))\<rangle>) rest then True
+       else if tag_T (cpx (load_F (conc_of J))) = T_PRED \<and> tag_T (load_T (cpx (load_F (conc_of J)))) = T_SUC \<and>
+               load_T (load_T (cpx (load_F (conc_of J)))) = cpy (load_F (conc_of J)) \<and>
+               mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest then True
+       else if tag_T (cpx (load_F (conc_of J))) = T_IFZ \<and> cpy (load_F (conc_of J)) = cpy (cpy (load_T (cpx (load_F (conc_of J))))) \<and>
+               mem (hyp_of J \<tturnstile> pack_F F_NEQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle>) rest \<and>
+               mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest then True
+       else if tag_T (cpx (load_F (conc_of J))) = T_IFZ \<and> cpy (load_F (conc_of J)) = cpx (cpy (load_T (cpx (load_F (conc_of J))))) \<and>
+               mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle>) rest \<and>
+               mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest then True
+       else False"
+      using n1 R0 by (rule notcond_thenE)
+    show "eval (cpx (load_F (conc_of J))) A = eval (cpy (load_F (conc_of J))) A"
+    proof (rule cases_bool[where q = "mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpx (load_F (conc_of J))\<rangle>) rest"])
+      show "mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpx (load_F (conc_of J))\<rangle>) rest B"
+        by (rule g2B)
+    next
+      assume g2: "mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpx (load_F (conc_of J))\<rangle>) rest"
+      have e: "eval (cpy (load_F (conc_of J))) A = eval (cpx (load_F (conc_of J))) A"
+        by (rule eq_prem[OF hJ rest bN aN g2 prev satG])
+      show "eval (cpx (load_F (conc_of J))) A = eval (cpy (load_F (conc_of J))) A"
+        using e by (rule eqSym)
+    next
+      assume n2: "\<not> mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpx (load_F (conc_of J))\<rangle>) rest"
+      have R2:
+        "if tag_T (cpx (load_F (conc_of J))) = T_SUC \<and> tag_T (cpy (load_F (conc_of J))) = T_SUC \<and>
+             mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>load_T (cpx (load_F (conc_of J))), load_T (cpy (load_F (conc_of J)))\<rangle>) rest then True
+         else if mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>pack_T T_SUC (cpx (load_F (conc_of J))), pack_T T_SUC (cpy (load_F (conc_of J)))\<rangle>) rest then True
+         else if tag_T (cpx (load_F (conc_of J))) = T_PRED \<and> tag_T (load_T (cpx (load_F (conc_of J)))) = T_SUC \<and>
+                 load_T (load_T (cpx (load_F (conc_of J)))) = cpy (load_F (conc_of J)) \<and>
+                 mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest then True
+         else if tag_T (cpx (load_F (conc_of J))) = T_IFZ \<and> cpy (load_F (conc_of J)) = cpy (cpy (load_T (cpx (load_F (conc_of J))))) \<and>
+                 mem (hyp_of J \<tturnstile> pack_F F_NEQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle>) rest \<and>
+                 mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest then True
+         else if tag_T (cpx (load_F (conc_of J))) = T_IFZ \<and> cpy (load_F (conc_of J)) = cpx (cpy (load_T (cpx (load_F (conc_of J))))) \<and>
+                 mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle>) rest \<and>
+                 mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest then True
+         else False"
+        using n2 R1 by (rule notcond_thenE)
+      show "eval (cpx (load_F (conc_of J))) A = eval (cpy (load_F (conc_of J))) A"
+      proof (rule cases_bool[where q = "tag_T (cpx (load_F (conc_of J))) = T_SUC \<and> tag_T (cpy (load_F (conc_of J))) = T_SUC \<and>
+             mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>load_T (cpx (load_F (conc_of J))), load_T (cpy (load_F (conc_of J)))\<rangle>) rest"])
+        show "(tag_T (cpx (load_F (conc_of J))) = T_SUC \<and> tag_T (cpy (load_F (conc_of J))) = T_SUC \<and>
+             mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>load_T (cpx (load_F (conc_of J))), load_T (cpy (load_F (conc_of J)))\<rangle>) rest) B"
+          by (rule g3B)
+      next
+        assume g3: "tag_T (cpx (load_F (conc_of J))) = T_SUC \<and> tag_T (cpy (load_F (conc_of J))) = T_SUC \<and>
+             mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>load_T (cpx (load_F (conc_of J))), load_T (cpy (load_F (conc_of J)))\<rangle>) rest"
+        have g3l: "tag_T (cpx (load_F (conc_of J))) = T_SUC \<and> tag_T (cpy (load_F (conc_of J))) = T_SUC"
+          using g3 by (rule conjE1)
+        have m3: "mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>load_T (cpx (load_F (conc_of J))), load_T (cpy (load_F (conc_of J)))\<rangle>) rest"
+          using g3 by (rule conjE2)
+        have c3a: "tag_T (cpx (load_F (conc_of J))) = T_SUC" using g3l by (rule conjE1)
+        have c3b: "tag_T (cpy (load_F (conc_of J))) = T_SUC" using g3l by (rule conjE2)
+        have eLoad: "eval (load_T (cpx (load_F (conc_of J)))) A = eval (load_T (cpy (load_F (conc_of J)))) A"
+          by (rule eq_prem[OF hJ rest Ll Lr m3 prev satG])
+        have eSuc: "S (eval (load_T (cpx (load_F (conc_of J)))) A) = S (eval (load_T (cpy (load_F (conc_of J)))) A)"
+          by (rule sucCong[OF eLoad])
+        have e1: "eval (cpx (load_F (conc_of J))) A = S (eval (load_T (cpy (load_F (conc_of J)))) A)"
+          apply (rule eval_sucI[where Q = "\<lambda>v. v = S (eval (load_T (cpy (load_F (conc_of J)))) A)"])
+            apply (rule aN)
+           apply (rule c3a)
+          apply (rule eSuc)
+          done
+        show "eval (cpx (load_F (conc_of J))) A = eval (cpy (load_F (conc_of J))) A"
+          apply (rule eval_sucI[where Q = "\<lambda>v. eval (cpx (load_F (conc_of J))) A = v"])
+            apply (rule bN)
+           apply (rule c3b)
+          apply (rule e1)
+          done
+      next
+        assume n3: "\<not> (tag_T (cpx (load_F (conc_of J))) = T_SUC \<and> tag_T (cpy (load_F (conc_of J))) = T_SUC \<and>
+             mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>load_T (cpx (load_F (conc_of J))), load_T (cpy (load_F (conc_of J)))\<rangle>) rest)"
+        have R3:
+          "if mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>pack_T T_SUC (cpx (load_F (conc_of J))), pack_T T_SUC (cpy (load_F (conc_of J)))\<rangle>) rest then True
+           else if tag_T (cpx (load_F (conc_of J))) = T_PRED \<and> tag_T (load_T (cpx (load_F (conc_of J)))) = T_SUC \<and>
+                   load_T (load_T (cpx (load_F (conc_of J)))) = cpy (load_F (conc_of J)) \<and>
+                   mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest then True
+           else if tag_T (cpx (load_F (conc_of J))) = T_IFZ \<and> cpy (load_F (conc_of J)) = cpy (cpy (load_T (cpx (load_F (conc_of J))))) \<and>
+                   mem (hyp_of J \<tturnstile> pack_F F_NEQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle>) rest \<and>
+                   mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest then True
+           else if tag_T (cpx (load_F (conc_of J))) = T_IFZ \<and> cpy (load_F (conc_of J)) = cpx (cpy (load_T (cpx (load_F (conc_of J))))) \<and>
+                   mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle>) rest \<and>
+                   mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest then True
+           else False"
+          using n3 R2 by (rule notcond_thenE)
+        show "eval (cpx (load_F (conc_of J))) A = eval (cpy (load_F (conc_of J))) A"
+        proof (rule cases_bool[where q = "mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>pack_T T_SUC (cpx (load_F (conc_of J))), pack_T T_SUC (cpy (load_F (conc_of J)))\<rangle>) rest"])
+          show "mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>pack_T T_SUC (cpx (load_F (conc_of J))), pack_T T_SUC (cpy (load_F (conc_of J)))\<rangle>) rest B"
+            by (rule g4B)
+        next
+          assume g4: "mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>pack_T T_SUC (cpx (load_F (conc_of J))), pack_T T_SUC (cpy (load_F (conc_of J)))\<rangle>) rest"
+          have eSS: "eval (pack_T T_SUC (cpx (load_F (conc_of J)))) A = eval (pack_T T_SUC (cpy (load_F (conc_of J)))) A"
+            by (rule eq_prem[OF hJ rest sucl sucr g4 prev satG])
+          have tg_tsl: "tag_T (pack_T T_SUC (cpx (load_F (conc_of J)))) = T_SUC"
+            by (rule tag_pack_T[OF _ aN], simp)
+          have ld_tsl: "load_T (pack_T T_SUC (cpx (load_F (conc_of J)))) = cpx (load_F (conc_of J))"
+            by (rule load_pack_T[OF _ aN], simp)
+          have tg_tsr: "tag_T (pack_T T_SUC (cpy (load_F (conc_of J)))) = T_SUC"
+            by (rule tag_pack_T[OF _ bN], simp)
+          have ld_tsr: "load_T (pack_T T_SUC (cpy (load_F (conc_of J)))) = cpy (load_F (conc_of J))"
+            by (rule load_pack_T[OF _ bN], simp)
+          have sL: "S (eval (load_T (pack_T T_SUC (cpx (load_F (conc_of J))))) A) = eval (pack_T T_SUC (cpy (load_F (conc_of J)))) A"
+            apply (rule eval_sucD[where Q = "\<lambda>v. v = eval (pack_T T_SUC (cpy (load_F (conc_of J)))) A"])
+              apply (rule sucl)
+             apply (rule tg_tsl)
+            apply (rule eSS)
+            done
+          have sL': "S (eval (cpx (load_F (conc_of J))) A) = eval (pack_T T_SUC (cpy (load_F (conc_of J)))) A"
+            using ld_tsl sL
+            by (rule eqSubst[where Q = "\<lambda>t. S (eval t A) = eval (pack_T T_SUC (cpy (load_F (conc_of J)))) A"])
+          have sR: "S (eval (cpx (load_F (conc_of J))) A) = S (eval (load_T (pack_T T_SUC (cpy (load_F (conc_of J))))) A)"
+            apply (rule eval_sucD[where Q = "\<lambda>v. S (eval (cpx (load_F (conc_of J))) A) = v"])
+              apply (rule sucr)
+             apply (rule tg_tsr)
+            apply (rule sL')
+            done
+          have sR': "S (eval (cpx (load_F (conc_of J))) A) = S (eval (cpy (load_F (conc_of J))) A)"
+            using ld_tsr sR
+            by (rule eqSubst[where Q = "\<lambda>t. S (eval (cpx (load_F (conc_of J))) A) = S (eval t A)"])
+          show "eval (cpx (load_F (conc_of J))) A = eval (cpy (load_F (conc_of J))) A"
+            using sR' by (rule sucInj)
+        next
+          assume n4: "\<not> mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>pack_T T_SUC (cpx (load_F (conc_of J))), pack_T T_SUC (cpy (load_F (conc_of J)))\<rangle>) rest"
+          have R4:
+            "if tag_T (cpx (load_F (conc_of J))) = T_PRED \<and> tag_T (load_T (cpx (load_F (conc_of J)))) = T_SUC \<and>
+                 load_T (load_T (cpx (load_F (conc_of J)))) = cpy (load_F (conc_of J)) \<and>
+                 mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest then True
+             else if tag_T (cpx (load_F (conc_of J))) = T_IFZ \<and> cpy (load_F (conc_of J)) = cpy (cpy (load_T (cpx (load_F (conc_of J))))) \<and>
+                     mem (hyp_of J \<tturnstile> pack_F F_NEQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle>) rest \<and>
+                     mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest then True
+             else if tag_T (cpx (load_F (conc_of J))) = T_IFZ \<and> cpy (load_F (conc_of J)) = cpx (cpy (load_T (cpx (load_F (conc_of J))))) \<and>
+                     mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle>) rest \<and>
+                     mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest then True
+             else False"
+            using n4 R3 by (rule notcond_thenE)
+          show "eval (cpx (load_F (conc_of J))) A = eval (cpy (load_F (conc_of J))) A"
+          proof (rule cases_bool[where q = "tag_T (cpx (load_F (conc_of J))) = T_PRED \<and> tag_T (load_T (cpx (load_F (conc_of J)))) = T_SUC \<and>
+                 load_T (load_T (cpx (load_F (conc_of J)))) = cpy (load_F (conc_of J)) \<and>
+                 mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest"])
+            show "(tag_T (cpx (load_F (conc_of J))) = T_PRED \<and> tag_T (load_T (cpx (load_F (conc_of J)))) = T_SUC \<and>
+                 load_T (load_T (cpx (load_F (conc_of J)))) = cpy (load_F (conc_of J)) \<and>
+                 mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest) B"
+              by (rule g5B)
+          next
+            assume g5: "tag_T (cpx (load_F (conc_of J))) = T_PRED \<and> tag_T (load_T (cpx (load_F (conc_of J)))) = T_SUC \<and>
+                 load_T (load_T (cpx (load_F (conc_of J)))) = cpy (load_F (conc_of J)) \<and>
+                 mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest"
+            have g5l: "(tag_T (cpx (load_F (conc_of J))) = T_PRED \<and> tag_T (load_T (cpx (load_F (conc_of J)))) = T_SUC) \<and>
+                 load_T (load_T (cpx (load_F (conc_of J)))) = cpy (load_F (conc_of J))"
+              using g5 by (rule conjE1)
+            have c5m: "mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest"
+              using g5 by (rule conjE2)
+            have g5ll: "tag_T (cpx (load_F (conc_of J))) = T_PRED \<and> tag_T (load_T (cpx (load_F (conc_of J)))) = T_SUC"
+              using g5l by (rule conjE1)
+            have c5c: "load_T (load_T (cpx (load_F (conc_of J)))) = cpy (load_F (conc_of J))"
+              using g5l by (rule conjE2)
+            have c5a: "tag_T (cpx (load_F (conc_of J))) = T_PRED" using g5ll by (rule conjE1)
+            have c5b: "tag_T (load_T (cpx (load_F (conc_of J)))) = T_SUC" using g5ll by (rule conjE2)
+            have erefl: "eval (cpy (load_F (conc_of J))) A = eval (cpy (load_F (conc_of J))) A"
+              by (rule eq_prem[OF hJ rest bN bN c5m prev satG])
+            have erhsN: "eval (cpy (load_F (conc_of J))) A N" by (rule eq_impl_term[OF erefl])
+            have c5cS: "cpy (load_F (conc_of J)) = load_T (load_T (cpx (load_F (conc_of J))))"
+              using c5c by (rule eqSym)
+            have innerEq: "eval (load_T (load_T (cpx (load_F (conc_of J))))) A = eval (cpy (load_F (conc_of J))) A"
+              using c5cS erefl by (rule eqSubst[where Q = "\<lambda>t. eval t A = eval (cpy (load_F (conc_of J))) A"])
+            have inner: "eval (load_T (cpx (load_F (conc_of J)))) A = S (eval (cpy (load_F (conc_of J))) A)"
+              apply (rule eval_sucI[where Q = "\<lambda>v. v = S (eval (cpy (load_F (conc_of J))) A)"])
+                apply (rule Ll)
+               apply (rule c5b)
+              apply (rule sucCong[OF innerEq])
+              done
+            have outer: "eval (cpx (load_F (conc_of J))) A = P (S (eval (cpy (load_F (conc_of J))) A))"
+              apply (rule eval_predI[where Q = "\<lambda>v. v = P (S (eval (cpy (load_F (conc_of J))) A))"])
+                apply (rule aN)
+               apply (rule c5a)
+              apply (rule predCong[OF inner])
+              done
+            have psi: "P (S (eval (cpy (load_F (conc_of J))) A)) = eval (cpy (load_F (conc_of J))) A"
+              by (rule predSucInv[OF erhsN])
+            show "eval (cpx (load_F (conc_of J))) A = eval (cpy (load_F (conc_of J))) A"
+              using outer psi by (rule eq_trans)
+          next
+            assume n5: "\<not> (tag_T (cpx (load_F (conc_of J))) = T_PRED \<and> tag_T (load_T (cpx (load_F (conc_of J)))) = T_SUC \<and>
+                 load_T (load_T (cpx (load_F (conc_of J)))) = cpy (load_F (conc_of J)) \<and>
+                 mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest)"
+            have R5:
+              "if tag_T (cpx (load_F (conc_of J))) = T_IFZ \<and> cpy (load_F (conc_of J)) = cpy (cpy (load_T (cpx (load_F (conc_of J))))) \<and>
+                   mem (hyp_of J \<tturnstile> pack_F F_NEQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle>) rest \<and>
+                   mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest then True
+               else if tag_T (cpx (load_F (conc_of J))) = T_IFZ \<and> cpy (load_F (conc_of J)) = cpx (cpy (load_T (cpx (load_F (conc_of J))))) \<and>
+                       mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle>) rest \<and>
+                       mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest then True
+               else False"
+              using n5 R4 by (rule notcond_thenE)
+            show "eval (cpx (load_F (conc_of J))) A = eval (cpy (load_F (conc_of J))) A"
+            proof (rule cases_bool[where q = "tag_T (cpx (load_F (conc_of J))) = T_IFZ \<and> cpy (load_F (conc_of J)) = cpy (cpy (load_T (cpx (load_F (conc_of J))))) \<and>
+                   mem (hyp_of J \<tturnstile> pack_F F_NEQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle>) rest \<and>
+                   mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest"])
+              show "(tag_T (cpx (load_F (conc_of J))) = T_IFZ \<and> cpy (load_F (conc_of J)) = cpy (cpy (load_T (cpx (load_F (conc_of J))))) \<and>
+                   mem (hyp_of J \<tturnstile> pack_F F_NEQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle>) rest \<and>
+                   mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest) B"
+                by (rule g6B)
+            next
+              assume g6: "tag_T (cpx (load_F (conc_of J))) = T_IFZ \<and> cpy (load_F (conc_of J)) = cpy (cpy (load_T (cpx (load_F (conc_of J))))) \<and>
+                   mem (hyp_of J \<tturnstile> pack_F F_NEQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle>) rest \<and>
+                   mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest"
+              have g6l: "(tag_T (cpx (load_F (conc_of J))) = T_IFZ \<and>
+                     cpy (load_F (conc_of J)) = cpy (cpy (load_T (cpx (load_F (conc_of J)))))) \<and>
+                   mem (hyp_of J \<tturnstile> pack_F F_NEQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle>) rest"
+                using g6 by (rule conjE1)
+              have c6m2: "mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest"
+                using g6 by (rule conjE2)
+              have g6ll: "tag_T (cpx (load_F (conc_of J))) = T_IFZ \<and>
+                     cpy (load_F (conc_of J)) = cpy (cpy (load_T (cpx (load_F (conc_of J)))))"
+                using g6l by (rule conjE1)
+              have c6m1: "mem (hyp_of J \<tturnstile> pack_F F_NEQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle>) rest"
+                using g6l by (rule conjE2)
+              have c6a: "tag_T (cpx (load_F (conc_of J))) = T_IFZ" using g6ll by (rule conjE1)
+              have c6b: "cpy (load_F (conc_of J)) = cpy (cpy (load_T (cpx (load_F (conc_of J)))))"
+                using g6ll by (rule conjE2)
+              have neqc: "eval (cpx (load_T (cpx (load_F (conc_of J))))) A \<noteq> eval (pack_T T_ZERO 0) A"
+                by (rule neq_prem[OF hJ rest cxLl ztzN c6m1 prev satG])
+              have neqc0: "\<not> (eval (cpx (load_T (cpx (load_F (conc_of J))))) A = 0)"
+                using eval_zero neqc[unfolded neq_def]
+                by (rule eqSubst[where Q = "\<lambda>t. \<not> (eval (cpx (load_T (cpx (load_F (conc_of J))))) A = t)"])
+              have erefl: "eval (cpy (load_F (conc_of J))) A = eval (cpy (load_F (conc_of J))) A"
+                by (rule eq_prem[OF hJ rest bN bN c6m2 prev satG])
+              have hb: "eval (cpy (cpy (load_T (cpx (load_F (conc_of J)))))) A = eval (cpy (load_F (conc_of J))) A"
+                using c6b erefl by (rule eqSubst[where Q = "\<lambda>t. eval t A = eval (cpy (load_F (conc_of J))) A"])
+              have bbN: "eval (cpy (cpy (load_T (cpx (load_F (conc_of J)))))) A N"
+                by (rule eq_impl_term[OF hb])
+              have ifred: "(if eval (cpx (load_T (cpx (load_F (conc_of J))))) A = 0
+                            then eval (cpx (cpy (load_T (cpx (load_F (conc_of J)))))) A
+                            else eval (cpy (cpy (load_T (cpx (load_F (conc_of J)))))) A)
+                           = eval (cpy (cpy (load_T (cpx (load_F (conc_of J)))))) A"
+                by (rule condI2[OF neqc0 bbN])
+              have ifeq: "(if eval (cpx (load_T (cpx (load_F (conc_of J))))) A = 0
+                            then eval (cpx (cpy (load_T (cpx (load_F (conc_of J)))))) A
+                            else eval (cpy (cpy (load_T (cpx (load_F (conc_of J)))))) A)
+                          = eval (cpy (load_F (conc_of J))) A"
+                using ifred hb by (rule eq_trans)
+              show "eval (cpx (load_F (conc_of J))) A = eval (cpy (load_F (conc_of J))) A"
+                apply (rule eval_ifzI[where Q = "\<lambda>v. v = eval (cpy (load_F (conc_of J))) A"])
+                  apply (rule aN)
+                 apply (rule c6a)
+                apply (rule ifeq)
+                done
+            next
+              assume n6: "\<not> (tag_T (cpx (load_F (conc_of J))) = T_IFZ \<and> cpy (load_F (conc_of J)) = cpy (cpy (load_T (cpx (load_F (conc_of J))))) \<and>
+                   mem (hyp_of J \<tturnstile> pack_F F_NEQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle>) rest \<and>
+                   mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest)"
+              have R6:
+                "if tag_T (cpx (load_F (conc_of J))) = T_IFZ \<and> cpy (load_F (conc_of J)) = cpx (cpy (load_T (cpx (load_F (conc_of J))))) \<and>
+                     mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle>) rest \<and>
+                     mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest then True
+                 else False"
+                using n6 R5 by (rule notcond_thenE)
+              show "eval (cpx (load_F (conc_of J))) A = eval (cpy (load_F (conc_of J))) A"
+              proof (rule cases_bool[where q = "tag_T (cpx (load_F (conc_of J))) = T_IFZ \<and> cpy (load_F (conc_of J)) = cpx (cpy (load_T (cpx (load_F (conc_of J))))) \<and>
+                     mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle>) rest \<and>
+                     mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest"])
+                show "(tag_T (cpx (load_F (conc_of J))) = T_IFZ \<and> cpy (load_F (conc_of J)) = cpx (cpy (load_T (cpx (load_F (conc_of J))))) \<and>
+                     mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle>) rest \<and>
+                     mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest) B"
+                  by (rule g7B)
+              next
+                assume g7: "tag_T (cpx (load_F (conc_of J))) = T_IFZ \<and> cpy (load_F (conc_of J)) = cpx (cpy (load_T (cpx (load_F (conc_of J))))) \<and>
+                     mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle>) rest \<and>
+                     mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest"
+                have g7l: "(tag_T (cpx (load_F (conc_of J))) = T_IFZ \<and>
+                       cpy (load_F (conc_of J)) = cpx (cpy (load_T (cpx (load_F (conc_of J)))))) \<and>
+                     mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle>) rest"
+                  using g7 by (rule conjE1)
+                have c7m2: "mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest"
+                  using g7 by (rule conjE2)
+                have g7ll: "tag_T (cpx (load_F (conc_of J))) = T_IFZ \<and>
+                       cpy (load_F (conc_of J)) = cpx (cpy (load_T (cpx (load_F (conc_of J)))))"
+                  using g7l by (rule conjE1)
+                have c7m1: "mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle>) rest"
+                  using g7l by (rule conjE2)
+                have c7a: "tag_T (cpx (load_F (conc_of J))) = T_IFZ" using g7ll by (rule conjE1)
+                have c7b: "cpy (load_F (conc_of J)) = cpx (cpy (load_T (cpx (load_F (conc_of J)))))"
+                  using g7ll by (rule conjE2)
+                have eqc: "eval (cpx (load_T (cpx (load_F (conc_of J))))) A = eval (pack_T T_ZERO 0) A"
+                  by (rule eq_prem[OF hJ rest cxLl ztzN c7m1 prev satG])
+                have eqc0: "eval (cpx (load_T (cpx (load_F (conc_of J))))) A = 0"
+                  using eqc eval_zero by (rule eq_trans)
+                have erefl: "eval (cpy (load_F (conc_of J))) A = eval (cpy (load_F (conc_of J))) A"
+                  by (rule eq_prem[OF hJ rest bN bN c7m2 prev satG])
+                have ha: "eval (cpx (cpy (load_T (cpx (load_F (conc_of J)))))) A = eval (cpy (load_F (conc_of J))) A"
+                  using c7b erefl by (rule eqSubst[where Q = "\<lambda>t. eval t A = eval (cpy (load_F (conc_of J))) A"])
+                have aaN: "eval (cpx (cpy (load_T (cpx (load_F (conc_of J)))))) A N"
+                  by (rule eq_impl_term[OF ha])
+                have ifred: "(if eval (cpx (load_T (cpx (load_F (conc_of J))))) A = 0
+                              then eval (cpx (cpy (load_T (cpx (load_F (conc_of J)))))) A
+                              else eval (cpy (cpy (load_T (cpx (load_F (conc_of J)))))) A)
+                             = eval (cpx (cpy (load_T (cpx (load_F (conc_of J)))))) A"
+                  by (rule condI1[OF eqc0 aaN])
+                have ifeq: "(if eval (cpx (load_T (cpx (load_F (conc_of J))))) A = 0
+                              then eval (cpx (cpy (load_T (cpx (load_F (conc_of J)))))) A
+                              else eval (cpy (cpy (load_T (cpx (load_F (conc_of J)))))) A)
+                            = eval (cpy (load_F (conc_of J))) A"
+                  using ifred ha by (rule eq_trans)
+                show "eval (cpx (load_F (conc_of J))) A = eval (cpy (load_F (conc_of J))) A"
+                  apply (rule eval_ifzI[where Q = "\<lambda>v. v = eval (cpy (load_F (conc_of J))) A"])
+                    apply (rule aN)
+                   apply (rule c7a)
+                  apply (rule ifeq)
+                  done
+              next
+                assume n7: "\<not> (tag_T (cpx (load_F (conc_of J))) = T_IFZ \<and> cpy (load_F (conc_of J)) = cpx (cpy (load_T (cpx (load_F (conc_of J))))) \<and>
+                     mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpx (load_T (cpx (load_F (conc_of J)))), pack_T T_ZERO 0\<rangle>) rest \<and>
+                     mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpy (load_F (conc_of J)), cpy (load_F (conc_of J))\<rangle>) rest)"
+                have R7: "False" using n7 R6 by (rule notcond_thenE)
+                have contra: "S(zero) = zero" by (rule R7[unfolded False_def])
+                show "eval (cpx (load_F (conc_of J))) A = eval (cpy (load_F (conc_of J))) A"
+                  by (rule exF[OF contra sucNonZero[OF nat0, unfolded neq_def]])
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+  show "sat (conc_of J) A" by (rule sat_formula_eqI[OF tg main])
+qed
 
 lemma check_neq_rules_sound:
   assumes J: "J N" and rest: "rest N"
