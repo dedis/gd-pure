@@ -4769,6 +4769,41 @@ lemma check_struct_sound:
   shows "sat (conc_of J) A"
   sorry
 
+lemma eq_prem:
+  assumes hJ: "hyp_of J N" and rest: "rest N"
+      and a: "a N" and b: "b N"
+      and m: "mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>a, b\<rangle>) rest"
+      and prev: "\<And>K A2. K N \<Longrightarrow> mem K rest \<Longrightarrow>
+                   sat_hyp (hyp_of K) A2 \<Longrightarrow> sat (conc_of K) A2"
+      and satG: "sat_hyp (hyp_of J) A"
+  shows "eval a A = eval b A"
+proof -
+  have ab: "\<langle>a, b\<rangle> N" using a b by simp
+  have X: "pack_F F_EQ \<langle>a, b\<rangle> N" by (rule pack_F_N[OF _ ab], simp)
+  have KN: "(hyp_of J \<tturnstile> pack_F F_EQ \<langle>a, b\<rangle>) N" using hJ X by simp
+  have hK: "hyp_of (hyp_of J \<tturnstile> pack_F F_EQ \<langle>a, b\<rangle>) = hyp_of J"
+    by (rule cpx_proj[OF hJ X])
+  have cK: "conc_of (hyp_of J \<tturnstile> pack_F F_EQ \<langle>a, b\<rangle>) = pack_F F_EQ \<langle>a, b\<rangle>"
+    by (rule cpy_proj[OF hJ X])
+  have sK: "sat_hyp (hyp_of (hyp_of J \<tturnstile> pack_F F_EQ \<langle>a, b\<rangle>)) A"
+    using hK satG by simp
+  have s0: "sat (conc_of (hyp_of J \<tturnstile> pack_F F_EQ \<langle>a, b\<rangle>)) A"
+    using KN m sK by (rule prev)
+  have s: "sat (pack_F F_EQ \<langle>a, b\<rangle>) A" using cK s0 by simp
+  have tgX: "tag_F (pack_F F_EQ \<langle>a, b\<rangle>) = F_EQ"
+    by (rule tag_pack_F[OF _ ab], simp)
+  have ldX: "load_F (pack_F F_EQ \<langle>a, b\<rangle>) = \<langle>a, b\<rangle>"
+    by (rule load_pack_F[OF _ ab], simp)
+  have E: "eval (cpx (load_F (pack_F F_EQ \<langle>a, b\<rangle>))) A
+         = eval (cpy (load_F (pack_F F_EQ \<langle>a, b\<rangle>))) A"
+    by (rule sat_formula_eqE[OF X tgX s])
+  show ?thesis
+    using E ldX a b apply simp
+    apply (rule eq_impl_term2)
+    apply simp
+    done
+qed
+
 lemma check_eq_rules_sound:
   assumes J: "J N" and rest: "rest N"
       and tg: "tag_F (conc_of J) = F_EQ"
