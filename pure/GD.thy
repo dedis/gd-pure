@@ -309,7 +309,7 @@ axiomatization where
   cond_thenQ_E: "c \<Longrightarrow> Q (if c then a else b) \<Longrightarrow> Q a" and
   cond_thenQ_I: "c \<Longrightarrow> Q a \<Longrightarrow> Q (if c then a else b)" and
   cond_elseQ_E: "\<not> c \<Longrightarrow> Q (if c then a else b) \<Longrightarrow> Q b" and
-  cond_elseQ_I: "\<not> c \<Longrightarrow> Q b \<Longrightarrow> Q (if c then a else b)"
+  cond_elseQ_I: "\<not> c \<Longrightarrow> Q b \<Longrightarrow>List Q (if c then a else b)"
 
 lemma condI1BEq:
   assumes c_holds: "c"
@@ -4708,6 +4708,88 @@ proof -
       thus "Q (S w)" using decomp by simp
     qed
   qed
+qed
+
+section \<open>Encoded List Recursion\<close>
+
+axiomatization list_rec :: "num \<Rightarrow> (num \<Rightarrow> num \<Rightarrow> num) \<Rightarrow> List \<Rightarrow> num"
+  where list_rec_nil [simp]: "list_rec z F Nil = z"
+  and list_rec_cons [simp]:  "\<lbrakk>h N; t N\<rbrakk> \<Longrightarrow> list_rec z F (Cons h t) = F h (list_rec z F t)"
+
+lemma list_rec_N:
+  fixes F :: "num \<Rightarrow> num \<Rightarrow> num"
+  assumes xs: "xs N"
+      and z: "z N"
+      and F: "\<And>h r. h N \<Longrightarrow> r N \<Longrightarrow> F h r N"
+  shows "list_rec z F xs N"
+proof (rule list_induct[OF xs])
+  have rec: "list_rec z F Nil = z"
+    by (rule list_rec_nil)
+  have rec': "z = list_rec z F Nil"
+    using rec by (rule eqSym)
+  show "list_rec z F Nil N"
+    using rec' z
+    by (rule eqSubst[where Q="\<lambda>r. r N"])
+next
+  fix h t
+  assume h: "h N"
+     and t: "t N"
+     and IH: "list_rec z F t N"
+  have Fr: "F h (list_rec z F t) N"
+    using h IH by (rule F)
+  have rec: "list_rec z F (Cons h t) = F h (list_rec z F t)"
+    using h t by (rule list_rec_cons)
+  have rec': "F h (list_rec z F t) = list_rec z F (Cons h t)"
+    using rec by (rule eqSym)
+  show "list_rec z F (Cons h t) N"
+    using rec' Fr
+    by (rule eqSubst[where Q="\<lambda>r. r N"])
+qed
+
+lemma list_rec_unique:
+  fixes g :: "List \<Rightarrow> num"
+    and F :: "num \<Rightarrow> num \<Rightarrow> num"
+  assumes xs: "xs N"
+      and g_nil: "g Nil = z"
+      and g_cons: "\<And>h t. h N \<Longrightarrow> t N \<Longrightarrow>
+                     g (Cons h t) = F h (g t)"
+  shows "g xs = list_rec z F xs"
+proof (rule list_induct[OF xs])
+  have rec: "list_rec z F Nil = z"
+    by (rule list_rec_nil)
+  have rec': "z = list_rec z F Nil"
+    using rec by (rule eqSym)
+  show "g Nil = list_rec z F Nil"
+    using g_nil rec' by (rule eq_trans)
+next
+  fix h t
+  assume h: "h N"
+     and t: "t N"
+     and IH: "g t = list_rec z F t"
+  have gh0: "g (Cons h t) = F h (g t)"
+    using h t by (rule g_cons)
+  have FgN: "F h (g t) N"
+    using gh0 by (rule eq_impl_term2)
+  have Fcong: "F h (g t) = F h (list_rec z F t)"
+  proof (rule eqSubst[
+      where a="g t"
+        and b="list_rec z F t"
+        and Q="\<lambda>r. F h (g t) = F h r"])
+    show "g t = list_rec z F t"
+      by (rule IH)
+  next
+    show "F h (g t) = F h (g t)"
+      using FgN by simp
+  qed
+  have gh: "g (Cons h t) = F h (list_rec z F t)"
+    using gh0 Fcong by (rule eq_trans)
+  have rec: "list_rec z F (Cons h t) = F h (list_rec z F t)"
+    using h t by (rule list_rec_cons)
+  have rec':
+    "F h (list_rec z F t) = list_rec z F (Cons h t)"
+    using rec by (rule eqSym)
+  show "g (Cons h t) = list_rec z F (Cons h t)"
+    using gh rec' by (rule eq_trans)
 qed
 
 (*
