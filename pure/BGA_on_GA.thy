@@ -4760,6 +4760,90 @@ lemma check_app_sound:
   shows "sat (conc_of J) A"
   sorry
 
+lemma find_structE:
+  assumes J: "J N" and G: "G N" and rest: "rest N" and ptr: "ptr N"
+      and sub: "subset ptr rest"
+      and fs: "find_struct J G ptr"
+      and H: "\<And>K. K N \<Longrightarrow> mem K rest \<Longrightarrow>
+                   conc_of K = conc_of J \<Longrightarrow>
+                   subset (hyp_of K) G \<Longrightarrow> R"
+  shows R
+proof -
+  have main: "subset ptr rest \<turnstile> (find_struct J G ptr \<turnstile> R)"
+  proof (rule list_induct[OF ptr])
+    show "subset Nil rest \<turnstile> (find_struct J G Nil \<turnstile> R)"
+    proof (rule entailsI)
+      assume sub0: "subset Nil rest"
+      show "find_struct J G Nil \<turnstile> R"
+      proof (rule entailsI)
+        assume fs0: "find_struct J G Nil"
+        have C0: "if Nil = Nil then False
+                    else if conc_of (list_hd Nil) = conc_of J \<and>
+                            subset (hyp_of (list_hd Nil)) G then True
+                    else find_struct J G (list_tl Nil)"
+          using fs0
+          by (rule defI[OF find_struct_def[where J=J and G=G and ptr=Nil]])
+        have F: "False" using C0 by simp
+        show R by (rule exF[OF F not_false])
+      qed
+    qed
+  next
+    fix h t
+    assume h: "h N" and t: "t N"
+       and IH: "subset t rest \<turnstile> (find_struct J G t \<turnstile> R)"
+    show "subset (Cons h t) rest \<turnstile> (find_struct J G (Cons h t) \<turnstile> R)"
+    proof (rule entailsI)
+      assume subht: "subset (Cons h t) rest"
+      have hrest: "mem h rest"
+        using h t rest subht by (rule subset_cons_headE)
+      have subt: "subset t rest"
+        using h t rest subht by (rule subset_cons_tailE)
+      show "find_struct J G (Cons h t) \<turnstile> R"
+      proof (rule entailsI)
+        assume fsht: "find_struct J G (Cons h t)"
+        have C0: "if Cons h t = Nil then False
+                    else if conc_of (list_hd (Cons h t)) = conc_of J \<and>
+                            subset (hyp_of (list_hd (Cons h t))) G then True
+                    else find_struct J G (list_tl (Cons h t))"
+          using fsht
+          by (rule defI[OF find_struct_def[where J=J and G=G and ptr="Cons h t"]])
+        have C: "if Cons h t = Nil then False
+                   else if conc_of h = conc_of J \<and> subset (hyp_of h) G then True
+                   else find_struct J G t"
+          using C0
+          by (simp only: list_hd_cons[OF h t] list_tl_cons[OF h t])
+        have ne: "\<not> (Cons h t = Nil)" using h t by simp
+        have C1: "if conc_of h = conc_of J \<and> subset (hyp_of h) G then True
+                  else find_struct J G t"
+          using ne C by (rule notcond_thenE)
+        have ch: "conc_of h N" using h by simp
+        have cJ: "conc_of J N" using J by simp
+        have hh: "hyp_of h N" using h by simp
+        have eqcB: "(conc_of h = conc_of J) B" by (rule eqBool[OF ch cJ])
+        have subBd: "(subset (hyp_of h) G) B" by (rule subset_bool[OF hh G])
+        have bothB: "(conc_of h = conc_of J \<and> subset (hyp_of h) G) B"
+          using eqcB subBd by simp
+        show R
+        proof (rule cases_bool[where q="conc_of h = conc_of J \<and> subset (hyp_of h) G"])
+          show "(conc_of h = conc_of J \<and> subset (hyp_of h) G) B" by (rule bothB)
+        next
+          assume both: "conc_of h = conc_of J \<and> subset (hyp_of h) G"
+          have hceq: "conc_of h = conc_of J" using both by (rule conjE1)
+          have hsub: "subset (hyp_of h) G" using both by (rule conjE2)
+          show R using h hrest hceq hsub by (rule H)
+        next
+          assume nboth: "\<not> (conc_of h = conc_of J \<and> subset (hyp_of h) G)"
+          have fst: "find_struct J G t" using nboth C1 by (rule notcond_thenE)
+          have IR: "find_struct J G t \<turnstile> R" using IH subt by (rule entailsE)
+          show R using IR fst by (rule entailsE)
+        qed
+      qed
+    qed
+  qed
+  have IR: "find_struct J G ptr \<turnstile> R" using main sub by (rule entailsE)
+  show R using IR fs by (rule entailsE)
+qed
+
 lemma check_struct_sound:
   assumes J: "J N" and rest: "rest N"
       and chk: "check_struct J rest"
@@ -4767,7 +4851,27 @@ lemma check_struct_sound:
                    sat_hyp (hyp_of K) A2 \<Longrightarrow> sat (conc_of K) A2"
       and satG: "sat_hyp (hyp_of J) A"
   shows "sat (conc_of J) A"
-  sorry
+proof -
+  have hJ: "hyp_of J N" using J by simp
+  have fs: "find_struct J (hyp_of J) rest"
+    using chk by (rule defI[OF check_struct_def[where J=J and rest=rest]])
+  have sub: "subset rest rest" using rest by (rule subset_refl)
+  show ?thesis
+  proof (rule find_structE[OF J hJ rest rest sub fs])
+    fix K
+    assume K: "K N"
+       and Km: "mem K rest"
+       and Kc: "conc_of K = conc_of J"
+       and Ksub: "subset (hyp_of K) (hyp_of J)"
+    have hK: "hyp_of K N" using K by simp
+    have satKh: "sat_hyp (hyp_of K) A"
+      by (rule sat_hyp_subset[OF Ksub hK hJ satG])
+    have satK: "sat (conc_of K) A"
+      using K Km satKh by (rule prev)
+    show "sat (conc_of J) A"
+      using Kc satK by (rule eqSubst[where Q = "\<lambda>c. sat c A"])
+  qed
+qed
 
 lemma eq_prem:
   assumes hJ: "hyp_of J N" and rest: "rest N"
