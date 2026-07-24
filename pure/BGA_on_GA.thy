@@ -56,7 +56,7 @@ locale suff_semantics = suff_syntax +
 
 locale consistent =  suff_semantics +
   (* Valid proofs yield satisfied formulas *)
-  assumes soundness: "\<lbrakk>is_valid_proof p J; sat_hyp (hyp_of J) A\<rbrakk> \<Longrightarrow> sat_fm (conc_of J) A"
+  assumes soundness: "\<lbrakk>A N; is_valid_proof p J; sat_hyp (hyp_of J) A\<rbrakk> \<Longrightarrow> sat_fm (conc_of J) A"
 begin
 
 lemma syntactically_consistent:
@@ -110,10 +110,14 @@ proof -
       apply (rule conjE2)
       apply (rule conj_holds)
       done
+   
+    have zeroN: "zero N"
+      by (rule nat0)
 
     have eq_sat: "sat_fm  (conc_of \<langle>Nil, mk_eq a b\<rangle>) zero"
       apply (rule soundness)
-       apply (rule eq_pf)
+      apply (rule zeroN)
+      apply (rule eq_pf)
       using mk_eq_nat apply simp
       apply (rule sat_hyp_nil)
       done
@@ -124,7 +128,8 @@ proof -
 
     have neq_sat: "sat_fm  (conc_of \<langle>Nil, mk_neq a b\<rangle>) zero"
       apply (rule soundness)
-       apply (rule neq_pf)
+      apply (rule zeroN)
+      apply (rule neq_pf)
       using mk_neq_nat apply simp
       apply (rule sat_hyp_nil)
       done
@@ -392,6 +397,10 @@ qed
 
 end
 
+text \<open>Read an encoded finite assignment, treating absent variables as zero.\<close>
+definition asn_get :: "asn \<Rightarrow> num \<Rightarrow> val" where
+  "asn_get A i \<equiv> if i < len A = 1 then nth i A else 0"
+
 locale bga_dfns = bga_bijective_encoding + 
   fixes dfns :: "dfn"
   fixes dfn_is :: "dfn \<Rightarrow> num \<Rightarrow> tm \<Rightarrow> o"
@@ -455,7 +464,7 @@ fixes eval :: "tm \<Rightarrow> asn \<Rightarrow> val"
 6. f_i (a, b) \<Down> eval(D(i)) for asn = \<langle>eval(a), eval(b)\<rangle>
 *)
   assumes eval_def: "eval t A :=
-    if tag_T t = T_VAR then nth (load_T t) A                          
+    if tag_T t = T_VAR then asn_get A (load_T t)                         
     else if tag_T t = T_ZERO then 0                                    
     else if tag_T t = T_SUC then S(eval (load_T t) A)              
     else if tag_T t = T_PRED then P(eval (load_T t) A)               
@@ -656,16 +665,21 @@ locale bga_subst = bga_bijective_encoding +
 
 locale bga_subst_semantics = bga_semantics + bga_subst +
   fixes asn_put :: "asn \<Rightarrow> num \<Rightarrow> val \<Rightarrow> asn"
-  assumes  asn_put_def:  "asn_put A i v :=  
-              if i = 0 then
-                   if A = Nil then v \<triangleright> Nil
-                   else v \<triangleright> list_tl A
-              else if A = Nil then 0 \<triangleright> asn_put Nil (i - 1) v
-              else list_hd A \<triangleright> asn_put (list_tl A) (i - 1) v"
-  assumes sat_subst_F: "\<lbrakk>f N; i N; s N\<rbrakk> \<Longrightarrow> sat (subst_F f i s) A \<longleftrightarrow> sat f (asn_put A i (eval s A))" 
-  assumes sat_hyp_put: "\<lbrakk>G N; i N; v N; fresh_H i G; sat_hyp G A\<rbrakk> \<Longrightarrow> sat_hyp G (asn_put A i v)" 
-  assumes eval_var_put: "\<lbrakk>i N; v N\<rbrakk> \<Longrightarrow> eval (pack_T T_VAR i) (asn_put A i v) = v" 
-  assumes asn_put_overwrite: "\<lbrakk>i N; v N; w N\<rbrakk> \<Longrightarrow> asn_put (asn_put A i v) i w = asn_put A i w"
+  assumes asn_put_def:
+    "asn_put A i v :=
+      if i = 0 then
+        if A = Nil then v \<triangleright> Nil
+        else v \<triangleright> list_tl A
+      else if A = Nil then 0 \<triangleright> asn_put Nil (i - 1) v
+      else list_hd A \<triangleright> asn_put (list_tl A) (i - 1) v"
+  assumes sat_subst_F:
+  "\<lbrakk>A N; f N; i N; s N; eval s A N\<rbrakk> \<Longrightarrow> sat (subst_F f i s) A \<longleftrightarrow> sat f (asn_put A i (eval s A))"
+  assumes sat_hyp_put:
+    "\<lbrakk>A N; G N; i N; v N; fresh_H i G; sat_hyp G A\<rbrakk>  \<Longrightarrow> sat_hyp G (asn_put A i v)"
+  assumes eval_var_put:
+    "\<lbrakk>A N; i N; v N\<rbrakk> \<Longrightarrow> eval (pack_T T_VAR i) (asn_put A i v) = v"
+  assumes asn_put_overwrite:
+    "\<lbrakk>A N; i N; v N; w N\<rbrakk> \<Longrightarrow> asn_put (asn_put A i v) i w = asn_put A i w"
 begin
 
 lemma nth_suc_cons:
@@ -683,149 +697,22 @@ proof -
     by (rule defE[OF nth_def[where i="S k" and xs="h \<triangleright> t"]], rule condI2Eq[OF ne nk inner])
 qed
 
-definition asn_puts :: "asn \<Rightarrow> List \<Rightarrow> asn" where
-  "asn_puts A us \<equiv>  list_rec A (\<lambda>u C. asn_put C (cpx u) (cpy u)) us"
-
-lemma asn_puts_nil: "asn_puts A Nil = A"
-  unfolding asn_puts_def by (rule list_rec_nil)
-
 lemma asn_put_N:
-  assumes i: "i N"
+  assumes A: "A N"
+      and i: "i N"
       and v: "v N"
   shows "asn_put A i v N"
 proof -
   have ow:
     "asn_put (asn_put A i v) i v = asn_put A i v"
-    using i v v by (rule asn_put_overwrite)
+    using A i v v by (rule asn_put_overwrite)
   show ?thesis
     using ow by (rule eq_impl_term2)
 qed
 
-lemma asn_puts_cons:
-  assumes i: "i N"
-      and v: "v N"
-      and us: "us N"
-  shows "asn_puts A (\<langle>i, v\<rangle> \<triangleright> us) =  asn_put (asn_puts A us) i v"
-proof -
-  have iv: "\<langle>i, v\<rangle> N"
-    using i v by simp
-  have rec:
-    "list_rec A (\<lambda>u C. asn_put C (cpx u) (cpy u)) (\<langle>i, v\<rangle> \<triangleright> us) =
-     (\<lambda>u C. asn_put C (cpx u) (cpy u)) \<langle>i, v\<rangle> (list_rec A (\<lambda>u C. asn_put C (cpx u) (cpy u)) us)"
-    using iv us by (rule list_rec_cons)
-  have putN:
-    "asn_put (list_rec A  (\<lambda>u C. asn_put C (hyp_of u) (conc_of u)) us) i v N"
-    using i v by (rule asn_put_N)
-  show ?thesis
-    unfolding asn_puts_def
-    using rec i v putN by simp
-qed
-
 lemma nat_ind_sound:
-  assumes p: "p N"
-      and i: "i N"
-      and a: "a N"
-      and G: "G N"
-      and fresh: "fresh_H i G"
-      and satG: "sat_hyp G A"
-      and base: "sat (subst_F p i (pack_T T_ZERO 0)) A"
-      and step: "\<And>C. sat_hyp (pack_F F_EQ \<langle>pack_T T_VAR i, pack_T T_VAR i\<rangle> \<triangleright> p \<triangleright> G) C
-                  \<Longrightarrow> sat (subst_F p i (pack_T T_SUC (pack_T T_VAR i))) C"
-      and an: "eval a A N"
-  shows "sat (subst_F p i a) A"
-proof -
-  let ?z = "pack_T T_ZERO 0"
-  let ?vi = "pack_T T_VAR i"
-  let ?svi = "pack_T T_SUC ?vi"
-  have zN: "?z N"
-    by (rule pack_T_N[OF _ nat0], simp)
-  have viN: "?vi N"
-    by (rule pack_T_N[OF _ i], simp)
-  have sviN: "?svi N"
-    by (rule pack_T_N[OF _ viN], simp)
-  have main: "\<And>n. n N \<Longrightarrow> sat p (asn_put A i n)"
-  proof -
-    fix n
-    assume n: "n N"
-    show "sat p (asn_put A i n)"
-    proof (rule ind[OF n])
-      have sub0: "sat (subst_F p i ?z) A \<longleftrightarrow> sat p (asn_put A i (eval ?z A))"
-        by (rule sat_subst_F[OF p i zN])
-      have sub0E: "sat (subst_F p i ?z) A \<longrightarrow> sat p (asn_put A i (eval ?z A))"
-        using sub0
-        by (rule iffE1)
-      have p0: "sat p (asn_put A i (eval ?z A))"
-        using sub0E base
-        by (rule implE)
-      have ez: "eval ?z A = 0"
-        by (rule eval_zero)
-      show "sat p (asn_put A i 0)"
-        using ez p0 by (rule eqSubst[where Q="\<lambda>v. sat p (asn_put A i v)"])
-    next
-      fix m
-      assume m: "m N"
-         and IH: "sat p (asn_put A i m)"
-      let ?Am = "asn_put A i m"
-      have Gm: "sat_hyp G ?Am"
-        using G i m fresh satG by (rule sat_hyp_put)
-      have ev: "eval ?vi ?Am = m"
-        by (rule eval_var_put[OF i m])
-      have me: "m = eval ?vi ?Am"
-        using ev by (rule eqSym)
-      have evN: "eval ?vi ?Am N"
-        using me m by (rule eqSubst[where Q="\<lambda>v. v N"])
-      have vvN: "\<langle>?vi, ?vi\<rangle> N"
-        using viN by simp
-      have eqN: "pack_F F_EQ \<langle>?vi, ?vi\<rangle> N"
-        by (rule pack_F_N[OF _ vvN], simp)
-      have tgEq: "tag_F (pack_F F_EQ \<langle>?vi, ?vi\<rangle>) = F_EQ"
-        by (rule tag_pack_F[OF _ vvN], simp)
-      have ldEq: "load_F (pack_F F_EQ \<langle>?vi, ?vi\<rangle>) = \<langle>?vi, ?vi\<rangle>"
-        by (rule load_pack_F[OF _ vvN], simp)
-      have satvi: "sat (pack_F F_EQ \<langle>?vi, ?vi\<rangle>) ?Am"
-        unfolding sat_def using tgEq ldEq viN evN by simp
-      have pG: "sat_hyp (p \<triangleright> G) ?Am"
-        using p G IH Gm by (rule sat_hyp_consI)
-      have pGN: "p \<triangleright> G N"
-        using p G by simp
-      have stepG: "sat_hyp (pack_F F_EQ \<langle>?vi, ?vi\<rangle> \<triangleright> p \<triangleright> G) ?Am"
-        using eqN pGN satvi pG by (rule sat_hyp_consI)
-      have ss: "sat (subst_F p i ?svi) ?Am"
-        using stepG by (rule step)
-      have subS: "sat (subst_F p i ?svi) ?Am \<longleftrightarrow> sat p (asn_put ?Am i (eval ?svi ?Am))"
-        by (rule sat_subst_F[OF p i sviN])
-      have subSE: "sat (subst_F p i ?svi) ?Am \<longrightarrow> sat p (asn_put ?Am i (eval ?svi ?Am))"
-        using subS by (rule iffE1)
-      have ps: "sat p (asn_put ?Am i (eval ?svi ?Am))"
-        using subSE ss by (rule implE)
-      have es0: "eval ?svi ?Am = S (eval ?vi ?Am)"
-        using viN evN by (rule eval_suc)
-      have sem: "S (eval ?vi ?Am) = S m"
-        using ev by (rule sucCong)
-      have es: "eval ?svi ?Am = S m"
-        using es0 sem by (rule eq_trans)
-      have ps': "sat p (asn_put ?Am i (S m))"
-        using es ps by (rule eqSubst[where Q="\<lambda>v. sat p(asn_put (asn_put A i m) i v)"])
-      have Sm: "S m N"
-        by (rule natS[OF m])
-      have ow: "asn_put ?Am i (S m) = asn_put A i (S m)"
-        by (rule asn_put_overwrite[OF i m Sm])
-      show "sat p (asn_put A i (S m))"
-        using ow ps' by (rule eqSubst[where Q="\<lambda>C. sat p C"])
-    qed
-  qed
-  have pa: "sat p (asn_put A i (eval a A))"
-    using an by (rule main)
-  have subA: "sat (subst_F p i a) A \<longleftrightarrow> sat p (asn_put A i (eval a A))"
-    by (rule sat_subst_F[OF p i a])
-  have subAE: "sat p (asn_put A i (eval a A)) \<longrightarrow> sat (subst_F p i a) A"
-    using subA by (rule iffE2)
-  show ?thesis
-    using subAE pa by (rule implE)
-qed
-
-lemma nat_ind_sound_put:
-  assumes p: "p N"
+  assumes A: "A N"
+      and p: "p N"
       and i: "i N"
       and a: "a N"
       and G: "G N"
@@ -853,18 +740,16 @@ proof -
     assume n: "n N"
     show "sat p (asn_put A i n)"
     proof (rule ind[OF n])
-      have sub0:
-        "sat (subst_F p i ?z) A \<longleftrightarrow>
-         sat p (asn_put A i (eval ?z A))"
-        by (rule sat_subst_F[OF p i zN])
-      have sub0E:
-        "sat (subst_F p i ?z) A \<longrightarrow>
-         sat p (asn_put A i (eval ?z A))"
+      have ez: "eval ?z A = 0"
+        by (rule eval_zero)
+      have ezN: "eval ?z A N"
+        using ez by (rule eq_impl_term)
+      have sub0: "sat (subst_F p i ?z) A \<longleftrightarrow> sat p (asn_put A i (eval ?z A))"
+    by (rule sat_subst_F[OF A p i zN ezN])
+      have sub0E: "sat (subst_F p i ?z) A \<longrightarrow> sat p (asn_put A i (eval ?z A))"
         using sub0 by (rule iffE1)
       have p0: "sat p (asn_put A i (eval ?z A))"
         using sub0E base by (rule implE)
-      have ez: "eval ?z A = 0"
-        by (rule eval_zero)
       show "sat p (asn_put A i 0)"
         using ez p0
         by (rule eqSubst[where Q="\<lambda>v. sat p (asn_put A i v)"])
@@ -873,10 +758,12 @@ proof -
       assume m: "m N"
          and IH: "sat p (asn_put A i m)"
       let ?Am = "asn_put A i m"
+      have Am: "?Am N"
+        using A i m by (rule asn_put_N)
       have Gm: "sat_hyp G ?Am"
-        using G i m fresh satG by (rule sat_hyp_put)
+        using A G i m fresh satG by (rule sat_hyp_put)
       have ev: "eval ?vi ?Am = m"
-        by (rule eval_var_put[OF i m])
+        using A i m by (rule eval_var_put)
       have me: "m = eval ?vi ?Am"
         using ev by (rule eqSym)
       have evN: "eval ?vi ?Am N"
@@ -907,10 +794,18 @@ proof -
         using eqN pGN satvi pG by (rule sat_hyp_consI)
       have ss: "sat (subst_F p i ?svi) ?Am"
         using m stepG by (rule step)
+      have es0: "eval ?svi ?Am = S (eval ?vi ?Am)"
+        using viN evN by (rule eval_suc)
+      have sem: "S (eval ?vi ?Am) = S m"
+        using ev by (rule sucCong)
+      have es: "eval ?svi ?Am = S m"
+        using es0 sem by (rule eq_trans)
+      have esN: "eval ?svi ?Am N"
+        using es by (rule eq_impl_term)
       have subS:
         "sat (subst_F p i ?svi) ?Am \<longleftrightarrow>
          sat p (asn_put ?Am i (eval ?svi ?Am))"
-        by (rule sat_subst_F[OF p i sviN])
+        by (rule sat_subst_F[OF Am p i sviN esN])
       have subSE:
         "sat (subst_F p i ?svi) ?Am \<longrightarrow>
          sat p (asn_put ?Am i (eval ?svi ?Am))"
@@ -932,7 +827,7 @@ proof -
       have Sm: "S m N"
         by (rule natS[OF m])
       have ow: "asn_put ?Am i (S m) = asn_put A i (S m)"
-        by (rule asn_put_overwrite[OF i m Sm])
+        using A i m Sm by (rule asn_put_overwrite)
       show "sat p (asn_put A i (S m))"
         using ow ps'
         by (rule eqSubst[where Q="\<lambda>C. sat p C"])
@@ -941,7 +836,7 @@ proof -
   have pa: "sat p (asn_put A i (eval a A))"
     using an by (rule main)
   have subA: "sat (subst_F p i a) A \<longleftrightarrow> sat p (asn_put A i (eval a A))"
-    by (rule sat_subst_F[OF p i a])
+    by (rule sat_subst_F[OF A p i a an])
   have subAE:
     "sat p (asn_put A i (eval a A)) \<longrightarrow>
      sat (subst_F p i a) A"
@@ -3011,22 +2906,24 @@ qed
 since for so many we just do the reverse direction *) 
 
 lemma eval_varD:
-  assumes t: "t N" and tg: "tag_T t = T_VAR"
+  assumes t: "t N"
+      and tg: "tag_T t = T_VAR"
       and H: "Q (eval t A)"
-  shows "Q (nth (load_T t) A)"
+  shows "Q (asn_get A (load_T t))"
 proof -
-  have R: "Q (if tag_T t = T_VAR then nth (load_T t) A
-     else if tag_T t = T_ZERO then 0
-     else if tag_T t = T_SUC then S (eval (load_T t) A)
-     else if tag_T t = T_PRED then P (eval (load_T t) A)
-     else if tag_T t = T_IFZ then
-       (if eval (cpx (load_T t)) A = 0
-        then eval (cpx (cpy (load_T t))) A
-        else eval (cpy (cpy (load_T t))) A)
-     else
-       eval (nth (cpx (load_T t)) dfns)
-         (eval (cpx (cpy (load_T t))) A \<triangleright>
-          eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
+  have R:
+    "Q (if tag_T t = T_VAR then asn_get A (load_T t)
+       else if tag_T t = T_ZERO then 0
+       else if tag_T t = T_SUC then S (eval (load_T t) A)
+       else if tag_T t = T_PRED then P (eval (load_T t) A)
+       else if tag_T t = T_IFZ then
+         (if eval (cpx (load_T t)) A = 0
+          then eval (cpx (cpy (load_T t))) A
+          else eval (cpy (cpy (load_T t))) A)
+       else
+         eval (nth (cpx (load_T t)) dfns)
+           (eval (cpx (cpy (load_T t))) A \<triangleright>
+            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
     using H by (rule defI[OF eval_def])
   show ?thesis
     using tg R by (rule cond_thenQ_E)
@@ -3035,7 +2932,7 @@ qed
 lemma eval_varI:
   assumes t: "t N"
       and tg: "tag_T t = T_VAR"
-      and H: "Q (nth (load_T t) A)"
+      and H: "Q (asn_get A (load_T t))"
   shows "Q (eval t A)"
 proof -
   show ?thesis
@@ -3048,7 +2945,7 @@ lemma eval_zeroD:
       and H: "Q (eval t A)"
   shows "Q 0"
 proof -
-  have R: "Q (if tag_T t = T_VAR then nth (load_T t) A
+  have R: "Q (if tag_T t = T_VAR then asn_get A (load_T t)
      else if tag_T t = T_ZERO then 0
      else if tag_T t = T_SUC then S (eval (load_T t) A)
      else if tag_T t = T_PRED then P (eval (load_T t) A)
@@ -3082,7 +2979,7 @@ lemma eval_sucD:
   shows "Q (S (eval (load_T t) A))"
 proof -
   have R:
-    "Q (if tag_T t = T_VAR then nth (load_T t) A
+    "Q (if tag_T t = T_VAR then asn_get A (load_T t)
        else if tag_T t = T_ZERO then 0
        else if tag_T t = T_SUC then S (eval (load_T t) A)
        else if tag_T t = T_PRED then P (eval (load_T t) A)
@@ -3164,7 +3061,7 @@ proof -
   have nvar: "\<not> tag_T t = T_VAR"
     using tg by simp
   have R:
-    "Q(if tag_T t = T_VAR then nth (load_T t) A
+    "Q(if tag_T t = T_VAR then asn_get A (load_T t)
        else if tag_T t = T_ZERO then 0
        else if tag_T t = T_SUC then S (eval (load_T t) A)
        else if tag_T t = T_PRED then P (eval (load_T t) A)
@@ -3189,7 +3086,7 @@ lemma eval_predD:
   shows "Q (P (eval (load_T t) A))"
 proof -
   have R:
-    "Q (if tag_T t = T_VAR then nth (load_T t) A
+    "Q (if tag_T t = T_VAR then asn_get A (load_T t)
        else if tag_T t = T_ZERO then 0
        else if tag_T t = T_SUC then S (eval (load_T t) A)
        else if tag_T t = T_PRED then P (eval (load_T t) A)
@@ -3297,7 +3194,7 @@ proof -
   have nvar: "\<not> tag_T t = T_VAR"
     using tg by simp
   have R:
-    "Q (if tag_T t = T_VAR then nth (load_T t) A
+    "Q (if tag_T t = T_VAR then asn_get A (load_T t)
        else if tag_T t = T_ZERO then 0
        else if tag_T t = T_SUC then S (eval (load_T t) A)
        else if tag_T t = T_PRED then P (eval (load_T t) A)
@@ -3325,7 +3222,7 @@ lemma eval_ifzD:
        else eval (cpy (cpy (load_T t))) A)"
 proof -
   have R:
-    "Q (if tag_T t = T_VAR then nth (load_T t) A
+    "Q (if tag_T t = T_VAR then asn_get A (load_T t)
        else if tag_T t = T_ZERO then 0
        else if tag_T t = T_SUC then S (eval (load_T t) A)
        else if tag_T t = T_PRED then P (eval (load_T t) A)
@@ -3461,7 +3358,7 @@ proof -
   have nvar: "\<not> tag_T t = T_VAR"
     using tg by simp
   have R:
-    "Q (if tag_T t = T_VAR then nth (load_T t) A
+    "Q (if tag_T t = T_VAR then asn_get A (load_T t)
        else if tag_T t = T_ZERO then 0
        else if tag_T t = T_SUC then S (eval (load_T t) A)
        else if tag_T t = T_PRED then P (eval (load_T t) A)
@@ -3492,7 +3389,7 @@ lemma eval_appD:
              eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
 proof -
   have R:
-  "Q (if tag_T t = T_VAR then nth (load_T t) A
+  "Q (if tag_T t = T_VAR then asn_get A (load_T t)
      else if tag_T t = T_ZERO then 0
      else if tag_T t = T_SUC then S (eval (load_T t) A)
      else if tag_T t = T_PRED then P (eval (load_T t) A)
@@ -3517,11 +3414,11 @@ proof -
        eval (nth (cpx (load_T t)) dfns)
          (eval (cpx (cpy (load_T t))) A \<triangleright>
           eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-  proof (rule cond_elseQ_E[where c="tag_T t = T_VAR" and a="nth (load_T t) A"])
+  proof (rule cond_elseQ_E[where c="tag_T t = T_VAR" and a="asn_get A (load_T t)"])
     show "\<not> tag_T t = T_VAR"
       by (rule nvar)
     show 
-      "Q (if tag_T t = T_VAR then nth (load_T t) A
+      "Q (if tag_T t = T_VAR then asn_get A (load_T t)
          else if tag_T t = T_ZERO then 0
          else if tag_T t = T_SUC then S (eval (load_T t) A)
          else if tag_T t = T_PRED then P (eval (load_T t) A)
@@ -3639,7 +3536,7 @@ proof -
             eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
     using nzero R2 by (rule cond_elseQ_I)
   have R:
-    "Q (if tag_T t = T_VAR then nth (load_T t) A
+    "Q (if tag_T t = T_VAR then asn_get A (load_T t)
        else if tag_T t = T_ZERO then 0
        else if tag_T t = T_SUC then S (eval (load_T t) A)
        else if tag_T t = T_PRED then P (eval (load_T t) A)
@@ -4203,26 +4100,30 @@ proof -
 qed
 
 lemma template_instance_sound:
-  assumes p: "p N" and i: "i N"
-      and a: "a N" and b: "b N"
-      and phi: "phi N" and f: "f N"
+  assumes A: "A N"
+      and p: "p N"
+      and i: "i N"
+      and a: "a N"
+      and b: "b N"
+      and phi: "phi N"
+      and f: "f N"
       and pa: "subst_F p i a = phi"
       and pb: "subst_F p i b = f"
       and sphi: "sat phi A"
+      and ea: "eval a A N"
       and tr: "\<And>R. R (eval a A) \<Longrightarrow> R (eval b A)"
   shows "sat f A"
 proof -
-  have saN: "subst_F p i a N"
-    by (rule subst_F_N[OF p i a])
-  have sbN: "subst_F p i b N"
-    by (rule subst_F_N[OF p i b])
+  have eb: "eval b A N"
+    using ea
+    by (rule tr[where R="\<lambda>v. v N"])
   have spa: "sat (subst_F p i a) A"
     using eqSym[OF pa] sphi
     by (rule eqSubst[where Q="\<lambda>q. sat q A"])
   have ia:
     "sat (subst_F p i a) A \<longrightarrow>
      sat p (asn_put A i (eval a A))"
-    using sat_subst_F[OF p i a]
+    using sat_subst_F[OF A p i a ea]
     by (rule iffE1)
   have upa: "sat p (asn_put A i (eval a A))"
     using ia spa by (rule implE)
@@ -4232,12 +4133,13 @@ proof -
   have ib:
     "sat p (asn_put A i (eval b A)) \<longrightarrow>
      sat (subst_F p i b) A"
-    using sat_subst_F[OF p i b]
+    using sat_subst_F[OF A p i b eb]
     by (rule iffE2)
   have spb: "sat (subst_F p i b) A"
     using ib upb by (rule implE)
   show ?thesis
-    using pb spb by (rule eqSubst[where Q="\<lambda>q. sat q A"])
+    using pb spb
+    by (rule eqSubst[where Q="\<lambda>q. sat q A"])
 qed
 
 lemma check_templateE:
@@ -5042,10 +4944,9 @@ proof -
 qed
 
 lemma check_subst_sound:
-  assumes J: "J N" and rest: "rest N"
+  assumes A: "A N" and J: "J N" and rest: "rest N"
       and chk: "check_subst J rest"
-      and prev: "\<And>K. K N \<Longrightarrow> mem K rest \<Longrightarrow>
-                   sat_hyp (hyp_of K) A \<Longrightarrow> sat (conc_of K) A"
+      and prev: "\<And>K. K N \<Longrightarrow> mem K rest \<Longrightarrow> sat_hyp (hyp_of K) A \<Longrightarrow> sat (conc_of K) A"
       and satG: "sat_hyp (hyp_of J) A"
   shows "sat (conc_of J) A"
 proof -
@@ -5083,6 +4984,8 @@ proof -
       using K Km satKh by (rule prev)
     have ab: "eval ?a A = eval ?b A"
       using cK Ktg satK by (rule sat_formula_eqE)
+    have ea: "eval ?a A N"
+      using ab by (rule eq_impl_term)
     have sub': "subset rest rest"
       using rest by (rule subset_refl)
     show "sat (conc_of J) A"
@@ -5122,7 +5025,7 @@ proof -
             using ab Ra by (rule eqSubst)
         qed
         show "sat (conc_of J) A"
-          using q i a b cL cJ qa qb satL tr
+          using A q i a b cL cJ qa qb satL ea tr
           by (rule template_instance_sound)
       qed
     qed
@@ -5210,9 +5113,7 @@ proof -
         assume all:
           "subst_F 0 i a = f \<and>
            subst_F 0 i ?z = phi \<and>
-           mem
-             (pack_F F_EQ \<langle>?vi, ?vi\<rangle> \<triangleright> 0 \<triangleright> G
-              \<tturnstile> subst_F 0 i ?svi)
+           mem (pack_F F_EQ \<langle>?vi, ?vi\<rangle> \<triangleright> 0 \<triangleright> G \<tturnstile> subst_F 0 i ?svi)
              rest"
                 have left:
           "subst_F 0 i a = f \<and>
@@ -5320,8 +5221,7 @@ proof -
           "\<not>(subst_F (S k) i a = f \<and> subst_F (S k) i ?z = phi \<and> mem (pack_F F_EQ \<langle>?vi, ?vi\<rangle> \<triangleright> S k \<triangleright> G \<tturnstile> subst_F (S k) i ?svi) rest)"
         have C1:
           "if S k > 0 = 1
-           then check_ind_template
-                  f phi a G (S k - 1) i rest
+           then check_ind_template f phi a G (S k - 1) i rest
            else False"
           using nall C0 by (rule notcond_thenE)
         have chkp:
@@ -5533,12 +5433,11 @@ proof -
 qed
 
 lemma check_ind_sound:
-  assumes J: "J N" and rest: "rest N"
+  assumes A: "A N"
+      and J: "J N"
+      and rest: "rest N"
       and chk: "check_ind J rest"
       and prev:
-        "\<And>K. K N \<Longrightarrow> mem K rest \<Longrightarrow>
-          sat_hyp (hyp_of K) A \<Longrightarrow> sat (conc_of K) A"
-      and prevN:
         "\<And>K A2. A2 N \<Longrightarrow> K N \<Longrightarrow> mem K rest \<Longrightarrow>
           sat_hyp (hyp_of K) A2 \<Longrightarrow> sat (conc_of K) A2"
       and satG: "sat_hyp (hyp_of J) A"
@@ -5614,8 +5513,8 @@ proof -
   have QaG: "sat_hyp (hyp_of ?Qa) A"
     using G eqaa satG by simp
   have satQa0: "sat (conc_of ?Qa) A"
-    using QaN mQa QaG
-    by (rule prev[where K="?Qa"])
+  using A QaN mQa QaG
+  by (rule prev[where K="?Qa"])
 have satQa: "sat ?eqaa A"
   using G eqaa satQa0 by simp
   have tgEq: "tag_F ?eqaa = F_EQ"
@@ -5648,7 +5547,8 @@ have satQa: "sat ?eqaa A"
       using hK satG
       by (rule eqSubst[where Q="\<lambda>H. sat_hyp H A"])
     have satK: "sat (conc_of K) A"
-      using K Km satKh by (rule prev)
+      using A K Km satKh
+      by (rule prev[where K=K])
     show "sat ?f A"
     proof (rule check_ind_templateE[
       OF f cK a G p i rest ct])
@@ -5693,7 +5593,7 @@ have satQa: "sat ?eqaa A"
         have KN: "?K N"
           using HN CN by simp
         have Am: "?Am N"
-          using i m by (rule asn_put_N)
+          using A i m by (rule asn_put_N)
         have hp: "hyp_of ?K = ?H"
           by (rule cpx_proj[OF HN CN])
         have hp': "?H = hyp_of ?K"
@@ -5702,7 +5602,7 @@ have satQa: "sat ?eqaa A"
           using hp' satStep
           by (rule eqSubst[where Q="\<lambda>H. sat_hyp H ?Am"])
         have satK: "sat (conc_of ?K) ?Am"
-        proof (rule prevN[where K="?K"])
+        proof (rule prev[where K="?K"])
           show "?Am N"
             by (rule Am)
         next
@@ -5722,8 +5622,8 @@ have satQa: "sat ?eqaa A"
           by (rule eqSubst[where Q="\<lambda>f. sat f ?Am"])
       qed
       have sq: "sat (subst_F q ?i ?a) A"
-        using q i a G fresh satG base step an
-        by (rule nat_ind_sound_put)
+        using A q i a G fresh satG base step an
+        by (rule nat_ind_sound)
       show "sat ?f A"
         using qa sq
         by (rule eqSubst[where Q="\<lambda>r. sat r A"])
@@ -5731,14 +5631,644 @@ have satQa: "sat ?eqaa A"
   qed
 qed
 
+lemma app_tryE:
+  assumes J: "J N"
+      and d: "d N"
+      and x: "x N"
+      and y: "y N"
+      and rest: "rest N"
+      and at: "app_try J d x y rest"
+      and H:
+        "dfn_is d 2 (nth d dfns) \<Longrightarrow>
+          mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>x, x\<rangle>) rest \<Longrightarrow>
+          mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>y, y\<rangle>) rest \<Longrightarrow>
+          find_phi J (subst_body (nth d dfns) x y)
+            (pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle>) rest \<Longrightarrow> R"
+  shows R
+proof -
+  have C:
+    "dfn_is d 2 (nth d dfns) \<and>
+      mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>x, x\<rangle>) rest \<and>
+      mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>y, y\<rangle>) rest \<and>
+      find_phi J (subst_body (nth d dfns) x y)
+        (pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle>) rest"
+    using at by (rule defI[OF app_try_def])
+    have C123:
+    "(dfn_is d 2 (nth d dfns) \<and>
+      mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>x, x\<rangle>) rest) \<and>
+     mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>y, y\<rangle>) rest"
+    using C by (rule conjE1)
+  have fp:
+    "find_phi J (subst_body (nth d dfns) x y)
+      (pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle>) rest"
+    using C by (rule conjE2)
+  have C12:
+    "dfn_is d 2 (nth d dfns) \<and>
+     mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>x, x\<rangle>) rest"
+    using C123 by (rule conjE1)
+  have my:
+    "mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>y, y\<rangle>) rest"
+    using C123 by (rule conjE2)
+  have di: "dfn_is d 2 (nth d dfns)"
+    using C12 by (rule conjE1)
+  have mx:
+    "mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>x, x\<rangle>) rest"
+    using C12 by (rule conjE2)
+  show R
+    using di mx my fp by (rule H)
+qed
+
+lemma app_yE:
+  assumes J: "J N"
+      and d: "d N"
+      and x: "x N"
+      and y: "y N"
+      and rest: "rest N"
+      and dr: "d < len dfns = 1"
+      and ay: "app_y J d x y rest"
+      and H: "\<And>q. q N \<Longrightarrow> app_try J d x q rest \<Longrightarrow> R"
+  shows R
+proof -
+  have main: "app_y J d x y rest \<longrightarrow> R"
+  proof (rule ind[OF y])
+    show "app_y J d x 0 rest \<longrightarrow> R"
+    proof (rule implI)
+      show "app_y J d x 0 rest B"
+        by (rule app_y_bool[OF J d x nat0 rest dr])
+    next
+      assume a0: "app_y J d x 0 rest"
+      have atB: "app_try J d x 0 rest B"
+        by (rule app_try_bool[OF J d x nat0 rest dr])
+      have C:
+        "if app_try J d x 0 rest then True
+         else if 0 > 0 = 1 then app_y J d x (0 - 1) rest
+         else False"
+        using a0 by (rule defI[OF app_y_def])
+      show R
+      proof (rule cases_bool[where q="app_try J d x 0 rest"])
+        show "app_try J d x 0 rest B"
+          by (rule atB)
+      next
+        assume at: "app_try J d x 0 rest"
+        show R
+          using nat0 at by (rule H)
+      next
+        assume nat: "\<not> app_try J d x 0 rest"
+        have F: "False"
+          using nat C by simp
+        show R
+          by (rule exF[OF F not_false])
+      qed
+    qed
+  next
+    fix q
+    assume q: "q N"
+       and IH: "app_y J d x q rest \<longrightarrow> R"
+    show "app_y J d x (S q) rest \<longrightarrow> R"
+    proof (rule implI)
+      show "app_y J d x (S q) rest B"
+        by (rule app_y_bool[OF J d x natS[OF q] rest dr])
+    next
+      assume as: "app_y J d x (S q) rest"
+      have atB: "app_try J d x (S q) rest B"
+        by (rule app_try_bool[OF J d x natS[OF q] rest dr])
+      have C:
+        "if app_try J d x (S q) rest then True
+         else if S q > 0 = 1 then app_y J d x (S q - 1) rest
+         else False"
+        using as by (rule defI[OF app_y_def])
+      show R
+      proof (rule cases_bool[where q="app_try J d x (S q) rest"])
+        show "app_try J d x (S q) rest B"
+          by (rule atB)
+      next
+        assume at: "app_try J d x (S q) rest"
+        show R
+          using natS[OF q] at by (rule H)
+      next
+        assume nat: "\<not> app_try J d x (S q) rest"
+        have C1: "if S q > 0 = 1 then app_y J d x (S q - 1) rest else False"
+          using nat C by (rule notcond_thenE)
+        have pos: "S q > 0 = 1"
+          using q by simp
+        have rec': "app_y J d x (S q - 1) rest"
+          using pos C1 by (rule cond_thenE)
+        have rec: "app_y J d x q rest"
+          using q rec' by simp
+        show R
+          using IH rec by (rule implE)
+      qed
+    qed
+  qed
+  show R
+    using main ay by (rule implE)
+qed
+
+lemma app_xE:
+  assumes J: "J N"
+      and d: "d N"
+      and x: "x N"
+      and rest: "rest N"
+      and dr: "d < len dfns = 1"
+      and ax: "app_x J d x rest"
+      and H: "\<And>q. q N \<Longrightarrow> app_y J d q (conc_of J) rest \<Longrightarrow> R"
+  shows R
+proof -
+  have cJ: "conc_of J N"
+    using J by simp
+  have main: "app_x J d x rest \<longrightarrow> R"
+  proof (rule ind[OF x])
+    show "app_x J d 0 rest \<longrightarrow> R"
+    proof (rule implI)
+      show "app_x J d 0 rest B"
+        by (rule app_x_bool[OF J d nat0 rest dr])
+    next
+      assume a0: "app_x J d 0 rest"
+      have ayB: "app_y J d 0 (conc_of J) rest B"
+        by (rule app_y_bool[OF J d nat0 cJ rest dr])
+      have C:
+        "if app_y J d 0 (conc_of J) rest then True
+         else if 0 > 0 = 1 then app_x J d (0 - 1) rest
+         else False"
+        using a0 by (rule defI[OF app_x_def])
+      show R
+      proof (rule cases_bool[
+          where q="app_y J d 0 (conc_of J) rest"])
+        show "app_y J d 0 (conc_of J) rest B"
+          by (rule ayB)
+      next
+        assume ay: "app_y J d 0 (conc_of J) rest"
+        show R
+          using nat0 ay by (rule H)
+      next
+        assume nay: "\<not> app_y J d 0 (conc_of J) rest"
+        have F: "False"
+          using nay C by simp
+        show R
+          by (rule exF[OF F not_false])
+      qed
+    qed
+  next
+    fix q
+    assume q: "q N"
+       and IH: "app_x J d q rest \<longrightarrow> R"
+    show "app_x J d (S q) rest \<longrightarrow> R"
+    proof (rule implI)
+      show "app_x J d (S q) rest B"
+        by (rule app_x_bool[OF J d natS[OF q] rest dr])
+    next
+      assume as: "app_x J d (S q) rest"
+      have ayB: "app_y J d (S q) (conc_of J) rest B"
+        by (rule app_y_bool[
+          OF J d natS[OF q] cJ rest dr])
+      have C:
+        "if app_y J d (S q) (conc_of J) rest then True
+         else if S q > 0 = 1 then app_x J d (S q - 1) rest
+         else False"
+        using as by (rule defI[OF app_x_def])
+      show R
+      proof (rule cases_bool[
+          where q="app_y J d (S q) (conc_of J) rest"])
+        show "app_y J d (S q) (conc_of J) rest B"
+          by (rule ayB)
+      next
+        assume ay: "app_y J d (S q) (conc_of J) rest"
+        show R
+          using natS[OF q] ay by (rule H)
+      next
+        assume nay:
+          "\<not> app_y J d (S q) (conc_of J) rest"
+        have C1:  "if S q > 0 = 1 then app_x J d (S q - 1) rest else False"
+          using nay C by (rule notcond_thenE)
+        have pos: "S q > 0 = 1"
+          using q by simp
+        have rec': "app_x J d (S q - 1) rest"
+          using pos C1 by (rule cond_thenE)
+        have rec: "app_x J d q rest"
+          using q rec' by simp
+        show R
+          using IH rec by (rule implE)
+      qed
+    qed
+  qed
+  show R
+    using main ax by (rule implE)
+qed
+
+lemma app_dE:
+  assumes J: "J N"
+      and d: "d N"
+      and rest: "rest N"
+      and ad: "app_d J d rest"
+      and H:
+        "\<And>q. q N \<Longrightarrow> q < len dfns = 1 \<Longrightarrow>
+          app_x J q (conc_of J) rest \<Longrightarrow> R"
+  shows R
+proof -
+  have ld: "len dfns N"
+    by (rule len_nat[OF dfns_N])
+  have main: "app_d J d rest \<longrightarrow> R"
+  proof (rule ind[OF d])
+    show "app_d J 0 rest \<longrightarrow> R"
+    proof (rule implI)
+      show "app_d J 0 rest B"
+        by (rule app_d_bool[OF J nat0 rest])
+    next
+      assume a0: "app_d J 0 rest"
+      have rB: "(0 < len dfns = 1) B"
+        by (rule eqBool[
+          OF less_terminates[OF nat0 ld]], simp)
+      have C:
+        "if 0 < len dfns = 1 then
+           if app_x J 0 (conc_of J) rest then True
+           else if 0 > 0 = 1 then app_d J (0 - 1) rest
+           else False
+         else if 0 > 0 = 1 then app_d J (0 - 1) rest
+         else False"
+        using a0 by (rule defI[OF app_d_def])
+      show R
+      proof (rule cases_bool[where q="0 < len dfns = 1"])
+        show "(0 < len dfns = 1) B"
+          by (rule rB)
+      next
+        assume dr: "0 < len dfns = 1"
+        have axB: "app_x J 0 (conc_of J) rest B"
+          by (rule app_x_bool[OF J nat0 _ rest dr],
+              use J in simp)
+        have C1:
+          "if app_x J 0 (conc_of J) rest then True
+           else if 0 > 0 = 1 then app_d J (0 - 1) rest
+           else False"
+          using dr C by (rule cond_thenE)
+        show R
+        proof (rule cases_bool[
+            where q="app_x J 0 (conc_of J) rest"])
+          show "app_x J 0 (conc_of J) rest B"
+            by (rule axB)
+        next
+          assume ax: "app_x J 0 (conc_of J) rest"
+          show R
+            using nat0 dr ax by (rule H)
+        next
+          assume nax: "\<not> app_x J 0 (conc_of J) rest"
+          have F: "False"
+            using nax C1 by simp
+          show R
+            by (rule exF[OF F not_false])
+        qed
+      next
+        assume ndr: "\<not> 0 < len dfns = 1"
+        have F: "False"
+          using ndr C by simp
+        show R
+          by (rule exF[OF F not_false])
+      qed
+    qed
+  next
+    fix q
+    assume q: "q N"
+       and IH: "app_d J q rest \<longrightarrow> R"
+    show "app_d J (S q) rest \<longrightarrow> R"
+    proof (rule implI)
+      show "app_d J (S q) rest B"
+        by (rule app_d_bool[OF J natS[OF q] rest])
+    next
+      assume as: "app_d J (S q) rest"
+      have rB: "(S q < len dfns = 1) B"
+        by (rule eqBool[
+          OF less_terminates[OF natS[OF q] ld]], simp)
+      have C:
+        "if S q < len dfns = 1 then
+           if app_x J (S q) (conc_of J) rest then True
+           else if S q > 0 = 1 then app_d J (S q - 1) rest
+           else False
+         else if S q > 0 = 1 then app_d J (S q - 1) rest
+         else False"
+        using as by (rule defI[OF app_d_def])
+      show R
+      proof (rule cases_bool[
+          where q="S q < len dfns = 1"])
+        show "(S q < len dfns = 1) B"
+          by (rule rB)
+      next
+        assume dr: "S q < len dfns = 1"
+        have axB:
+          "app_x J (S q) (conc_of J) rest B"
+          by (rule app_x_bool[
+            OF J natS[OF q] _ rest dr],
+            use J in simp)
+        have C1:
+          "if app_x J (S q) (conc_of J) rest then True
+           else if S q > 0 = 1 then app_d J (S q - 1) rest
+           else False"
+          using dr C by (rule cond_thenE)
+        show R
+        proof (rule cases_bool[
+            where q="app_x J (S q) (conc_of J) rest"])
+          show "app_x J (S q) (conc_of J) rest B"
+            by (rule axB)
+        next
+          assume ax:
+            "app_x J (S q) (conc_of J) rest"
+          show R
+            using natS[OF q] dr ax by (rule H)
+        next
+          assume nax:
+            "\<not> app_x J (S q) (conc_of J) rest"
+          have C2: "if S q > 0 = 1 then app_d J (S q - 1) rest else False"
+            using nax C1 by (rule notcond_thenE)
+          have pos: "S q > 0 = 1"
+            using q by simp
+          have rec': "app_d J (S q - 1) rest"
+            using pos C2 by (rule cond_thenE)
+          have rec: "app_d J q rest"
+            using q rec' by simp
+          show R
+            using IH rec by (rule implE)
+        qed
+      next
+        assume ndr: "\<not> S q < len dfns = 1"
+        have C1: "if S q > 0 = 1 then app_d J (S q - 1) rest else False"
+          using ndr C by (rule notcond_thenE)
+        have pos: "S q > 0 = 1"
+          using q by simp
+        have rec': "app_d J (S q - 1) rest"
+          using pos C1 by (rule cond_thenE)
+        have rec: "app_d J q rest"
+          using q rec' by simp
+        show R
+          using IH rec by (rule implE)
+      qed
+    qed
+  qed
+  show R
+    using main ad by (rule implE)
+qed
+
+lemma sat_refl_eval_N:
+  assumes t: "t N"
+      and s: "sat (pack_F F_EQ \<langle>t, t\<rangle>) A"
+  shows "eval t A N"
+proof -
+  have s': "sat (mk_eq t t) A"
+  proof -
+    show "sat (mk_eq t t) A"
+      unfolding mk_eq_def
+      by (rule s)
+  qed
+  have e: "eval t A = eval t A"
+    by (rule sat_eqE'[OF t t s'])
+  show ?thesis
+    by (rule eq_impl_term[OF e])
+qed
+
+(* this is the pain that we had last time we were here... I knew this shit was gonna bite us for app *)
+lemma eval_subst_bodyE:
+  assumes b: "b N"
+      and x: "x N"
+      and y: "y N"
+      and ex: "eval x A N"
+      and ey: "eval y A N"
+      and fresh: "fresh_T 2 b"
+      and H: "Q (eval (subst_body b x y) A)"
+    shows "Q (eval b (eval x A \<triangleright> eval y A \<triangleright> Nil))"
+  sorry 
+
+lemma eval_app_substE:
+  assumes d: "d N"
+      and x: "x N"
+      and y: "y N"
+      and ex: "eval x A N"
+      and ey: "eval y A N"
+      and di: "dfn_is d 2 (nth d dfns)"
+      and H:
+        "Q (eval (subst_body (nth d dfns) x y) A)"
+  shows "Q (eval (pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle>) A)"
+proof -
+  have dr: "d < len dfns = 1"
+    using d di by (rule dfn_is_rangeE)
+  have bodyN: "nth d dfns N"
+    using dfns_N dr by (rule nth_in_range_N)
+  have fresh: "fresh_T 2 (nth d dfns)"
+    using d di by (rule dfn_is_freshE)
+  have body:
+    "Q (eval (nth d dfns)
+      (eval x A \<triangleright> eval y A \<triangleright> Nil))"
+    using bodyN x y ex ey fresh H
+    by (rule eval_subst_bodyE)
+  have payN: "\<langle>d, \<langle>x, y\<rangle>\<rangle> N"
+    using d x y by simp
+  have appN: "pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle> N"
+    by (rule pack_T_N[OF _ payN], simp)
+  have tg:
+    "tag_T (pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle>) = T_APP"
+    by (rule tag_pack_T[OF _ payN], simp)
+    have payN: "\<langle>d, \<langle>x, y\<rangle>\<rangle> N"
+    using d x y by simp
+  have appN: "pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle> N"
+    by (rule pack_T_N[OF _ payN], simp)
+  have tg:
+    "tag_T (pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle>) = T_APP"
+    by (rule tag_pack_T[OF _ payN], simp)
+  have nv:
+    "\<not> tag_T (pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle>) = T_VAR"
+    using tg by simp
+  have nz:
+    "\<not> tag_T (pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle>) = T_ZERO"
+    using tg by simp
+  have ns:
+    "\<not> tag_T (pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle>) = T_SUC"
+    using tg by simp
+  have np:
+    "\<not> tag_T (pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle>) = T_PRED"
+    using tg by simp
+  have ni:
+    "\<not> tag_T (pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle>) = T_IFZ"
+    using tg by simp
+  have ld:
+    "load_T (pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle>) = \<langle>d, \<langle>x, y\<rangle>\<rangle>"
+    by (rule load_pack_T[OF _ payN], simp)
+  have ld':
+    "load_T (pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle>) \<equiv> \<langle>d, \<langle>x, y\<rangle>\<rangle>"
+    by (rule eq_reflection[OF ld])
+    have xyN: "\<langle>x, y\<rangle> N"
+    using x y by simp
+  have px:
+    "hyp_of \<langle>d, \<langle>x, y\<rangle>\<rangle> = d"
+    using d xyN by (rule cpx_proj)
+  have py:
+    "conc_of \<langle>d, \<langle>x, y\<rangle>\<rangle> = \<langle>x, y\<rangle>"
+    using d xyN by (rule cpy_proj)
+  have pxx:
+    "hyp_of \<langle>x, y\<rangle> = x"
+    using x y by (rule cpx_proj)
+  have pxy:
+    "conc_of \<langle>x, y\<rangle> = y"
+    using x y by (rule cpy_proj)
+  have px':
+    "hyp_of \<langle>d, \<langle>x, y\<rangle>\<rangle> \<equiv> d"
+    by (rule eq_reflection[OF px])
+  have py':
+    "conc_of \<langle>d, \<langle>x, y\<rangle>\<rangle> \<equiv> \<langle>x, y\<rangle>"
+    by (rule eq_reflection[OF py])
+  have pxx':
+    "hyp_of \<langle>x, y\<rangle> \<equiv> x"
+    by (rule eq_reflection[OF pxx])
+  have pxy':
+    "conc_of \<langle>x, y\<rangle> \<equiv> y"
+    by (rule eq_reflection[OF pxy])
+  show ?thesis
+  proof (rule eval_appI[OF appN tg])
+    show "Q (eval (nth (cpx (load_T (pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle>))) dfns)
+          (eval (cpx (cpy (load_T(pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle>)))) A \<triangleright>
+           eval (cpy (cpy (load_T (pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle>))))
+            A \<triangleright> Nil))"
+      using body
+      by (simp only: ld' px' py' pxx' pxy')
+  qed
+qed
+
 lemma check_app_sound:
-  assumes J: "J N" and rest: "rest N"
+  assumes A: "A N"
+      and J: "J N"
+      and rest: "rest N"
       and chk: "check_app J rest"
-      and prev: "\<And>K. K N \<Longrightarrow> mem K rest \<Longrightarrow>
-                   sat_hyp (hyp_of K) A \<Longrightarrow> sat (conc_of K) A"
+      and prev:
+        "\<And>K. K N \<Longrightarrow> mem K rest \<Longrightarrow>
+          sat_hyp (hyp_of K) A \<Longrightarrow> sat (conc_of K) A"
       and satG: "sat_hyp (hyp_of J) A"
   shows "sat (conc_of J) A"
-  sorry
+proof -
+  have one: "(1::num) N"
+    by simp
+  have startN: "len dfns - 1 N"
+    by (rule sub_terminates[OF len_nat[OF dfns_N] one])
+  have ad: "app_d J (len dfns - 1) rest"
+    using chk by (rule defI[OF check_app_def])
+  show ?thesis
+  proof (rule app_dE[OF J startN rest ad])
+    fix d
+    assume d: "d N"
+       and dr: "d < len dfns = 1"
+       and ax: "app_x J d (conc_of J) rest"
+    show "sat (conc_of J) A"
+    proof (rule app_xE[OF J d _ rest dr ax])
+      show "conc_of J N"
+        using J by simp
+    next
+      fix x
+      assume x: "x N"
+         and ay: "app_y J d x (conc_of J) rest"
+      show "sat (conc_of J) A"
+      proof (rule app_yE[OF J d x _ rest dr ay])
+        show "conc_of J N"
+          using J by simp
+      next
+        fix y
+        assume y: "y N"
+           and at: "app_try J d x y rest"
+        show "sat (conc_of J) A"
+        proof (rule app_tryE[OF J d x y rest at])
+          assume di: "dfn_is d 2 (nth d dfns)"
+             and mx:
+              "mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>x, x\<rangle>) rest"
+             and my:
+              "mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>y, y\<rangle>) rest"
+             and fp:
+              "find_phi J
+                (subst_body (nth d dfns) x y)
+                (pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle>) rest"
+          have hJ: "hyp_of J N"
+            using J by simp
+          have xxN: "\<langle>x, x\<rangle> N"
+            using x by simp
+          have yyN: "\<langle>y, y\<rangle> N"
+            using y by simp
+          have xeqN: "pack_F F_EQ \<langle>x, x\<rangle> N"
+            by (rule pack_F_N[OF _ xxN], simp)
+          have yeqN: "pack_F F_EQ \<langle>y, y\<rangle> N"
+            by (rule pack_F_N[OF _ yyN], simp)
+          have JxN:
+            "(hyp_of J \<tturnstile> pack_F F_EQ \<langle>x, x\<rangle>) N"
+            using hJ xeqN by simp
+          have JyN:
+            "(hyp_of J \<tturnstile> pack_F F_EQ \<langle>y, y\<rangle>) N"
+            using hJ yeqN by simp
+          have sx: "sat (pack_F F_EQ \<langle>x, x\<rangle>) A"
+            using JxN mx satG sorry
+          have sy: "sat (pack_F F_EQ \<langle>y, y\<rangle>) A"
+            using JyN my satG sorry (*should be trivial im tired*)
+          have ex: "eval x A N"
+            using x sx by (rule sat_refl_eval_N)
+          have ey: "eval y A N"
+            using y sy by (rule sat_refl_eval_N)
+          have bodyN: "nth d dfns N"
+            using dfns_N dr by (rule nth_in_range_N)
+          have sbN: "subst_body (nth d dfns) x y N"
+            by (rule subst_body_N[OF bodyN x y])
+          have payN: "\<langle>d, \<langle>x, y\<rangle>\<rangle> N"
+            using d x y by simp
+          have appN: "pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle> N"
+            by (rule pack_T_N[OF _ payN], simp)
+          have sub: "subset rest rest"
+            by (rule subset_refl[OF rest])
+          have tr:
+            "\<And>R. R (eval (subst_body (nth d dfns) x y) A) \<Longrightarrow>
+              R (eval (pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle>) A)"
+          proof -
+            fix R
+            assume HR:
+              "R (eval (subst_body (nth d dfns) x y) A)"
+            show "R (eval (pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle>) A)"
+              using d x y ex ey di HR
+              by (rule eval_app_substE)
+          qed
+          show "sat (conc_of J) A"
+          proof (rule find_phiE[
+              OF J sbN appN rest rest sub fp])
+            fix K
+            assume K: "K N"
+               and Km: "mem K rest"
+               and Kh: "hyp_of K = hyp_of J"
+               and ct:
+                "check_template
+                  (conc_of J) (conc_of K)
+                  (subst_body (nth d dfns) x y)
+                  (pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle>)
+                  (rep_vars_F (conc_of J) (J + 1)) (J + 1)"
+            have satK: "sat_hyp (hyp_of K) A"
+              using eqSym[OF Kh] satG
+              by (rule eqSubst[where Q="\<lambda>G. sat_hyp G A"])
+            have sK: "sat (conc_of K) A"
+              using K Km satK by (rule prev)
+            have cJ: "conc_of J N"
+              using J by simp
+            have cK: "conc_of K N"
+              using K by simp
+            have iN: "J + 1 N"
+              using J by simp
+            have pN: "rep_vars_F (conc_of J) (J + 1) N"
+              by (rule rep_vars_F_N[OF cJ iN])
+            show "sat (conc_of J) A"
+            proof (rule check_templateE[
+                OF cJ cK sbN appN pN iN ct])
+              fix q
+              assume q: "q N"
+                 and qa:
+                  "subst_F q (J + 1)
+                    (subst_body (nth d dfns) x y) = conc_of K"
+                 and qb:
+                  "subst_F q (J + 1)
+                    (pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle>) = conc_of J"
+              show "sat (conc_of J) A"
+                sorry (* should be easy but im tired by (rule template_instance_sound[OF A q sbN appN cK cJ]) *)
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
 
 lemma find_structE:
   assumes J: "J N" and G: "G N" and rest: "rest N" and ptr: "ptr N"
@@ -6710,15 +7240,26 @@ proof -
 qed
 
 lemma valid_step_sound:
-  assumes J: "J N" and rest: "rest N"
+  assumes A: "A N"
+      and J: "J N"
+      and rest: "rest N"
       and vs: "valid_step J rest"
-      and prev: "\<And>K. K N \<Longrightarrow> mem K rest \<Longrightarrow>
-                   sat_hyp (hyp_of K) A \<Longrightarrow> sat (conc_of K) A"
-      and prevN: "\<And>K A2. A2 N \<Longrightarrow> K N \<Longrightarrow> mem K rest \<Longrightarrow>
-                    sat_hyp (hyp_of K) A2 \<Longrightarrow> sat (conc_of K) A2"
+      and prev:
+        "\<And>K A2. A2 N \<Longrightarrow> K N \<Longrightarrow> mem K rest \<Longrightarrow>
+          sat_hyp (hyp_of K) A2 \<Longrightarrow> sat (conc_of K) A2"
       and satG: "sat_hyp (hyp_of J) A"
   shows "sat (conc_of J) A"
 proof -
+  have prevA:
+    "\<And>K. K N \<Longrightarrow> mem K rest \<Longrightarrow> sat_hyp (hyp_of K) A \<Longrightarrow> sat (conc_of K) A"
+  proof -
+    fix K
+    assume K: "K N"
+       and Km: "mem K rest"
+       and satK: "sat_hyp (hyp_of K) A"
+    show "sat (conc_of K) A"
+      using A K Km satK by (rule prev)
+  qed
   have cJ: "conc_of J N"
     using J by simp
   have hJ: "hyp_of J N"
@@ -6777,7 +7318,7 @@ proof -
     next
       assume g1: "check_cut J rest"
       show ?thesis
-        by (rule check_cut_sound[OF J rest g1 prev satG])
+        by (rule check_cut_sound[OF J rest g1 prevA satG])
     next
       assume n1: "\<not> check_cut J rest"
       have R2:
@@ -6803,7 +7344,7 @@ proof -
       next
         assume g2: "check_subst J rest"
         show ?thesis
-          by (rule check_subst_sound[OF J rest g2 prev satG])
+          by (rule check_subst_sound[OF A J rest g2 prevA satG])
       next
         assume n2: "\<not> check_subst J rest"
         have R3:
@@ -6828,7 +7369,7 @@ proof -
         next
           assume g3: "check_ind J rest"
           show ?thesis
-            by (rule check_ind_sound[OF J rest g3 prev prevN satG])
+            using A J rest g3 prev satG by (rule check_ind_sound)
         next
           assume n3: "\<not> check_ind J rest"
           have R4:
@@ -6852,7 +7393,7 @@ proof -
           next
             assume g4: "check_app J rest"
             show ?thesis
-              by (rule check_app_sound[OF J rest g4 prev satG])
+              by (rule check_app_sound[OF A J rest g4 prevA satG])
           next
             assume n4: "\<not> check_app J rest"
             have R5:
@@ -6875,7 +7416,7 @@ proof -
             next
               assume g5: "check_struct J rest"
               show ?thesis
-                by (rule check_struct_sound[OF J rest g5 prev satG])
+                by (rule check_struct_sound[OF J rest g5 prevA satG])
             next
               assume n5: "\<not> check_struct J rest"
               have R6:
@@ -6904,7 +7445,7 @@ proof -
                      (tag_T (cpy (load_F (conc_of J)))) rest"
                   using g6 R6 by (rule cond_thenE)
                 show ?thesis
-                  by (rule check_eq_rules_sound[OF J rest g6 C6 prev satG])
+                  by (rule check_eq_rules_sound[OF J rest g6 C6 prevA satG])
               next
                 assume n6: "\<not> tag_F (conc_of J) = F_EQ"
                 have C6:
@@ -6915,7 +7456,7 @@ proof -
                      (tag_T (cpy (load_F (conc_of J)))) rest"
                   using n6 R6 by (rule notcond_thenE)
                 show ?thesis
-                  by (rule check_neq_rules_sound[OF J rest n6 C6 prev satG])
+                  by (rule check_neq_rules_sound[OF J rest n6 C6 prevA satG])
               qed
             qed
           qed
@@ -6998,14 +7539,7 @@ next
           using Jh satG
           by (rule eqSubst[where Q="\<lambda>z. sat_hyp (hyp_of z) A"])
         have sh: "sat (conc_of h) A"
-        proof (rule valid_step_sound[OF h t vs])
-          fix K
-          assume K: "K N"
-             and mK: "mem K t"
-             and satK: "sat_hyp (hyp_of K) A"
-          show "sat (conc_of K) A"
-            using A clt K mK satK by (rule IH)
-        next
+        proof (rule valid_step_sound[OF A h t vs])
           fix K A2
           assume A2: "A2 N"
              and K: "K N"
@@ -7038,120 +7572,129 @@ next
 qed
 
 lemma check_list_sound:
-  assumes pf: "pf N"
-  shows "\<And>J A. check_list pf \<Longrightarrow> J N \<Longrightarrow> mem J pf \<Longrightarrow>
-                sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A"
-proof (rule check_list_induct[OF pf])
-  show "\<And>J A. check_list Nil \<Longrightarrow> J N \<Longrightarrow> mem J Nil \<Longrightarrow>
-               sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A"
-  proof -
-    fix J A
-    assume chk: "check_list Nil"
-       and J: "J N"
-       and m: "mem J Nil"
-       and satG: "sat_hyp (hyp_of J) A"
-    show "sat (conc_of J) A"
-      by (rule exF[OF m mem_nil])
-  qed
-next
-  fix h t A
-  assume h: "h N"
-     and t: "t N"
-     and IH:
-       "\<And>J. check_list t \<Longrightarrow> J N \<Longrightarrow> mem J t \<Longrightarrow>
-          sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A"
-  show "\<And>J. check_list (Cons h t) \<Longrightarrow> J N \<Longrightarrow>
-               mem J (Cons h t) \<Longrightarrow>
-               sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A"
-  proof -
-    fix J
-    assume cl: "check_list (Cons h t)"
-       and J: "J N"
-       and mJ: "mem J (Cons h t)"
-       and satG: "sat_hyp (hyp_of J) A"
-    have hne: "\<not> Cons h t = Nil"
-      using h t by simp
-    have R0:
-      "if Cons h t = Nil then True
-       else if valid_step (list_hd (Cons h t)) (list_tl (Cons h t))
-       then check_list (list_tl (Cons h t))
-       else False"
-      using cl
-      by (rule defI[OF check_list_def[where pf="Cons h t"]])
-    have R:
-      "if Cons h t = Nil then True
-       else if valid_step h t then check_list t else False"
-      using R0
-      by (simp only: list_hd_cons[OF h t] list_tl_cons[OF h t])
-    have R1:
-      "if valid_step h t then check_list t else False"
-      using hne R by (rule notcond_thenE)
-    show "sat (conc_of J) A"
-    proof (rule cases_bool[where q="valid_step h t"])
-      show "valid_step h t B"
-        by (rule valid_step_bool[OF h t])
-    next
-      assume vs: "valid_step h t"
-      have clt: "check_list t"
-        using vs R1 by (rule cond_thenE)
-      have mJ':
-        "if h = J then True else mem J t"
-        using mJ h t J
-        by (simp add: mem_cons[OF h t J])
+  assumes A: "A N"
+      and pf: "pf N"
+      and chk: "check_list pf"
+      and J: "J N"
+      and Jm: "mem J pf"
+      and satG: "sat_hyp (hyp_of J) A"
+  shows "sat (conc_of J) A"
+proof -
+  have main:
+    "\<And>J A. A N \<Longrightarrow> check_list pf \<Longrightarrow> J N \<Longrightarrow> mem J pf \<Longrightarrow>
+      sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A"
+  proof (rule check_list_induct_N[OF pf])
+    show "\<And>J A. A N \<Longrightarrow> check_list Nil \<Longrightarrow> J N \<Longrightarrow> mem J Nil \<Longrightarrow>
+      sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A"
+    proof -
+      fix J A
+      assume A: "A N"
+         and chk: "check_list Nil"
+         and J: "J N"
+         and Jm: "mem J Nil"
+         and satG: "sat_hyp (hyp_of J) A"
       show "sat (conc_of J) A"
-      proof (rule cases_bool[where q="h = J"])
-        show "(h = J) B"
-          by (rule eqBool[OF h J])
+        by (rule exF[OF Jm mem_nil])
+    qed
+  next
+    fix h t
+    assume h: "h N"
+       and t: "t N"
+       and IH:
+         "\<And>J A. A N \<Longrightarrow> check_list t \<Longrightarrow> J N \<Longrightarrow> mem J t \<Longrightarrow>
+           sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A"
+    show "\<And>J A. A N \<Longrightarrow> check_list (Cons h t) \<Longrightarrow> J N \<Longrightarrow>
+      mem J (Cons h t) \<Longrightarrow>
+      sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A"
+    proof -
+      fix J A
+      assume A: "A N"
+         and chk: "check_list (Cons h t)"
+         and J: "J N"
+         and Jm: "mem J (Cons h t)"
+         and satG: "sat_hyp (hyp_of J) A"
+      have hne: "\<not> Cons h t = Nil"
+        using h t by simp
+      have R0:
+        "if Cons h t = Nil then True
+         else if valid_step (list_hd (Cons h t)) (list_tl (Cons h t))
+         then check_list (list_tl (Cons h t))
+         else False"
+        using chk
+        by (rule defI[OF check_list_def[where pf="Cons h t"]])
+      have R:
+        "if Cons h t = Nil then True
+         else if valid_step h t then check_list t else False"
+        using R0
+        by (simp only: list_hd_cons[OF h t] list_tl_cons[OF h t])
+      have R1:
+        "if valid_step h t then check_list t else False"
+        using hne R by (rule notcond_thenE)
+      show "sat (conc_of J) A"
+      proof (rule cases_bool[where q="valid_step h t"])
+        show "valid_step h t B"
+          by (rule valid_step_bool[OF h t])
       next
-        assume hJ: "h = J"
-        have Jh: "J = h"
-          using hJ by (rule eqSym)
-        have satGh: "sat_hyp (hyp_of h) A"
-          using Jh satG
-          by (rule eqSubst[where Q="\<lambda>z. sat_hyp (hyp_of z) A"])
-        have sh: "sat (conc_of h) A"
-        proof (rule valid_step_sound[OF h t vs])
-          fix K
-          assume K: "K N"
-             and mK: "mem K t"
-             and satK: "sat_hyp (hyp_of K) A"
-          show "sat (conc_of K) A"
-            using clt K mK satK by (rule IH)
-        next
+        assume vs: "valid_step h t"
+        have chkt: "check_list t"
+          using vs R1 by (rule cond_thenE)
+        have prev:
+          "\<And>K A2. A2 N \<Longrightarrow> K N \<Longrightarrow> mem K t \<Longrightarrow>
+            sat_hyp (hyp_of K) A2 \<Longrightarrow> sat (conc_of K) A2"
+        proof -
           fix K A2
           assume A2: "A2 N"
              and K: "K N"
-             and mK: "mem K t"
+             and Km: "mem K t"
              and satK: "sat_hyp (hyp_of K) A2"
           show "sat (conc_of K) A2"
-            using A2 clt K mK satK
-            by (rule check_list_sound_N[OF t])
-        next
-          show "sat_hyp (hyp_of h) A"
-            by (rule satGh)
+            using A2 chkt K Km satK by (rule IH)
         qed
+        have member:
+          "if h = J then True else mem J t"
+          using Jm h t J
+          by (simp add: mem_cons[OF h t J])
         show "sat (conc_of J) A"
-          using hJ sh
-          by (rule eqSubst[where Q="\<lambda>z. sat (conc_of z) A"])
+        proof (rule cases_bool[where q="h = J"])
+          show "(h = J) B"
+            by (rule eqBool[OF h J])
+        next
+          assume hJ: "h = J"
+          have Jh: "J = h"
+            using hJ by (rule eqSym)
+          have satGh: "sat_hyp (hyp_of h) A"
+            using Jh satG
+            by (rule eqSubst[
+              where Q="\<lambda>z. sat_hyp (hyp_of z) A"])
+          have sh: "sat (conc_of h) A"
+            by (rule valid_step_sound[OF A h t vs prev satGh])
+          show "sat (conc_of J) A"
+            using hJ sh
+            by (rule eqSubst[
+              where Q="\<lambda>z. sat (conc_of z) A"])
+        next
+          assume nhJ: "\<not> h = J"
+          have Jmt: "mem J t"
+            using nhJ member by (rule notcond_thenE)
+          show "sat (conc_of J) A"
+            using A chkt J Jmt satG by (rule IH)
+        qed
       next
-        assume nhJ: "\<not> h = J"
-        have mJt: "mem J t"
-          using nhJ mJ' by (rule notcond_thenE)
+        assume nvs: "\<not> valid_step h t"
+        have F: "False"
+          using nvs R1 by (rule notcond_thenE)
         show "sat (conc_of J) A"
-          using clt J mJt satG by (rule IH)
+          by (rule exF[OF F not_false])
       qed
-    next
-      assume nvs: "\<not> valid_step h t"
-      have F: "False"
-        using nvs R1 by (rule notcond_thenE)
-      show "sat (conc_of J) A"
-        by (rule exF[OF F not_false])
     qed
   qed
+  show ?thesis
+    using A chk J Jm satG by (rule main)
 qed
 
 lemma soundness_bridge:
-  assumes vp: "is_valid_proof p J"
+  assumes A: "A N"
+      and vp: "is_valid_proof p J"
       and satG: "sat_hyp (hyp_of J) A"
   shows "sat (conc_of J) A"
 proof -
@@ -7165,7 +7708,7 @@ proof -
     by (rule condE3B[OF RB])
   have PN: "(p N) \<and> (Nil N)"
     by (rule eqE[OF pnilB])
-  have p: "p N"
+  have pN: "p N"
     using PN by (rule conjE1)
   have R:
     "if p = Nil then False
@@ -7173,16 +7716,21 @@ proof -
     using vp by (rule defI[OF is_valid_proof_def])
   show ?thesis
   proof (rule cases_bool[where q="p = Nil"])
-    show "(p = Nil) B" by (rule pnilB)
+    show "(p = Nil) B"
+      by (rule pnilB)
   next
     assume pe: "p = Nil"
-    have F: "False" using pe R by (rule cond_thenE)
-    show ?thesis by (rule exF[OF F not_false])
+    have F: "False"
+      using pe R by (rule cond_thenE)
+    show ?thesis
+      by (rule exF[OF F not_false])
   next
     assume pne: "\<not> p = Nil"
-    have inner: "if list_hd p = J then check_list p else False"
+    have inner:
+      "if list_hd p = J then check_list p else False"
       using pne R by (rule notcond_thenE)
-    have innerB: "(if list_hd p = J then check_list p else False) B"
+    have innerB:
+      "(if list_hd p = J then check_list p else False) B"
       using inner by simp
     have hJB: "(list_hd p = J) B"
       by (rule condE3B[OF innerB])
@@ -7194,27 +7742,34 @@ proof -
       using HN by (rule conjE2)
     show ?thesis
     proof (rule cases_bool[where q="list_hd p = J"])
-      show "(list_hd p = J) B" by (rule hJB)
+      show "(list_hd p = J) B"
+        by (rule hJB)
     next
       assume hJ: "list_hd p = J"
       have cp: "check_list p"
         using hJ inner by (rule cond_thenE)
       have tpN: "list_tl p N"
-        by (rule list_tl_nat[OF p])
+        by (rule list_tl_nat[OF pN])
       have rec: "list_hd p \<triangleright> list_tl p = p"
-        by (rule cons_reconstr[OF p pne])
-      have mh0: "list_hd p \<in> (list_hd p \<triangleright> list_tl p)"
+        by (rule cons_reconstr[OF pN pne])
+      have mh0:
+        "list_hd p \<in> (list_hd p \<triangleright> list_tl p)"
         by (rule mem_cons_head[OF hN tpN])
       have mh: "list_hd p \<in> p"
-        using rec mh0 by (rule eqSubst[where Q="\<lambda>L. list_hd p \<in> L"])
+        using rec mh0
+        by (rule eqSubst[where Q="\<lambda>L. list_hd p \<in> L"])
       have mJ: "J \<in> p"
-        using hJ mh by (rule eqSubst[where Q="\<lambda>x. x \<in> p"])
+        using hJ mh
+        by (rule eqSubst[where Q="\<lambda>x. x \<in> p"])
       show ?thesis
-        using p cp JN mJ satG by (rule check_list_sound)
+        using A pN cp JN mJ satG
+        by (rule check_list_sound)
     next
       assume nhJ: "\<not> list_hd p = J"
-      have F: "False" using nhJ inner by (rule notcond_thenE)
-      show ?thesis by (rule exF[OF F not_false])
+      have F: "False"
+        using nhJ inner by (rule notcond_thenE)
+      show ?thesis
+        by (rule exF[OF F not_false])
     qed
   qed
 qed
@@ -7234,8 +7789,15 @@ proof (unfold_locales)
     by (rule sat_eqE')
   show "\<And>a b A. a N \<Longrightarrow> b N \<Longrightarrow> sat (mk_neq a b) A \<Longrightarrow> eval a A \<noteq> eval b A"  
     by (rule sat_neqE')
-  show "\<And>p J A. is_valid_proof p J \<Longrightarrow> sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A"
-    by (rule soundness_bridge)
+  show "\<And>p J A. A N \<Longrightarrow> is_valid_proof p J \<Longrightarrow> sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A"
+  proof -
+    fix p J A
+    assume A: "A N"
+       and vp: "is_valid_proof p J"
+       and satG: "sat_hyp (hyp_of J) A"
+    show "sat (conc_of J) A"
+      by (rule soundness_bridge[OF A vp satG])
+  qed
 qed
 
 end
