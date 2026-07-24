@@ -465,9 +465,13 @@ fixes eval :: "tm \<Rightarrow> asn \<Rightarrow> val"
       (if eval (cpx (load_T t)) A = 0 
          then eval (cpx (cpy (load_T t))) A
          else eval (cpy (cpy (load_T t))) A)
-    else                                                          
-      eval (nth (cpx (load_T t)) dfns) 
-           ((eval (cpx (cpy (load_T t))) A)\<triangleright> ((eval (cpy (cpy (load_T t))) A) \<triangleright> Nil))"
+    else
+      (if eval (cpx (cpy (load_T t))) A = eval (cpx (cpy (load_T t))) A
+       then (if eval (cpy (cpy (load_T t))) A = eval (cpy (cpy (load_T t))) A
+             then eval (nth (cpx (load_T t)) dfns)
+                    ((eval (cpx (cpy (load_T t))) A)\<triangleright> ((eval (cpy (cpy (load_T t))) A) \<triangleright> Nil))
+             else 0)
+       else 0)"
 begin
 definition sat :: "num \<Rightarrow> num  \<Rightarrow> o" where
     "sat f A \<equiv> if tag_F f = 0 
@@ -3635,23 +3639,7 @@ lemma eval_varD:
   assumes t: "t N" and tg: "tag_T t = T_VAR"
       and H: "Q (eval t A)"
   shows "Q (nth (load_T t) A)"
-proof -
-  have R: "Q (if tag_T t = T_VAR then nth (load_T t) A
-     else if tag_T t = T_ZERO then 0
-     else if tag_T t = T_SUC then S (eval (load_T t) A)
-     else if tag_T t = T_PRED then P (eval (load_T t) A)
-     else if tag_T t = T_IFZ then
-       (if eval (cpx (load_T t)) A = 0
-        then eval (cpx (cpy (load_T t))) A
-        else eval (cpy (cpy (load_T t))) A)
-     else
-       eval (nth (cpx (load_T t)) dfns)
-         (eval (cpx (cpy (load_T t))) A \<triangleright>
-          eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using H by (rule defI[OF eval_def])
-  show ?thesis
-    using tg R by (rule cond_thenQ_E)
-qed
+  using tg defI[where Q="Q", OF eval_def H] by (rule cond_thenQ_E)
 
 lemma eval_varI:
   assumes t: "t N"
@@ -3669,21 +3657,10 @@ lemma eval_zeroD:
       and H: "Q (eval t A)"
   shows "Q 0"
 proof -
-  have R: "Q (if tag_T t = T_VAR then nth (load_T t) A
-     else if tag_T t = T_ZERO then 0
-     else if tag_T t = T_SUC then S (eval (load_T t) A)
-     else if tag_T t = T_PRED then P (eval (load_T t) A)
-     else if tag_T t = T_IFZ then
-       (if eval (cpx (load_T t)) A = 0
-        then eval (cpx (cpy (load_T t))) A
-        else eval (cpy (cpy (load_T t))) A)
-     else
-       eval (nth (cpx (load_T t)) dfns)
-         (eval (cpx (cpy (load_T t))) A \<triangleright>
-          eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using H by (rule defI[OF eval_def])
-  show ?thesis 
-    using tg R by simp
+  have nvar: "\<not> tag_T t = T_VAR" using tg by simp
+  show "Q 0"
+    using tg cond_elseQ_E[where Q="Q", OF nvar defI[where Q="Q", OF eval_def H]]
+    by (rule cond_thenQ_E)
 qed
 
 lemma eval_zeroI:
@@ -3691,9 +3668,10 @@ lemma eval_zeroI:
       and H: "Q 0"
   shows "Q (eval t A)"
 proof -
+  have nvar: "\<not> tag_T t = T_VAR" using tg by simp
   show ?thesis
-    apply (rule defE[OF eval_def[where t=t and A=A]])
-    using tg H by simp
+    by (rule defE[OF eval_def[where t=t and A=A]],
+        rule cond_elseQ_I[where Q="Q", OF nvar cond_thenQ_I[where Q="Q", OF tg H]])
 qed
 
 lemma eval_sucD:
@@ -3702,51 +3680,11 @@ lemma eval_sucD:
       and H: "Q (eval t A)"
   shows "Q (S (eval (load_T t) A))"
 proof -
-  have R:
-    "Q (if tag_T t = T_VAR then nth (load_T t) A
-       else if tag_T t = T_ZERO then 0
-       else if tag_T t = T_SUC then S (eval (load_T t) A)
-       else if tag_T t = T_PRED then P (eval (load_T t) A)
-       else if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-         eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using H by (rule defI[OF eval_def])
-  have nvar: "\<not> tag_T t = T_VAR"
-    using tg by simp
-  have R1:
-    "Q (if tag_T t = T_ZERO then 0
-       else if tag_T t = T_SUC then S (eval (load_T t) A)
-       else if tag_T t = T_PRED then P (eval (load_T t) A)
-       else if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-         eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using nvar R by (rule cond_elseQ_E)
-  have nzero: "\<not> tag_T t = T_ZERO"
-    using tg by simp
-  have R2:
-    "Q (if tag_T t = T_SUC then S (eval (load_T t) A)
-       else if tag_T t = T_PRED then P (eval (load_T t) A)
-       else if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-            eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using nzero R1 by (rule cond_elseQ_E)
+  have nvar: "\<not> tag_T t = T_VAR" using tg by simp
+  have nzero: "\<not> tag_T t = T_ZERO" using tg by simp
   show ?thesis
-    using tg R2 by (rule cond_thenQ_E)
+    using tg cond_elseQ_E[where Q="Q", OF nzero cond_elseQ_E[where Q="Q", OF nvar defI[where Q="Q", OF eval_def H]]]
+    by (rule cond_thenQ_E)
 qed
 
 lemma eval_sucI:
@@ -3755,52 +3693,11 @@ lemma eval_sucI:
       and H: "Q (S (eval (load_T t) A))"
   shows "Q (eval t A)"
 proof -
-  have R2:
-    "Q (if tag_T t = T_SUC then S (eval (load_T t) A)
-       else if tag_T t = T_PRED then P (eval (load_T t) A)
-       else if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-            eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using tg H by (rule cond_thenQ_I)
-  have nzero: "\<not> tag_T t = T_ZERO"
-    using tg by simp
-  have R1:
-    "Q (if tag_T t = T_ZERO then 0
-       else if tag_T t = T_SUC then S (eval (load_T t) A)
-       else if tag_T t = T_PRED then P (eval (load_T t) A)
-       else if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-         eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using nzero R2 by (rule cond_elseQ_I)
-  have nvar: "\<not> tag_T t = T_VAR"
-    using tg by simp
-  have R:
-    "Q(if tag_T t = T_VAR then nth (load_T t) A
-       else if tag_T t = T_ZERO then 0
-       else if tag_T t = T_SUC then S (eval (load_T t) A)
-       else if tag_T t = T_PRED then P (eval (load_T t) A)
-       else if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-         eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using nvar R1 by (rule cond_elseQ_I)
+  have nvar: "\<not> tag_T t = T_VAR" using tg by simp
+  have nzero: "\<not> tag_T t = T_ZERO" using tg by simp
   show ?thesis
-    apply (rule defE[OF eval_def[where t=t and A=A]])
-    using R .
+    by (rule defE[OF eval_def[where t=t and A=A]],
+        rule cond_elseQ_I[where Q="Q", OF nvar cond_elseQ_I[where Q="Q", OF nzero cond_thenQ_I[where Q="Q", OF tg H]]])
 qed
 
 lemma eval_predD:
@@ -3809,64 +3706,12 @@ lemma eval_predD:
       and H: "Q (eval t A)"
   shows "Q (P (eval (load_T t) A))"
 proof -
-  have R:
-    "Q (if tag_T t = T_VAR then nth (load_T t) A
-       else if tag_T t = T_ZERO then 0
-       else if tag_T t = T_SUC then S (eval (load_T t) A)
-       else if tag_T t = T_PRED then P (eval (load_T t) A)
-       else if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-         eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using H by (rule defI[OF eval_def])
-  have nvar: "\<not> tag_T t = T_VAR"
-    using tg by simp
-  have R1:
-    "Q (if tag_T t = T_ZERO then 0
-       else if tag_T t = T_SUC then S (eval (load_T t) A)
-       else if tag_T t = T_PRED then P (eval (load_T t) A)
-       else if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-         eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using nvar R by (rule cond_elseQ_E)
-  have nzero: "\<not> tag_T t = T_ZERO"
-    using tg by simp
-  have R2:
-    "Q (if tag_T t = T_SUC then S (eval (load_T t) A)
-       else if tag_T t = T_PRED then P (eval (load_T t) A)
-       else if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-         eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using nzero R1 by (rule cond_elseQ_E)
-  have nsuc: "\<not> tag_T t = T_SUC"
-    using tg by simp
-  have R3:
-    "Q (if tag_T t = T_PRED then P (eval (load_T t) A)
-       else if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-         eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using nsuc R2 by (rule cond_elseQ_E)
+  have nvar: "\<not> tag_T t = T_VAR" using tg by simp
+  have nzero: "\<not> tag_T t = T_ZERO" using tg by simp
+  have nsuc: "\<not> tag_T t = T_SUC" using tg by simp
   show ?thesis
-    using tg R3 by (rule cond_thenQ_E)
+    using tg cond_elseQ_E[where Q="Q", OF nsuc cond_elseQ_E[where Q="Q", OF nzero cond_elseQ_E[where Q="Q", OF nvar defI[where Q="Q", OF eval_def H]]]]
+    by (rule cond_thenQ_E)
 qed
 
 lemma eval_predI:
@@ -3875,65 +3720,12 @@ lemma eval_predI:
       and H: "Q (P (eval (load_T t) A))"
   shows "Q (eval t A)"
 proof -
-  have R3:
-    "Q (if tag_T t = T_PRED then P (eval (load_T t) A)
-       else if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-         eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using tg H by (rule cond_thenQ_I)
-  have nsuc: "\<not> tag_T t = T_SUC"
-    using tg by simp
-  have R2:
-    "Q (if tag_T t = T_SUC then S (eval (load_T t) A)
-       else if tag_T t = T_PRED then P (eval (load_T t) A)
-       else if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-         eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using nsuc R3 by (rule cond_elseQ_I)
-  have nzero: "\<not> tag_T t = T_ZERO"
-    using tg by simp
-  have R1:
-    "Q (if tag_T t = T_ZERO then 0
-       else if tag_T t = T_SUC then S (eval (load_T t) A)
-       else if tag_T t = T_PRED then P (eval (load_T t) A)
-       else if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-         eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using nzero R2 by (rule cond_elseQ_I)
-  have nvar: "\<not> tag_T t = T_VAR"
-    using tg by simp
-  have R:
-    "Q (if tag_T t = T_VAR then nth (load_T t) A
-       else if tag_T t = T_ZERO then 0
-       else if tag_T t = T_SUC then S (eval (load_T t) A)
-       else if tag_T t = T_PRED then P (eval (load_T t) A)
-       else if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-         eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using nvar R1 by (rule cond_elseQ_I)
+  have nvar: "\<not> tag_T t = T_VAR" using tg by simp
+  have nzero: "\<not> tag_T t = T_ZERO" using tg by simp
+  have nsuc: "\<not> tag_T t = T_SUC" using tg by simp
   show ?thesis
-    apply (rule defE[OF eval_def[where t=t and A=A]])
-    using R .
+    by (rule defE[OF eval_def[where t=t and A=A]],
+        rule cond_elseQ_I[where Q="Q", OF nvar cond_elseQ_I[where Q="Q", OF nzero cond_elseQ_I[where Q="Q", OF nsuc cond_thenQ_I[where Q="Q", OF tg H]]]])
 qed
 
 lemma eval_ifzD:
@@ -3945,76 +3737,13 @@ lemma eval_ifzD:
        then eval (cpx (cpy (load_T t))) A
        else eval (cpy (cpy (load_T t))) A)"
 proof -
-  have R:
-    "Q (if tag_T t = T_VAR then nth (load_T t) A
-       else if tag_T t = T_ZERO then 0
-       else if tag_T t = T_SUC then S (eval (load_T t) A)
-       else if tag_T t = T_PRED then P (eval (load_T t) A)
-       else if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-         eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using H by (rule defI[OF eval_def])
-  have nvar: "\<not> tag_T t = T_VAR"
-    using tg by simp
-  have R1:
-    "Q (if tag_T t = T_ZERO then 0
-       else if tag_T t = T_SUC then S (eval (load_T t) A)
-       else if tag_T t = T_PRED then P (eval (load_T t) A)
-       else if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-         eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using nvar R by (rule cond_elseQ_E)
-  have nzero: "\<not> tag_T t = T_ZERO"
-    using tg by simp
-  have R2:
-    "Q (if tag_T t = T_SUC then S (eval (load_T t) A)
-       else if tag_T t = T_PRED then P (eval (load_T t) A)
-       else if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-         eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using nzero R1 by (rule cond_elseQ_E)
-  have nsuc: "\<not> tag_T t = T_SUC"
-    using tg by simp
-  have R3:
-    "Q (if tag_T t = T_PRED then P (eval (load_T t) A)
-       else if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-         eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using nsuc R2 by (rule cond_elseQ_E)
-  have npred: "\<not> tag_T t = T_PRED"
-    using tg by simp
-  have R4:
-    "Q (if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-         eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using npred R3 by (rule cond_elseQ_E)
+  have nvar: "\<not> tag_T t = T_VAR" using tg by simp
+  have nzero: "\<not> tag_T t = T_ZERO" using tg by simp
+  have nsuc: "\<not> tag_T t = T_SUC" using tg by simp
+  have npred: "\<not> tag_T t = T_PRED" using tg by simp
   show ?thesis
-    using tg R4 by (rule cond_thenQ_E)
+    using tg cond_elseQ_E[where Q="Q", OF npred cond_elseQ_E[where Q="Q", OF nsuc cond_elseQ_E[where Q="Q", OF nzero cond_elseQ_E[where Q="Q", OF nvar defI[where Q="Q", OF eval_def H]]]]]
+    by (rule cond_thenQ_E)
 qed
 
 lemma eval_ifzI:
@@ -4026,78 +3755,13 @@ lemma eval_ifzI:
            else eval (cpy (cpy (load_T t))) A)"
   shows "Q (eval t A)"
 proof -
-  have R4:
-    "Q (if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-         eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using tg H by (rule cond_thenQ_I)
-  have npred: "\<not> tag_T t = T_PRED"
-    using tg by simp
-  have R3:
-    "Q (if tag_T t = T_PRED then P (eval (load_T t) A)
-       else if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-         eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using npred R4 by (rule cond_elseQ_I)
-  have nsuc: "\<not> tag_T t = T_SUC"
-    using tg by simp
-  have R2:
-    "Q
-      (if tag_T t = T_SUC then S (eval (load_T t) A)
-       else if tag_T t = T_PRED then P (eval (load_T t) A)
-       else if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-         eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using nsuc R3 by (rule cond_elseQ_I)
-  have nzero: "\<not> tag_T t = T_ZERO"
-    using tg by simp
-  have R1:
-    "Q (if tag_T t = T_ZERO then 0
-       else if tag_T t = T_SUC then S (eval (load_T t) A)
-       else if tag_T t = T_PRED then P (eval (load_T t) A)
-       else if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-         eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using nzero R2 by (rule cond_elseQ_I)
-  have nvar: "\<not> tag_T t = T_VAR"
-    using tg by simp
-  have R:
-    "Q (if tag_T t = T_VAR then nth (load_T t) A
-       else if tag_T t = T_ZERO then 0
-       else if tag_T t = T_SUC then S (eval (load_T t) A)
-       else if tag_T t = T_PRED then P (eval (load_T t) A)
-       else if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-         eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using nvar R1 by (rule cond_elseQ_I)
+  have nvar: "\<not> tag_T t = T_VAR" using tg by simp
+  have nzero: "\<not> tag_T t = T_ZERO" using tg by simp
+  have nsuc: "\<not> tag_T t = T_SUC" using tg by simp
+  have npred: "\<not> tag_T t = T_PRED" using tg by simp
   show ?thesis
-    apply (rule defE[OF eval_def[where t=t and A=A]])
-    using R .
+    by (rule defE[OF eval_def[where t=t and A=A]],
+        rule cond_elseQ_I[where Q="Q", OF nvar cond_elseQ_I[where Q="Q", OF nzero cond_elseQ_I[where Q="Q", OF nsuc cond_elseQ_I[where Q="Q", OF npred cond_thenQ_I[where Q="Q", OF tg H]]]]])
 qed
 
 lemma eval_appD:
@@ -4108,174 +3772,101 @@ lemma eval_appD:
       and npred: "\<not> tag_T t = T_PRED"
       and nifz: "\<not> tag_T t = T_IFZ"
       and H: "Q (eval t A)"
-  shows "Q (eval (nth (cpx (load_T t)) dfns)
-            (eval (cpx (cpy (load_T t))) A \<triangleright>
-             eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-proof -
-  have R:
-  "Q (if tag_T t = T_VAR then nth (load_T t) A
-     else if tag_T t = T_ZERO then 0
-     else if tag_T t = T_SUC then S (eval (load_T t) A)
-     else if tag_T t = T_PRED then P (eval (load_T t) A)
-     else if tag_T t = T_IFZ then
-       (if eval (cpx (load_T t)) A = 0
-        then eval (cpx (cpy (load_T t))) A
-        else eval (cpy (cpy (load_T t))) A)
-     else
-       eval (nth (cpx (load_T t)) dfns)
-         (eval (cpx (cpy (load_T t))) A \<triangleright>
-          eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-  using H by (rule defI[OF eval_def])
-  have R1: 
-    "Q (if tag_T t = T_ZERO then 0
-     else if tag_T t = T_SUC then S (eval (load_T t) A)
-     else if tag_T t = T_PRED then P (eval (load_T t) A)
-     else if tag_T t = T_IFZ then
-       (if eval (cpx (load_T t)) A = 0
-        then eval (cpx (cpy (load_T t))) A
-        else eval (cpy (cpy (load_T t))) A)
-     else
-       eval (nth (cpx (load_T t)) dfns)
-         (eval (cpx (cpy (load_T t))) A \<triangleright>
-          eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-  proof (rule cond_elseQ_E[where c="tag_T t = T_VAR" and a="nth (load_T t) A"])
-    show "\<not> tag_T t = T_VAR"
-      by (rule nvar)
-    show 
-      "Q (if tag_T t = T_VAR then nth (load_T t) A
-         else if tag_T t = T_ZERO then 0
-         else if tag_T t = T_SUC then S (eval (load_T t) A)
-         else if tag_T t = T_PRED then P (eval (load_T t) A)
-         else if tag_T t = T_IFZ then
-           (if eval (cpx (load_T t)) A = 0
-            then eval (cpx (cpy (load_T t))) A
-            else eval (cpy (cpy (load_T t))) A)
-         else
-           eval (nth (cpx (load_T t)) dfns)
-             (eval (cpx (cpy (load_T t))) A \<triangleright>
-              eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-      by (rule R)
-  qed
-  have R2:
-    "Q (if tag_T t = T_SUC then S (eval (load_T t) A)
-       else if tag_T t = T_PRED then P (eval (load_T t) A)
-       else if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-         eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using nzero R1 by (rule cond_elseQ_E)
-  have R3:
-    "Q (if tag_T t = T_PRED then P (eval (load_T t) A)
-       else if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-         eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using nsuc R2 by (rule cond_elseQ_E)
-  have R4:
-    "Q (if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-         eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using npred R3 by (rule cond_elseQ_E)
-  show ?thesis
-    using nifz R4 by (rule cond_elseQ_E)
-qed
+  shows "Q (if eval (cpx (cpy (load_T t))) A = eval (cpx (cpy (load_T t))) A
+            then (if eval (cpy (cpy (load_T t))) A = eval (cpy (cpy (load_T t))) A
+                  then eval (nth (cpx (load_T t)) dfns)
+                         ((eval (cpx (cpy (load_T t))) A)\<triangleright> ((eval (cpy (cpy (load_T t))) A) \<triangleright> Nil))
+                  else 0)
+            else 0)"
+  by (rule cond_elseQ_E[where Q="Q", OF nifz cond_elseQ_E[where Q="Q", OF npred cond_elseQ_E[where Q="Q", OF nsuc cond_elseQ_E[where Q="Q", OF nzero cond_elseQ_E[where Q="Q", OF nvar defI[where Q="Q", OF eval_def H]]]]]])
 
 lemma eval_appI:
   assumes t: "t N"
       and tg: "tag_T t = T_APP"
       and H:
-        "Q
-          (eval (nth (cpx (load_T t)) dfns)
-            (eval (cpx (cpy (load_T t))) A \<triangleright>
-             eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
+        "Q (if eval (cpx (cpy (load_T t))) A = eval (cpx (cpy (load_T t))) A
+            then (if eval (cpy (cpy (load_T t))) A = eval (cpy (cpy (load_T t))) A
+                  then eval (nth (cpx (load_T t)) dfns)
+                         ((eval (cpx (cpy (load_T t))) A)\<triangleright> ((eval (cpy (cpy (load_T t))) A) \<triangleright> Nil))
+                  else 0)
+            else 0)"
   shows "Q (eval t A)"
 proof -
-  have nvar: "\<not> tag_T t = T_VAR"
-    using tg by simp
-  have nzero: "\<not> tag_T t = T_ZERO"
-    using tg by simp
-  have nsuc: "\<not> tag_T t = T_SUC"
-    using tg by simp
-  have npred: "\<not> tag_T t = T_PRED"
-    using tg by simp
-  have nifz: "\<not> tag_T t = T_IFZ"
-    using tg by simp
-  have R4:
-    "Q (if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-         eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using nifz H  by (rule cond_elseQ_I)
-  have R3:
-    "Q (if tag_T t = T_PRED then P (eval (load_T t) A)
-       else if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-         eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using npred R4 by (rule cond_elseQ_I)
-  have R2:
-    "Q (if tag_T t = T_SUC then S (eval (load_T t) A)
-       else if tag_T t = T_PRED then P (eval (load_T t) A)
-       else if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-         eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using nsuc R3 by (rule cond_elseQ_I)
-  have R1:
-    "Q (if tag_T t = T_ZERO then 0
-       else if tag_T t = T_SUC then S (eval (load_T t) A)
-       else if tag_T t = T_PRED then P (eval (load_T t) A)
-       else if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-         eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using nzero R2 by (rule cond_elseQ_I)
-  have R:
-    "Q (if tag_T t = T_VAR then nth (load_T t) A
-       else if tag_T t = T_ZERO then 0
-       else if tag_T t = T_SUC then S (eval (load_T t) A)
-       else if tag_T t = T_PRED then P (eval (load_T t) A)
-       else if tag_T t = T_IFZ then
-         (if eval (cpx (load_T t)) A = 0
-          then eval (cpx (cpy (load_T t))) A
-          else eval (cpy (cpy (load_T t))) A)
-       else
-         eval (nth (cpx (load_T t)) dfns)
-           (eval (cpx (cpy (load_T t))) A \<triangleright>
-            eval (cpy (cpy (load_T t))) A \<triangleright> Nil))"
-    using nvar R1 by (rule cond_elseQ_I)
+  have nvar: "\<not> tag_T t = T_VAR" using tg by simp
+  have nzero: "\<not> tag_T t = T_ZERO" using tg by simp
+  have nsuc: "\<not> tag_T t = T_SUC" using tg by simp
+  have npred: "\<not> tag_T t = T_PRED" using tg by simp
+  have nifz: "\<not> tag_T t = T_IFZ" using tg by simp
   show ?thesis
-    apply (rule defE[OF eval_def[where t=t and A=A]])
-    using R .
+    by (rule defE[OF eval_def[where t=t and A=A]],
+        rule cond_elseQ_I[where Q="Q", OF nvar cond_elseQ_I[where Q="Q", OF nzero cond_elseQ_I[where Q="Q", OF nsuc cond_elseQ_I[where Q="Q", OF npred cond_elseQ_I[where Q="Q", OF nifz H]]]]])
+qed
+
+text \<open>Call-by-value: a grounded application forces its arguments to be
+  grounded.  From @{text "eval t A N"} with @{text t} an application we can
+  read off the argument values and the underlying body value.\<close>
+lemma eval_app_arg1N:
+  assumes t: "t N" and tg: "tag_T t = T_APP" and hN: "eval t A N"
+  shows "eval (cpx (cpy (load_T t))) A N"
+proof -
+  let ?a1 = "eval (cpx (cpy (load_T t))) A"
+  have body:
+    "(if ?a1 = ?a1
+      then (if eval (cpy (cpy (load_T t))) A = eval (cpy (cpy (load_T t))) A
+            then eval (nth (cpx (load_T t)) dfns)
+                   ((?a1)\<triangleright> ((eval (cpy (cpy (load_T t))) A) \<triangleright> Nil))
+            else 0)
+      else 0) N"
+    by (rule eval_appD[where Q="\<lambda>x. x N", OF t _ _ _ _ _ hN], (simp add: tg)+)
+  have gB: "(?a1 = ?a1) B" by (rule condE3[OF body])
+  show "?a1 N" by (rule conjE1[OF eqE[OF gB]])
+qed
+
+lemma eval_app_arg2N:
+  assumes t: "t N" and tg: "tag_T t = T_APP" and hN: "eval t A N"
+  shows "eval (cpy (cpy (load_T t))) A N"
+proof -
+  let ?a1 = "eval (cpx (cpy (load_T t))) A"
+  let ?a2 = "eval (cpy (cpy (load_T t))) A"
+  have g1: "?a1 = ?a1" by (rule eval_app_arg1N[OF t tg hN, unfolded isNat_def])
+  have body:
+    "(if ?a1 = ?a1
+      then (if ?a2 = ?a2
+            then eval (nth (cpx (load_T t)) dfns) ((?a1)\<triangleright> ((?a2) \<triangleright> Nil))
+            else 0)
+      else 0) N"
+    by (rule eval_appD[where Q="\<lambda>x. x N", OF t _ _ _ _ _ hN], (simp add: tg)+)
+  have inner: "(if ?a2 = ?a2 then eval (nth (cpx (load_T t)) dfns) ((?a1)\<triangleright> ((?a2) \<triangleright> Nil)) else 0) N"
+    by (rule condE1[OF g1 body])
+  have gB: "(?a2 = ?a2) B" by (rule condE3[OF inner])
+  show "?a2 N" by (rule conjE1[OF eqE[OF gB]])
+qed
+
+lemma eval_app_val:
+  assumes t: "t N" and tg: "tag_T t = T_APP" and hN: "eval t A N"
+  shows "eval t A = eval (nth (cpx (load_T t)) dfns)
+                      ((eval (cpx (cpy (load_T t))) A)\<triangleright> ((eval (cpy (cpy (load_T t))) A) \<triangleright> Nil))"
+proof -
+  let ?a1 = "eval (cpx (cpy (load_T t))) A"
+  let ?a2 = "eval (cpy (cpy (load_T t))) A"
+  let ?body = "eval (nth (cpx (load_T t)) dfns) ((?a1)\<triangleright> ((?a2) \<triangleright> Nil))"
+  have a1N: "?a1 N" by (rule eval_app_arg1N[OF t tg hN])
+  have a2N: "?a2 N" by (rule eval_app_arg2N[OF t tg hN])
+  have g1: "?a1 = ?a1" by (rule a1N[unfolded isNat_def])
+  have g2: "?a2 = ?a2" by (rule a2N[unfolded isNat_def])
+  have refl: "eval t A = eval t A" by (rule hN[unfolded isNat_def])
+  have red: "eval t A = (if ?a1 = ?a1 then (if ?a2 = ?a2 then ?body else 0) else 0)"
+    by (rule eval_appD[where Q="\<lambda>x. eval t A = x", OF t _ _ _ _ _ refl], (simp add: tg)+)
+  have outerN: "(if ?a1 = ?a1 then (if ?a2 = ?a2 then ?body else 0) else 0) N"
+    using red hN by (rule eqSubst[where Q="\<lambda>z. z N"])
+  have innerN: "(if ?a2 = ?a2 then ?body else 0) N" by (rule condE1[OF g1 outerN])
+  have bodyN: "?body N" by (rule condE1[OF g2 innerN])
+  have e1: "(if ?a1 = ?a1 then (if ?a2 = ?a2 then ?body else 0) else 0) = (if ?a2 = ?a2 then ?body else 0)"
+    by (rule condI1Eq[OF g1 innerN innerN[unfolded isNat_def]])
+  have e2: "(if ?a2 = ?a2 then ?body else 0) = ?body"
+    by (rule condI1Eq[OF g2 bodyN bodyN[unfolded isNat_def]])
+  have t1: "eval t A = (if ?a2 = ?a2 then ?body else 0)" using red e1 by (rule eq_trans)
+  show ?thesis using t1 e2 by (rule eq_trans)
 qed
 
 (* Continuation forms of subst_body's constructor equations. *)

@@ -77,8 +77,12 @@ where
          then eval (cpx (cpy (load_T t))) A
          else eval (cpy (cpy (load_T t))) A)
     else
-      eval (nth (cpx (load_T t)) dfns)
-           ((eval (cpx (cpy (load_T t))) A)\<triangleright> ((eval (cpy (cpy (load_T t))) A) \<triangleright> Nil))" and
+      (if eval (cpx (cpy (load_T t))) A = eval (cpx (cpy (load_T t))) A
+       then (if eval (cpy (cpy (load_T t))) A = eval (cpy (cpy (load_T t))) A
+             then eval (nth (cpx (load_T t)) dfns)
+                    ((eval (cpx (cpy (load_T t))) A)\<triangleright> ((eval (cpy (cpy (load_T t))) A) \<triangleright> Nil))
+             else 0)
+       else 0)" and
 
   subst_T_def: "subst_T t j v :=
     if tag_T t = T_VAR then

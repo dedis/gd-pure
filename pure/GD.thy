@@ -309,7 +309,7 @@ axiomatization where
   cond_thenQ_E: "c \<Longrightarrow> Q (if c then a else b) \<Longrightarrow> Q a" and
   cond_thenQ_I: "c \<Longrightarrow> Q a \<Longrightarrow> Q (if c then a else b)" and
   cond_elseQ_E: "\<not> c \<Longrightarrow> Q (if c then a else b) \<Longrightarrow> Q b" and
-  cond_elseQ_I: "\<not> c \<Longrightarrow> Q b \<Longrightarrow>List Q (if c then a else b)"
+  cond_elseQ_I: "\<not> c \<Longrightarrow> Q b \<Longrightarrow> Q (if c then a else b)"
 
 lemma condI1BEq:
   assumes c_holds: "c"
