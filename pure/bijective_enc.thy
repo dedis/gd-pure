@@ -59,7 +59,12 @@ axiomatization
   check_app          :: "jdg \<Rightarrow> pf \<Rightarrow> o"                              and
   valid_step         :: "jdg \<Rightarrow> pf \<Rightarrow> o"                              and
   check_list         :: "pf \<Rightarrow> o"                                    and
-  is_valid_proof     :: "pf \<Rightarrow> jdg \<Rightarrow> o"
+  is_valid_proof     :: "pf \<Rightarrow> jdg \<Rightarrow> o"                              and
+  fresh_T            :: "num \<Rightarrow> tm \<Rightarrow> o"                              and
+  fresh_F            :: "num \<Rightarrow> fm \<Rightarrow> o"                              and
+  fresh_H            :: "num \<Rightarrow> hyp \<Rightarrow> o"                             and
+  dfn_is             :: "dfn \<Rightarrow> num \<Rightarrow> tm \<Rightarrow> o"                        and
+  asn_put            :: "asn \<Rightarrow> num \<Rightarrow> val \<Rightarrow> asn"
 where
 
   eval_def: "eval t A :=
@@ -111,6 +116,33 @@ where
                \<langle>subst_body (cpx (cpy (load_T b))) x y,
                 subst_body (cpy (cpy (load_T b))) x y\<rangle>\<rangle>" and
 
+  fresh_T_def: "fresh_T k t :=
+       if tag_T t = T_VAR then load_T t < k = 1
+       else if tag_T t = T_ZERO then True
+       else if tag_T t = T_SUC then fresh_T k (load_T t)
+       else if tag_T t = T_PRED then fresh_T k (load_T t)
+       else if tag_T t = T_IFZ then
+         fresh_T k (cpx (load_T t)) \<and>
+         fresh_T k (cpx (cpy (load_T t))) \<and>
+         fresh_T k (cpy (cpy (load_T t)))
+       else if tag_T t = T_APP then
+         fresh_T k (cpx (cpy (load_T t))) \<and>
+         fresh_T k (cpy (cpy (load_T t)))
+       else False" and
+
+  fresh_F_def: "fresh_F k f := fresh_T k (cpx (load_F f)) \<and> fresh_T k (cpy (load_F f))" and
+
+  fresh_H_def: "fresh_H k G := if G = Nil then True else fresh_F k (list_hd G) \<and> fresh_H k (list_tl G)" and
+
+  dfn_is_def: "dfn_is d k b := if d < len dfns = 1 then nth d dfns = b \<and> fresh_T k b else False" and
+
+  asn_put_def: "asn_put A i v :=
+      if i = 0 then
+        if A = Nil then v \<triangleright> Nil
+        else v \<triangleright> list_tl A
+      else if A = Nil then 0 \<triangleright> asn_put Nil (i - 1) v
+      else list_hd A \<triangleright> asn_put (list_tl A) (i - 1) v" and
+
   check_template_def: "check_template f phi a b p i :=
     if subst_F p i a = phi \<and> subst_F p i b = f then True
     else if p > 0 = 1 then check_template f phi a b (p - 1) i
@@ -159,7 +191,7 @@ where
             mem (G \<tturnstile> pack_F F_EQ \<langle>load_T lhs, load_T rhs\<rangle>) rest then True
     else if mem (G \<tturnstile> pack_F F_EQ \<langle>pack_T T_SUC lhs, pack_T T_SUC rhs\<rangle>) rest then True
     else if tg_L = T_PRED \<and> tag_T (load_T lhs) = T_SUC \<and>
-            cpx (load_T (load_T lhs)) = rhs \<and>
+            (load_T (load_T lhs)) = rhs \<and>
             mem (G \<tturnstile> pack_F F_EQ \<langle>rhs, rhs\<rangle>) rest then True
     else if tg_L = T_IFZ \<and> rhs = cpy (cpy (load_T lhs)) \<and>
             mem (G \<tturnstile> pack_F F_NEQ \<langle>cpx (load_T lhs), pack_T T_ZERO 0\<rangle>) rest \<and>
@@ -197,7 +229,7 @@ where
     else find_ind_base J a rest (list_tl ptr)" and
 
   check_ind_def: "check_ind J rest :=
-    if mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpx (load_F (conc_of J)), cpx (load_F (conc_of J))\<rangle>) rest then
+    if fresh_H (J + 1) (hyp_of J) \<and> mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>cpx (load_F (conc_of J)), cpx (load_F (conc_of J))\<rangle>) rest then
        find_ind_base J (cpx (load_F (conc_of J))) rest rest
     else False" and
 
@@ -218,6 +250,7 @@ where
   check_struct_def: "check_struct J rest := find_struct J (hyp_of J) rest" and
 
   app_try_def: "app_try J d x y rest :=
+    dfn_is d 2 (nth d dfns) \<and>
     mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>x, x\<rangle>) rest \<and>
     mem (hyp_of J \<tturnstile> pack_F F_EQ \<langle>y, y\<rangle>) rest \<and>
     find_phi J (subst_body (nth d dfns) x y) (pack_T T_APP \<langle>d, \<langle>x, y\<rangle>\<rangle>) rest" and
@@ -411,9 +444,9 @@ lemma mono_pack_F:
 section \<open>4.  Interpret bga_full. transfers `consistent` to this instance\<close>
 
 interpretation conc: bga_full
-  tag_T load_T pack_T tag_F load_F pack_F dfns
+  tag_T load_T pack_T tag_F load_F pack_F fresh_T fresh_F fresh_H dfns dfn_is
   eval
-  subst_T subst_F subst_body
+  subst_T subst_F subst_body asn_put
   check_template rep_vars_T rep_vars_F find_phi find_eq check_subst
   check_eq_rules check_neq_rules
   check_ind_template find_ind_base check_ind
@@ -424,6 +457,7 @@ interpretation conc: bga_full
   apply (fact dfns_N pack_F_N tag_F_N load_F_N pack_T_N tag_T_N load_T_N
               tag_pack_F load_pack_F tag_pack_T load_pack_T pack_tag_F pack_tag_T
               decrease_F decrease_T tag_T_zero mono_pack_T mono_pack_F
+              fresh_T_def fresh_F_def fresh_H_def dfn_is_def asn_put_def
               eval_def subst_T_def subst_F_def subst_body_def
               check_template_def rep_vars_T_def rep_vars_F_def find_phi_def
               find_eq_def check_subst_def check_eq_rules_def check_neq_rules_def

@@ -253,8 +253,8 @@ locale bga_bijective_encoding =
   assumes tag_T_zero: "tag_T 0 = T_ZERO"
 
   (*Monotone assumptions for Bounding *)
-  assumes mono_pack_T: "(x \<le> y = 1) \<Longrightarrow> (pack_T tg x \<le> pack_T tg y =1)"
-  assumes mono_pack_F: "(x \<le> y = 1) \<Longrightarrow> (pack_F tg x \<le> pack_F tg y =1)"
+  assumes mono_pack_T: "\<lbrakk>tg N; x N; y N; x \<le> y = 1\<rbrakk> \<Longrightarrow> (pack_T tg x \<le> pack_T tg y = 1)"
+  assumes mono_pack_F: "\<lbrakk>tg N; x N; y N; x \<le> y = 1\<rbrakk> \<Longrightarrow> (pack_F tg x \<le> pack_F tg y = 1)"
 begin
 
 lemma fresh_T_bool [auto]:
@@ -662,11 +662,20 @@ locale bga_subst_semantics = bga_semantics + bga_subst +
                    else v \<triangleright> list_tl A
               else if A = Nil then 0 \<triangleright> asn_put Nil (i - 1) v
               else list_hd A \<triangleright> asn_put (list_tl A) (i - 1) v"
-  assumes sat_subst_F: "\<lbrakk>f N; i N; s N\<rbrakk> \<Longrightarrow> sat (subst_F f i s) A \<longleftrightarrow> sat f (asn_put A i (eval s A))" 
-  assumes sat_hyp_put: "\<lbrakk>G N; i N; v N; fresh_H i G; sat_hyp G A\<rbrakk> \<Longrightarrow> sat_hyp G (asn_put A i v)" 
-  assumes eval_var_put: "\<lbrakk>i N; v N\<rbrakk> \<Longrightarrow> eval (pack_T T_VAR i) (asn_put A i v) = v" 
-  assumes asn_put_overwrite: "\<lbrakk>i N; v N; w N\<rbrakk> \<Longrightarrow> asn_put (asn_put A i v) i w = asn_put A i w"
 begin
+
+(* 4th is maybe a bit hard?*)
+lemma eval_var_put: "\<lbrakk>i N; v N\<rbrakk> \<Longrightarrow> eval (pack_T T_VAR i) (asn_put A i v) = v"
+  sorry
+
+lemma asn_put_overwrite: "\<lbrakk>i N; v N; w N\<rbrakk> \<Longrightarrow> asn_put (asn_put A i v) i w = asn_put A i w"
+  sorry
+
+lemma sat_subst_F: "\<lbrakk>f N; i N; s N\<rbrakk> \<Longrightarrow> sat (subst_F f i s) A \<longleftrightarrow> sat f (asn_put A i (eval s A))"
+  sorry
+
+lemma sat_hyp_put: "\<lbrakk>G N; i N; v N; fresh_H i G; sat_hyp G A\<rbrakk> \<Longrightarrow> sat_hyp G (asn_put A i v)"
+  sorry
 
 lemma nth_suc_cons:
   assumes k: "k N" and h: "h N" and t: "t N" and nk: "nth k t N"
