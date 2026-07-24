@@ -666,6 +666,79 @@ locale bga_subst_semantics = bga_semantics + bga_subst +
               else list_hd A \<triangleright> asn_put (list_tl A) (i - 1) v"
 begin
 
+text \<open>Freshness is inherited by every member of a hypothesis list.
+  All the propositions involved (fresh_H, fresh_F, membership) are proper
+  booleans, so we can run the induction through the grounded object
+  implication.\<close>
+lemma fresh_H_mem:
+  assumes i: "i N" and G: "G N" and f: "f N"
+      and fr: "fresh_H i G" and mm: "f \<in> G"
+  shows "fresh_F i f"
+proof -
+  have main: "fresh_H i G \<longrightarrow> (f \<in> G \<longrightarrow> fresh_F i f)"
+  proof (rule list_induct[OF G])
+    show "fresh_H i Nil \<longrightarrow> (f \<in> Nil \<longrightarrow> fresh_F i f)"
+    proof (rule implI)
+      show "fresh_H i Nil B" by (rule fresh_H_bool[OF i nil_nat])
+    next
+      assume "fresh_H i Nil"
+      show "f \<in> Nil \<longrightarrow> fresh_F i f"
+      proof (rule implI)
+        show "(f \<in> Nil) B" by (rule mem_bool[OF f nil_nat])
+      next
+        assume mn: "f \<in> Nil"
+        show "fresh_F i f" by (rule exF[OF mn mem_nil])
+      qed
+    qed
+  next
+    fix h t
+    assume h: "h N" and t: "t N"
+       and IH: "fresh_H i t \<longrightarrow> (f \<in> t \<longrightarrow> fresh_F i f)"
+    have ht: "h \<triangleright> t N" using h t by simp
+    show "fresh_H i (h \<triangleright> t) \<longrightarrow> (f \<in> (h \<triangleright> t) \<longrightarrow> fresh_F i f)"
+    proof (rule implI)
+      show "fresh_H i (h \<triangleright> t) B" by (rule fresh_H_bool[OF i ht])
+    next
+      assume frht: "fresh_H i (h \<triangleright> t)"
+      have ne: "\<not> (h \<triangleright> t = Nil)" using h t by simp
+      have unf0: "if (h \<triangleright> t) = Nil then True
+                    else fresh_F i (list_hd (h \<triangleright> t)) \<and> fresh_H i (list_tl (h \<triangleright> t))"
+        using frht by (rule defI[OF fresh_H_def[where k=i and G="h \<triangleright> t"]])
+      have conj0: "fresh_F i (list_hd (h \<triangleright> t)) \<and> fresh_H i (list_tl (h \<triangleright> t))"
+        by (rule notcond_thenE[OF ne unf0])
+      have frh: "fresh_F i h"
+        using conjE1[OF conj0] by (simp only: list_hd_cons[OF h t])
+      have frt: "fresh_H i t"
+        using conjE2[OF conj0] by (simp only: list_tl_cons[OF h t])
+      show "f \<in> (h \<triangleright> t) \<longrightarrow> fresh_F i f"
+      proof (rule implI)
+        show "(f \<in> (h \<triangleright> t)) B" by (rule mem_bool[OF f ht])
+      next
+        assume mm2: "f \<in> (h \<triangleright> t)"
+        have split: "f \<in> (h \<triangleright> t) \<longleftrightarrow> (if h = f then True else f \<in> t)"
+          by (rule mem_cons[OF h t f])
+        have cond: "if h = f then True else f \<in> t"
+          by (rule implE[OF iffE1[OF split] mm2])
+        show "fresh_F i f"
+        proof (rule cases_bool[where q="h = f"])
+          show "(h = f) B" by (rule eqBool[OF h f])
+        next
+          assume hf: "h = f"
+          show "fresh_F i f"
+            using hf frh by (rule eqSubst[where Q="\<lambda>z. fresh_F i z"])
+        next
+          assume hf: "\<not> h = f"
+          have ft: "f \<in> t" by (rule notcond_thenE[OF hf cond])
+          have imp1: "f \<in> t \<longrightarrow> fresh_F i f" by (rule implE[OF IH frt])
+          show "fresh_F i f" by (rule implE[OF imp1 ft])
+        qed
+      qed
+    qed
+  qed
+  have imp1: "f \<in> G \<longrightarrow> fresh_F i f" by (rule implE[OF main fr])
+  show "fresh_F i f" by (rule implE[OF imp1 mm])
+qed
+
 (* 4th is maybe a bit hard?*)
 lemma sat_subst_F: "\<lbrakk>f N; i N; s N\<rbrakk> \<Longrightarrow> sat (subst_F f i s) A \<longleftrightarrow> sat f (asn_put A i (eval s A))"
   sorry
@@ -687,6 +760,56 @@ proof -
   show ?thesis
     by (rule defE[OF nth_def[where i="S k" and xs="h \<triangleright> t"]], rule condI2Eq[OF ne nk inner])
 qed
+
+text \<open>With the totalised nth (out-of-range yields 0 rather
+  than omega), "nth i Nil" reduces to 0 and nth
+  is everywhere grounded.\<close>
+lemma nth_nil: "nth i Nil = 0"
+  apply (rule defE[OF nth_def[where i=i and xs=Nil]])
+  apply (rule condI1Eq[where d=0])
+    apply (rule nil_nat[unfolded isNat_def])
+   apply (rule nat0)
+  apply (rule nat0[unfolded isNat_def])
+  done
+
+lemma nth_N:
+  assumes xs: "xs N"
+  shows "\<forall>i. nth i xs N"
+proof (rule list_induct[OF xs])
+  show "\<forall>i. nth i Nil N"
+  proof (rule forallI)
+    fix i assume iN: "i N"
+    show "nth i Nil N"
+      using eqSym[OF nth_nil] nat0 by (rule eqSubst[where Q="\<lambda>z. z N"])
+  qed
+next
+  fix h t
+  assume h: "h N" and t: "t N" and IH: "\<forall>i. nth i t N"
+  show "\<forall>i. nth i (h \<triangleright> t) N"
+  proof (rule forallI)
+    fix i assume iN: "i N"
+    show "nth i (h \<triangleright> t) N"
+    proof (rule cases_nat_2[where x=i])
+      show "i N" by (rule iN)
+    next
+      assume "i = 0"
+      show "nth 0 (h \<triangleright> t) N"
+        using eqSym[OF nth_zero_cons[OF h t]] h
+        by (rule eqSubst[where Q="\<lambda>z. z N"])
+    next
+      fix k assume k: "k N" and ik: "i = S k"
+      have nkt: "nth k t N" by (rule forallE[OF IH k])
+      have red: "nth (S k) (h \<triangleright> t) = nth k t" by (rule nth_suc_cons[OF k h t nkt])
+      show "nth (S k) (h \<triangleright> t) N"
+        using eqSym[OF red] nkt by (rule eqSubst[where Q="\<lambda>z. z N"])
+    qed
+  qed
+qed
+
+lemma nth_N':
+  assumes xs: "xs N" and i: "i N"
+  shows "nth i xs N"
+  by (rule forallE[OF nth_N[OF xs] i])
 
 text \<open>These need A N (for a junk A the
   guard A = Nil is not grounded).\<close>
@@ -880,6 +1003,207 @@ proof -
     qed
   qed
   show ?thesis by (rule forallE[OF main A])
+qed
+
+lemma nth_zero_ne_nil:
+  assumes L: "L N" and ne: "\<not> L = Nil"
+  shows "nth 0 L = list_hd L"
+proof -
+  have rec: "list_hd L \<triangleright> list_tl L = L" by (rule cons_reconstr[OF L ne])
+  have z: "nth 0 (list_hd L \<triangleright> list_tl L) = list_hd L"
+    by (rule nth_zero_cons[OF list_hd_nat[OF L] list_tl_nat[OF L]])
+  show ?thesis
+    using rec z by (rule eqSubst[where Q="\<lambda>z. nth 0 z = list_hd L"])
+qed
+
+lemma nth_suc_ne_nil:
+  assumes m: "m N" and L: "L N" and ne: "\<not> L = Nil"
+  shows "nth (S m) L = nth m (list_tl L)"
+proof -
+  have rec: "list_hd L \<triangleright> list_tl L = L" by (rule cons_reconstr[OF L ne])
+  have nmtl: "nth m (list_tl L) N" by (rule nth_N'[OF list_tl_nat[OF L] m])
+  have z: "nth (S m) (list_hd L \<triangleright> list_tl L) = nth m (list_tl L)"
+    by (rule nth_suc_cons[OF m list_hd_nat[OF L] list_tl_nat[OF L] nmtl])
+  show ?thesis
+    using rec z by (rule eqSubst[where Q="\<lambda>z. nth (S m) z = nth m (list_tl L)"])
+qed
+
+text \<open>Coincidence away from the updated index: for @{text "j \<noteq> i"} the value at
+  @{text j} is unaffected by @{text "asn_put A i v"}.  Now that @{text nth} is
+  total this holds unconditionally (no range guard).\<close>
+lemma nth_put_ne:
+  assumes A: "A N" and i: "i N" and v: "v N" and j: "j N" and ne: "\<not> j = i"
+  shows "nth j (asn_put A i v) = nth j A"
+proof -
+  have main: "\<forall>A. \<forall>j. (\<not> j = i) \<longrightarrow> nth j (asn_put A i v) = nth j A"
+  proof (rule ind[OF i])
+    (* ================= base: i = 0 ================= *)
+    show "\<forall>A. \<forall>j. (\<not> j = 0) \<longrightarrow> nth j (asn_put A 0 v) = nth j A"
+    proof (rule forallI)
+      fix Aa assume Aa: "Aa N"
+      show "\<forall>j. (\<not> j = 0) \<longrightarrow> nth j (asn_put Aa 0 v) = nth j Aa"
+      proof (rule forallI)
+        fix jj assume jj: "jj N"
+        show "(\<not> jj = 0) \<longrightarrow> nth jj (asn_put Aa 0 v) = nth jj Aa"
+        proof (rule implI)
+          show "(\<not> jj = 0) B" by (rule not_bool[OF eqBool[OF jj nat0]])
+        next
+          assume jnz: "\<not> jj = 0"
+          show "nth jj (asn_put Aa 0 v) = nth jj Aa"
+          proof (rule cases_nat_2[where x=jj])
+            show "jj N" by (rule jj)
+          next
+            assume jz: "jj = 0"
+            show "nth 0 (asn_put Aa 0 v) = nth 0 Aa" by (rule exF[OF jz jnz])
+          next
+            fix m assume m: "m N" and jm: "jj = S m"
+            show "nth (S m) (asn_put Aa 0 v) = nth (S m) Aa"
+            proof (rule cases_bool[where q="Aa = Nil"])
+              show "(Aa = Nil) B" by (rule eqBool[OF Aa nil_nat])
+            next
+              assume anil: "Aa = Nil"
+              have nmNil: "nth m Nil N" by (rule nth_N'[OF nil_nat m])
+              have e1: "asn_put Nil 0 v = v \<triangleright> Nil" by (rule asn_put_0_nil[OF v])
+              have e2: "nth (S m) (v \<triangleright> Nil) = nth m Nil"
+                by (rule nth_suc_cons[OF m v nil_nat nmNil])
+              have e3: "nth (S m) (asn_put Nil 0 v) = nth m Nil"
+                using eqSym[OF e1] e2 by (rule eqSubst[where Q="\<lambda>z. nth (S m) z = nth m Nil"])
+              have e4: "nth (S m) (asn_put Nil 0 v) = 0" using e3 nth_nil by (rule eq_trans)
+              have gNil: "nth (S m) (asn_put Nil 0 v) = nth (S m) Nil"
+                using e4 eqSym[OF nth_nil] by (rule eq_trans)
+              show "nth (S m) (asn_put Aa 0 v) = nth (S m) Aa"
+                using eqSym[OF anil] gNil
+                by (rule eqSubst[where Q="\<lambda>z. nth (S m) (asn_put z 0 v) = nth (S m) z"])
+            next
+              assume ann: "\<not> Aa = Nil"
+              have nmtl: "nth m (list_tl Aa) N" by (rule nth_N'[OF list_tl_nat[OF Aa] m])
+              have e1: "asn_put Aa 0 v = v \<triangleright> list_tl Aa" by (rule asn_put_0_ne[OF Aa v ann])
+              have e2: "nth (S m) (v \<triangleright> list_tl Aa) = nth m (list_tl Aa)"
+                by (rule nth_suc_cons[OF m v list_tl_nat[OF Aa] nmtl])
+              have lhs: "nth (S m) (asn_put Aa 0 v) = nth m (list_tl Aa)"
+                using eqSym[OF e1] e2 by (rule eqSubst[where Q="\<lambda>z. nth (S m) z = nth m (list_tl Aa)"])
+              have rhs: "nth (S m) Aa = nth m (list_tl Aa)" by (rule nth_suc_ne_nil[OF m Aa ann])
+              show "nth (S m) (asn_put Aa 0 v) = nth (S m) Aa"
+                using lhs eqSym[OF rhs] by (rule eq_trans)
+            qed
+          qed
+        qed
+      qed
+    qed
+  next
+    (* ================= step: i = S k ================= *)
+    fix k assume k: "k N"
+      and IH: "\<forall>A. \<forall>j. (\<not> j = k) \<longrightarrow> nth j (asn_put A k v) = nth j A"
+    show "\<forall>A. \<forall>j. (\<not> j = S k) \<longrightarrow> nth j (asn_put A (S k) v) = nth j A"
+    proof (rule forallI)
+      fix Aa assume Aa: "Aa N"
+      show "\<forall>j. (\<not> j = S k) \<longrightarrow> nth j (asn_put Aa (S k) v) = nth j Aa"
+      proof (rule forallI)
+        fix jj assume jj: "jj N"
+        show "(\<not> jj = S k) \<longrightarrow> nth jj (asn_put Aa (S k) v) = nth jj Aa"
+        proof (rule implI)
+          show "(\<not> jj = S k) B" by (rule not_bool[OF eqBool[OF jj natS[OF k]]])
+        next
+          assume jnz2: "\<not> jj = S k"
+          show "nth jj (asn_put Aa (S k) v) = nth jj Aa"
+          proof (rule cases_nat_2[where x=jj])
+            show "jj N" by (rule jj)
+          next
+            assume jz: "jj = 0"
+            show "nth 0 (asn_put Aa (S k) v) = nth 0 Aa"
+            proof (rule cases_bool[where q="Aa = Nil"])
+              show "(Aa = Nil) B" by (rule eqBool[OF Aa nil_nat])
+            next
+              assume anil: "Aa = Nil"
+              have recN: "asn_put Nil k v N" by (rule asn_put_N[OF nil_nat k v])
+              have e1: "asn_put Nil (S k) v = 0 \<triangleright> asn_put Nil k v" by (rule asn_put_S_nil[OF v k])
+              have e2: "nth 0 (0 \<triangleright> asn_put Nil k v) = 0" by (rule nth_zero_cons[OF nat0 recN])
+              have e3: "nth 0 (asn_put Nil (S k) v) = 0"
+                using eqSym[OF e1] e2 by (rule eqSubst[where Q="\<lambda>z. nth 0 z = 0"])
+              have gNil: "nth 0 (asn_put Nil (S k) v) = nth 0 Nil"
+                using e3 eqSym[OF nth_nil] by (rule eq_trans)
+              show "nth 0 (asn_put Aa (S k) v) = nth 0 Aa"
+                using eqSym[OF anil] gNil
+                by (rule eqSubst[where Q="\<lambda>z. nth 0 (asn_put z (S k) v) = nth 0 z"])
+            next
+              assume ann: "\<not> Aa = Nil"
+              have recN: "asn_put (list_tl Aa) k v N" by (rule asn_put_N[OF list_tl_nat[OF Aa] k v])
+              have e1: "asn_put Aa (S k) v = list_hd Aa \<triangleright> asn_put (list_tl Aa) k v"
+                by (rule asn_put_S_ne[OF Aa v k ann])
+              have e2: "nth 0 (list_hd Aa \<triangleright> asn_put (list_tl Aa) k v) = list_hd Aa"
+                by (rule nth_zero_cons[OF list_hd_nat[OF Aa] recN])
+              have lhs: "nth 0 (asn_put Aa (S k) v) = list_hd Aa"
+                using eqSym[OF e1] e2 by (rule eqSubst[where Q="\<lambda>z. nth 0 z = list_hd Aa"])
+              have rhs: "nth 0 Aa = list_hd Aa" by (rule nth_zero_ne_nil[OF Aa ann])
+              show "nth 0 (asn_put Aa (S k) v) = nth 0 Aa"
+                using lhs eqSym[OF rhs] by (rule eq_trans)
+            qed
+          next
+            fix m assume m: "m N" and jm: "jj = S m"
+            show "nth (S m) (asn_put Aa (S k) v) = nth (S m) Aa"
+            proof (rule cases_bool[where q="m = k"])
+              show "(m = k) B" by (rule eqBool[OF m k])
+            next
+              assume mk: "m = k"
+              have smsk: "S m = S k" using mk by (rule sucCong)
+              have jjsk: "jj = S k" using jm smsk by (rule eq_trans)
+              show "nth (S m) (asn_put Aa (S k) v) = nth (S m) Aa"
+                by (rule exF[OF jjsk jnz2])
+            next
+              assume mk: "\<not> m = k"
+              show "nth (S m) (asn_put Aa (S k) v) = nth (S m) Aa"
+              proof (rule cases_bool[where q="Aa = Nil"])
+                show "(Aa = Nil) B" by (rule eqBool[OF Aa nil_nat])
+              next
+                assume anil: "Aa = Nil"
+                have recN: "asn_put Nil k v N" by (rule asn_put_N[OF nil_nat k v])
+                have nmrec: "nth m (asn_put Nil k v) N" by (rule nth_N'[OF recN m])
+                have e1: "asn_put Nil (S k) v = 0 \<triangleright> asn_put Nil k v" by (rule asn_put_S_nil[OF v k])
+                have e2: "nth (S m) (0 \<triangleright> asn_put Nil k v) = nth m (asn_put Nil k v)"
+                  by (rule nth_suc_cons[OF m nat0 recN nmrec])
+                have lhs1: "nth (S m) (asn_put Nil (S k) v) = nth m (asn_put Nil k v)"
+                  using eqSym[OF e1] e2 by (rule eqSubst[where Q="\<lambda>z. nth (S m) z = nth m (asn_put Nil k v)"])
+                have ihstep1: "\<forall>j. (\<not> j = k) \<longrightarrow> nth j (asn_put Nil k v) = nth j Nil"
+                  by (rule forallE[OF IH nil_nat])
+                have ihstep2: "(\<not> m = k) \<longrightarrow> nth m (asn_put Nil k v) = nth m Nil"
+                  by (rule forallE[OF ihstep1 m])
+                have ihm: "nth m (asn_put Nil k v) = nth m Nil" by (rule implE[OF ihstep2 mk])
+                have lhs2: "nth (S m) (asn_put Nil (S k) v) = nth m Nil" using lhs1 ihm by (rule eq_trans)
+                have lhsz: "nth (S m) (asn_put Nil (S k) v) = 0" using lhs2 nth_nil by (rule eq_trans)
+                have gNil: "nth (S m) (asn_put Nil (S k) v) = nth (S m) Nil"
+                  using lhsz eqSym[OF nth_nil] by (rule eq_trans)
+                show "nth (S m) (asn_put Aa (S k) v) = nth (S m) Aa"
+                  using eqSym[OF anil] gNil
+                  by (rule eqSubst[where Q="\<lambda>z. nth (S m) (asn_put z (S k) v) = nth (S m) z"])
+              next
+                assume ann: "\<not> Aa = Nil"
+                have recN: "asn_put (list_tl Aa) k v N" by (rule asn_put_N[OF list_tl_nat[OF Aa] k v])
+                have nmrec: "nth m (asn_put (list_tl Aa) k v) N" by (rule nth_N'[OF recN m])
+                have e1: "asn_put Aa (S k) v = list_hd Aa \<triangleright> asn_put (list_tl Aa) k v"
+                  by (rule asn_put_S_ne[OF Aa v k ann])
+                have e2: "nth (S m) (list_hd Aa \<triangleright> asn_put (list_tl Aa) k v) = nth m (asn_put (list_tl Aa) k v)"
+                  by (rule nth_suc_cons[OF m list_hd_nat[OF Aa] recN nmrec])
+                have lhs1: "nth (S m) (asn_put Aa (S k) v) = nth m (asn_put (list_tl Aa) k v)"
+                  using eqSym[OF e1] e2 by (rule eqSubst[where Q="\<lambda>z. nth (S m) z = nth m (asn_put (list_tl Aa) k v)"])
+                have ihstep1: "\<forall>j. (\<not> j = k) \<longrightarrow> nth j (asn_put (list_tl Aa) k v) = nth j (list_tl Aa)"
+                  by (rule forallE[OF IH list_tl_nat[OF Aa]])
+                have ihstep2: "(\<not> m = k) \<longrightarrow> nth m (asn_put (list_tl Aa) k v) = nth m (list_tl Aa)"
+                  by (rule forallE[OF ihstep1 m])
+                have ihm: "nth m (asn_put (list_tl Aa) k v) = nth m (list_tl Aa)" by (rule implE[OF ihstep2 mk])
+                have lhs2: "nth (S m) (asn_put Aa (S k) v) = nth m (list_tl Aa)" using lhs1 ihm by (rule eq_trans)
+                have rhs: "nth (S m) Aa = nth m (list_tl Aa)" by (rule nth_suc_ne_nil[OF m Aa ann])
+                show "nth (S m) (asn_put Aa (S k) v) = nth (S m) Aa"
+                  using lhs2 eqSym[OF rhs] by (rule eq_trans)
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+  have m1: "\<forall>j. (\<not> j = i) \<longrightarrow> nth j (asn_put A i v) = nth j A" by (rule forallE[OF main A])
+  have m2: "(\<not> j = i) \<longrightarrow> nth j (asn_put A i v) = nth j A" by (rule forallE[OF m1 j])
+  show ?thesis by (rule implE[OF m2 ne])
 qed
 
 lemma eval_var_put:
