@@ -56,7 +56,7 @@ locale suff_semantics = suff_syntax +
 
 locale consistent =  suff_semantics +
   (* Valid proofs yield satisfied formulas *)
-  assumes soundness: "\<lbrakk>is_valid_proof p J; sat_hyp (hyp_of J) A\<rbrakk> \<Longrightarrow> sat_fm (conc_of J) A"
+  assumes soundness: "\<lbrakk>is_valid_proof p J; sat_hyp (hyp_of J) A; A N\<rbrakk> \<Longrightarrow> sat_fm (conc_of J) A"
 begin
 
 lemma syntactically_consistent:
@@ -113,9 +113,10 @@ proof -
 
     have eq_sat: "sat_fm  (conc_of \<langle>Nil, mk_eq a b\<rangle>) zero"
       apply (rule soundness)
-       apply (rule eq_pf)
-      using mk_eq_nat apply simp
+        apply (rule eq_pf)
+       using mk_eq_nat apply simp
       apply (rule sat_hyp_nil)
+      apply (rule nat0)
       done
 
     have eq_sat1: "sat_fm (mk_eq a b) zero"
@@ -124,9 +125,10 @@ proof -
 
     have neq_sat: "sat_fm  (conc_of \<langle>Nil, mk_neq a b\<rangle>) zero"
       apply (rule soundness)
-       apply (rule neq_pf)
-      using mk_neq_nat apply simp
+        apply (rule neq_pf)
+       using mk_neq_nat apply simp
       apply (rule sat_hyp_nil)
+      apply (rule nat0)
       done
     have neq_sat1: "sat_fm (mk_neq a b) zero"
       using neq_sat mk_neq_nat apply simp
@@ -665,12 +667,6 @@ locale bga_subst_semantics = bga_semantics + bga_subst +
 begin
 
 (* 4th is maybe a bit hard?*)
-lemma eval_var_put: "\<lbrakk>i N; v N\<rbrakk> \<Longrightarrow> eval (pack_T T_VAR i) (asn_put A i v) = v"
-  sorry
-
-lemma asn_put_overwrite: "\<lbrakk>i N; v N; w N\<rbrakk> \<Longrightarrow> asn_put (asn_put A i v) i w = asn_put A i w"
-  sorry
-
 lemma sat_subst_F: "\<lbrakk>f N; i N; s N\<rbrakk> \<Longrightarrow> sat (subst_F f i s) A \<longleftrightarrow> sat f (asn_put A i (eval s A))"
   sorry
 
@@ -692,42 +688,332 @@ proof -
     by (rule defE[OF nth_def[where i="S k" and xs="h \<triangleright> t"]], rule condI2Eq[OF ne nk inner])
 qed
 
-definition asn_puts :: "asn \<Rightarrow> List \<Rightarrow> asn" where
-  "asn_puts A us \<equiv>  list_rec A (\<lambda>u C. asn_put C (cpx u) (cpy u)) us"
-
-lemma asn_puts_nil: "asn_puts A Nil = A"
-  unfolding asn_puts_def by (rule list_rec_nil)
+text \<open>These need A N (for a junk A the
+  guard A = Nil is not grounded).\<close>
 
 lemma asn_put_N:
-  assumes i: "i N"
-      and v: "v N"
+  assumes A: "A N" and i: "i N" and v: "v N"
   shows "asn_put A i v N"
 proof -
-  have ow:
-    "asn_put (asn_put A i v) i v = asn_put A i v"
-    using i v v by (rule asn_put_overwrite)
-  show ?thesis
-    using ow by (rule eq_impl_term2)
+  have main: "\<forall>b. asn_put b i v N"
+  proof (rule ind[OF i])
+    show "\<forall>b. asn_put b 0 v N"
+    proof (rule forallI)
+      fix b assume B: "b N"
+      show "asn_put b 0 v N"
+      proof (rule cases_bool[where q = "b = Nil"])
+        show "(b = Nil) B" by (rule eqBool[OF B nil_nat])
+      next
+        assume c: "b = Nil"
+        have d: "v \<triangleright> Nil N" using v by simp
+        have r: "asn_put b 0 v = v \<triangleright> Nil"
+          apply (rule defE[OF asn_put_def[where A = b and i = 0 and v = v]])
+          apply (rule condI1Eq[where d = "v \<triangleright> Nil"], rule zeroRefl, rule d)
+          apply (rule condI1Eq[where d = "v \<triangleright> Nil"], rule c, rule d, rule d[unfolded isNat_def])
+          done
+        show "asn_put b 0 v N" by (rule eq_impl_term[OF r])
+      next
+        assume c: "\<not> b = Nil"
+        have d: "v \<triangleright> list_tl b N" using v B by simp
+        have r: "asn_put b 0 v = v \<triangleright> list_tl b"
+          apply (rule defE[OF asn_put_def[where A = b and i = 0 and v = v]])
+          apply (rule condI1Eq[where d = "v \<triangleright> list_tl b"], rule zeroRefl, rule d)
+          apply (rule condI2Eq[where d = "v \<triangleright> list_tl b"], rule c, rule d, rule d[unfolded isNat_def])
+          done
+        show "asn_put b 0 v N" by (rule eq_impl_term[OF r])
+      qed
+    qed
+  next
+    fix k assume k: "k N" and IH: "\<forall>b. asn_put b k v N"
+    have nz: "\<not> S k = 0" using k by simp
+    have sk1: "S k - 1 = k" using k by simp
+    show "\<forall>b. asn_put b (S k) v N"
+    proof (rule forallI)
+      fix b assume B: "b N"
+      show "asn_put b (S k) v N"
+      proof (rule cases_bool[where q = "b = Nil"])
+        show "(b = Nil) B" by (rule eqBool[OF B nil_nat])
+      next
+        assume c: "b = Nil"
+        have recN: "asn_put Nil k v N" by (rule forallE[OF IH nil_nat])
+        have d: "0 \<triangleright> asn_put Nil k v N" using recN by simp
+        have r: "asn_put b (S k) v = 0 \<triangleright> asn_put Nil k v"
+          apply (rule defE[OF asn_put_def[where A = b and i = "S k" and v = v]])
+          apply (rule condI2Eq[where d = "0 \<triangleright> asn_put Nil k v"], rule nz, rule d)
+          apply (rule condI1Eq[where d = "0 \<triangleright> asn_put Nil k v"], rule c, rule d)
+          apply (rule eqSubst[where Q = "\<lambda>n. 0 \<triangleright> asn_put Nil n v = 0 \<triangleright> asn_put Nil k v", OF eqSym[OF sk1]], rule d[unfolded isNat_def])
+          done
+        show "asn_put b (S k) v N" by (rule eq_impl_term[OF r])
+      next
+        assume c: "\<not> b = Nil"
+        have recN: "asn_put (list_tl b) k v N" by (rule forallE[OF IH list_tl_nat[OF B]])
+        have d: "list_hd b \<triangleright> asn_put (list_tl b) k v N" using B recN by simp
+        have r: "asn_put b (S k) v = list_hd b \<triangleright> asn_put (list_tl b) k v"
+          apply (rule defE[OF asn_put_def[where A = b and i = "S k" and v = v]])
+          apply (rule condI2Eq[where d = "list_hd b \<triangleright> asn_put (list_tl b) k v"], rule nz, rule d)
+          apply (rule condI2Eq[where d = "list_hd b \<triangleright> asn_put (list_tl b) k v"], rule c, rule d)
+          apply (rule eqSubst[where Q = "\<lambda>n. list_hd b \<triangleright> asn_put (list_tl b) n v = list_hd b \<triangleright> asn_put (list_tl b) k v", OF eqSym[OF sk1]], rule d[unfolded isNat_def])
+          done
+        show "asn_put b (S k) v N" by (rule eq_impl_term[OF r])
+      qed
+    qed
+  qed
+  show ?thesis by (rule forallE[OF main A])
 qed
 
-lemma asn_puts_cons:
-  assumes i: "i N"
-      and v: "v N"
-      and us: "us N"
-  shows "asn_puts A (\<langle>i, v\<rangle> \<triangleright> us) =  asn_put (asn_puts A us) i v"
+lemma asn_put_0_nil:
+  assumes v: "v N" shows "asn_put Nil 0 v = v \<triangleright> Nil"
 proof -
-  have iv: "\<langle>i, v\<rangle> N"
-    using i v by simp
-  have rec:
-    "list_rec A (\<lambda>u C. asn_put C (cpx u) (cpy u)) (\<langle>i, v\<rangle> \<triangleright> us) =
-     (\<lambda>u C. asn_put C (cpx u) (cpy u)) \<langle>i, v\<rangle> (list_rec A (\<lambda>u C. asn_put C (cpx u) (cpy u)) us)"
-    using iv us by (rule list_rec_cons)
-  have putN:
-    "asn_put (list_rec A  (\<lambda>u C. asn_put C (hyp_of u) (conc_of u)) us) i v N"
-    using i v by (rule asn_put_N)
+  have d: "v \<triangleright> Nil N" using v by simp
   show ?thesis
-    unfolding asn_puts_def
-    using rec i v putN by simp
+    apply (rule defE[OF asn_put_def[where A = Nil and i = 0 and v = v]])
+    apply (rule condI1Eq[where d = "v \<triangleright> Nil"], rule zeroRefl, rule d)
+    apply (rule condI1Eq[where d = "v \<triangleright> Nil"], rule nil_nat[unfolded isNat_def], rule d, rule d[unfolded isNat_def])
+    done
+qed
+
+lemma asn_put_0_ne:
+  assumes A: "A N" and v: "v N" and ne: "\<not> A = Nil"
+  shows "asn_put A 0 v = v \<triangleright> list_tl A"
+proof -
+  have d: "v \<triangleright> list_tl A N" using v A by simp
+  show ?thesis
+    apply (rule defE[OF asn_put_def[where A = A and i = 0 and v = v]])
+    apply (rule condI1Eq[where d = "v \<triangleright> list_tl A"], rule zeroRefl, rule d)
+    apply (rule condI2Eq[where d = "v \<triangleright> list_tl A"], rule ne, rule d, rule d[unfolded isNat_def])
+    done
+qed
+
+lemma asn_put_S_nil:
+  assumes v: "v N" and k: "k N"
+  shows "asn_put Nil (S k) v = 0 \<triangleright> asn_put Nil k v"
+proof -
+  have nz: "\<not> S k = 0" using k by simp
+  have sk1: "S k - 1 = k" using k by simp
+  have recN: "asn_put Nil k v N" by (rule asn_put_N[OF nil_nat k v])
+  have d: "0 \<triangleright> asn_put Nil k v N" using recN by simp
+  show ?thesis
+    apply (rule defE[OF asn_put_def[where A = Nil and i = "S k" and v = v]])
+    apply (rule condI2Eq[where d = "0 \<triangleright> asn_put Nil k v"], rule nz, rule d)
+    apply (rule condI1Eq[where d = "0 \<triangleright> asn_put Nil k v"], rule nil_nat[unfolded isNat_def], rule d)
+    apply (rule eqSubst[where Q = "\<lambda>n. 0 \<triangleright> asn_put Nil n v = 0 \<triangleright> asn_put Nil k v", OF eqSym[OF sk1]], rule d[unfolded isNat_def])
+    done
+qed
+
+lemma asn_put_S_ne:
+  assumes A: "A N" and v: "v N" and k: "k N" and ne: "\<not> A = Nil"
+  shows "asn_put A (S k) v = list_hd A \<triangleright> asn_put (list_tl A) k v"
+proof -
+  have nz: "\<not> S k = 0" using k by simp
+  have sk1: "S k - 1 = k" using k by simp
+  have recN: "asn_put (list_tl A) k v N" by (rule asn_put_N[OF list_tl_nat[OF A] k v])
+  have d: "list_hd A \<triangleright> asn_put (list_tl A) k v N" using A recN by simp
+  show ?thesis
+    apply (rule defE[OF asn_put_def[where A = A and i = "S k" and v = v]])
+    apply (rule condI2Eq[where d = "list_hd A \<triangleright> asn_put (list_tl A) k v"], rule nz, rule d)
+    apply (rule condI2Eq[where d = "list_hd A \<triangleright> asn_put (list_tl A) k v"], rule ne, rule d)
+    apply (rule eqSubst[where Q = "\<lambda>n. list_hd A \<triangleright> asn_put (list_tl A) n v = list_hd A \<triangleright> asn_put (list_tl A) k v", OF eqSym[OF sk1]], rule d[unfolded isNat_def])
+    done
+qed
+
+lemma nth_put_eq:
+  assumes A: "A N" and i: "i N" and v: "v N"
+  shows "nth i (asn_put A i v) = v"
+proof -
+  have main: "\<forall>b. nth i (asn_put b i v) = v"
+  proof (rule ind[OF i])
+    show "\<forall>b. nth 0 (asn_put b 0 v) = v"
+    proof (rule forallI)
+      fix b assume B: "b N"
+      show "nth 0 (asn_put b 0 v) = v"
+      proof (rule cases_bool[where q = "b = Nil"])
+        show "(b = Nil) B" by (rule eqBool[OF B nil_nat])
+      next
+        assume c: "b = Nil"
+        have r: "asn_put b 0 v = v \<triangleright> Nil"
+          using eqSym[OF c] asn_put_0_nil[OF v]
+          by (rule eqSubst[where Q = "\<lambda>z. asn_put z 0 v = v \<triangleright> Nil"])
+        show "nth 0 (asn_put b 0 v) = v"
+          using eqSym[OF r] nth_zero_cons[OF v nil_nat]
+          by (rule eqSubst[where Q = "\<lambda>z. nth 0 z = v"])
+      next
+        assume c: "\<not> b = Nil"
+        have r: "asn_put b 0 v = v \<triangleright> list_tl b" by (rule asn_put_0_ne[OF B v c])
+        show "nth 0 (asn_put b 0 v) = v"
+          using eqSym[OF r] nth_zero_cons[OF v list_tl_nat[OF B]]
+          by (rule eqSubst[where Q = "\<lambda>z. nth 0 z = v"])
+      qed
+    qed
+  next
+    fix k assume k: "k N" and IH: "\<forall>b. nth k (asn_put b k v) = v"
+    show "\<forall>b. nth (S k) (asn_put b (S k) v) = v"
+    proof (rule forallI)
+      fix b assume B: "b N"
+      show "nth (S k) (asn_put b (S k) v) = v"
+      proof (rule cases_bool[where q = "b = Nil"])
+        show "(b = Nil) B" by (rule eqBool[OF B nil_nat])
+      next
+        assume c: "b = Nil"
+        have r: "asn_put b (S k) v = 0 \<triangleright> asn_put Nil k v"
+          using eqSym[OF c] asn_put_S_nil[OF v k]
+          by (rule eqSubst[where Q = "\<lambda>z. asn_put z (S k) v = 0 \<triangleright> asn_put Nil k v"])
+        have ih: "nth k (asn_put Nil k v) = v" by (rule forallE[OF IH nil_nat])
+        have nthN: "nth k (asn_put Nil k v) N" by (rule eq_impl_term[OF ih])
+        have recN: "asn_put Nil k v N" by (rule asn_put_N[OF nil_nat k v])
+        have sc: "nth (S k) (0 \<triangleright> asn_put Nil k v) = nth k (asn_put Nil k v)"
+          by (rule nth_suc_cons[OF k nat0 recN nthN])
+        have sv: "nth (S k) (0 \<triangleright> asn_put Nil k v) = v" using sc ih by (rule eq_trans)
+        show "nth (S k) (asn_put b (S k) v) = v"
+          using eqSym[OF r] sv by (rule eqSubst[where Q = "\<lambda>z. nth (S k) z = v"])
+      next
+        assume c: "\<not> b = Nil"
+        have r: "asn_put b (S k) v = list_hd b \<triangleright> asn_put (list_tl b) k v" by (rule asn_put_S_ne[OF B v k c])
+        have ih: "nth k (asn_put (list_tl b) k v) = v" by (rule forallE[OF IH list_tl_nat[OF B]])
+        have nthN: "nth k (asn_put (list_tl b) k v) N" by (rule eq_impl_term[OF ih])
+        have recN: "asn_put (list_tl b) k v N" by (rule asn_put_N[OF list_tl_nat[OF B] k v])
+        have sc: "nth (S k) (list_hd b \<triangleright> asn_put (list_tl b) k v) = nth k (asn_put (list_tl b) k v)"
+          by (rule nth_suc_cons[OF k list_hd_nat[OF B] recN nthN])
+        have sv: "nth (S k) (list_hd b \<triangleright> asn_put (list_tl b) k v) = v" using sc ih by (rule eq_trans)
+        show "nth (S k) (asn_put b (S k) v) = v"
+          using eqSym[OF r] sv by (rule eqSubst[where Q = "\<lambda>z. nth (S k) z = v"])
+      qed
+    qed
+  qed
+  show ?thesis by (rule forallE[OF main A])
+qed
+
+lemma eval_var_put:
+  assumes A: "A N" and i: "i N" and v: "v N"
+  shows "eval (pack_T T_VAR i) (asn_put A i v) = v"
+proof -
+  have vpN: "pack_T T_VAR i N" by (rule pack_T_N[OF _ i], simp)
+  have tg: "tag_T (pack_T T_VAR i) = T_VAR" by (rule tag_pack_T[OF _ i], simp)
+  have ld: "load_T (pack_T T_VAR i) = i" by (rule load_pack_T[OF _ i], simp)
+  have key: "nth i (asn_put A i v) = v" by (rule nth_put_eq[OF A i v])
+  have H: "nth (load_T (pack_T T_VAR i)) (asn_put A i v) = v"
+    using eqSym[OF ld] key by (rule eqSubst[where Q = "\<lambda>z. nth z (asn_put A i v) = v"])
+  show ?thesis
+    apply (rule defE[OF eval_def[where t = "pack_T T_VAR i" and A = "asn_put A i v"]])
+    apply (rule condI1Eq[where d = v], rule tg, rule v, rule H)
+    done
+qed
+
+lemma asn_put_overwrite:
+  assumes A: "A N" and i: "i N" and v: "v N" and w: "w N"
+  shows "asn_put (asn_put A i v) i w = asn_put A i w"
+proof -
+  have main: "\<forall>b. asn_put (asn_put b i v) i w = asn_put b i w"
+  proof (rule ind[OF i])
+    show "\<forall>b. asn_put (asn_put b 0 v) 0 w = asn_put b 0 w"
+    proof (rule forallI)
+      fix b assume B: "b N"
+      show "asn_put (asn_put b 0 v) 0 w = asn_put b 0 w"
+      proof (rule cases_bool[where q = "b = Nil"])
+        show "(b = Nil) B" by (rule eqBool[OF B nil_nat])
+      next
+        assume c: "b = Nil"
+        have vnil: "v \<triangleright> Nil N" by (rule cons_nat[OF v nil_nat])
+        have r1: "asn_put b 0 v = v \<triangleright> Nil"
+          using eqSym[OF c] asn_put_0_nil[OF v]
+          by (rule eqSubst[where Q = "\<lambda>z. asn_put z 0 v = v \<triangleright> Nil"])
+        have ne1: "\<not> v \<triangleright> Nil = Nil" using v by simp
+        have r2: "asn_put (v \<triangleright> Nil) 0 w = w \<triangleright> list_tl (v \<triangleright> Nil)" by (rule asn_put_0_ne[OF vnil w ne1])
+        have tl1: "list_tl (v \<triangleright> Nil) = Nil" by (rule list_tl_cons[OF v nil_nat])
+        have r3: "asn_put b 0 w = w \<triangleright> Nil"
+          using eqSym[OF c] asn_put_0_nil[OF w]
+          by (rule eqSubst[where Q = "\<lambda>z. asn_put z 0 w = w \<triangleright> Nil"])
+        have e2: "asn_put (v \<triangleright> Nil) 0 w = w \<triangleright> Nil"
+          using tl1 r2 by (rule eqSubst[where Q = "\<lambda>z. asn_put (v \<triangleright> Nil) 0 w = w \<triangleright> z"])
+        have eL: "asn_put (asn_put b 0 v) 0 w = w \<triangleright> Nil"
+          using eqSym[OF r1] e2 by (rule eqSubst[where Q = "\<lambda>z. asn_put z 0 w = w \<triangleright> Nil"])
+        show "asn_put (asn_put b 0 v) 0 w = asn_put b 0 w"
+          using eL eqSym[OF r3] by (rule eq_trans)
+      next
+        assume c: "\<not> b = Nil"
+        have tlB: "list_tl b N" using B by simp
+        have vtl: "v \<triangleright> list_tl b N" by (rule cons_nat[OF v tlB])
+        have r1: "asn_put b 0 v = v \<triangleright> list_tl b" by (rule asn_put_0_ne[OF B v c])
+        have ne1: "\<not> v \<triangleright> list_tl b = Nil" using v tlB by simp
+        have r2: "asn_put (v \<triangleright> list_tl b) 0 w = w \<triangleright> list_tl (v \<triangleright> list_tl b)" by (rule asn_put_0_ne[OF vtl w ne1])
+        have tl1: "list_tl (v \<triangleright> list_tl b) = list_tl b" by (rule list_tl_cons[OF v tlB])
+        have r3: "asn_put b 0 w = w \<triangleright> list_tl b" by (rule asn_put_0_ne[OF B w c])
+        have e2: "asn_put (v \<triangleright> list_tl b) 0 w = w \<triangleright> list_tl b"
+          using tl1 r2 by (rule eqSubst[where Q = "\<lambda>z. asn_put (v \<triangleright> list_tl b) 0 w = w \<triangleright> z"])
+        have eL: "asn_put (asn_put b 0 v) 0 w = w \<triangleright> list_tl b"
+          using eqSym[OF r1] e2 by (rule eqSubst[where Q = "\<lambda>z. asn_put z 0 w = w \<triangleright> list_tl b"])
+        show "asn_put (asn_put b 0 v) 0 w = asn_put b 0 w"
+          using eL eqSym[OF r3] by (rule eq_trans)
+      qed
+    qed
+  next
+    fix k assume k: "k N" and IH: "\<forall>b. asn_put (asn_put b k v) k w = asn_put b k w"
+    show "\<forall>b. asn_put (asn_put b (S k) v) (S k) w = asn_put b (S k) w"
+    proof (rule forallI)
+      fix b assume B: "b N"
+      show "asn_put (asn_put b (S k) v) (S k) w = asn_put b (S k) w"
+      proof (rule cases_bool[where q = "b = Nil"])
+        show "(b = Nil) B" by (rule eqBool[OF B nil_nat])
+      next
+        assume c: "b = Nil"
+        have recvN: "asn_put Nil k v N" by (rule asn_put_N[OF nil_nat k v])
+        have rv: "asn_put b (S k) v = 0 \<triangleright> asn_put Nil k v"
+          using eqSym[OF c] asn_put_S_nil[OF v k]
+          by (rule eqSubst[where Q = "\<lambda>z. asn_put z (S k) v = 0 \<triangleright> asn_put Nil k v"])
+        have cne: "\<not> 0 \<triangleright> asn_put Nil k v = Nil" using recvN by simp
+        have consN: "0 \<triangleright> asn_put Nil k v N" by (rule cons_nat[OF nat0 recvN])
+        have r2: "asn_put (0 \<triangleright> asn_put Nil k v) (S k) w
+                  = list_hd (0 \<triangleright> asn_put Nil k v) \<triangleright> asn_put (list_tl (0 \<triangleright> asn_put Nil k v)) k w"
+          by (rule asn_put_S_ne[OF consN w k cne])
+        have hd2: "list_hd (0 \<triangleright> asn_put Nil k v) = 0" by (rule list_hd_cons[OF nat0 recvN])
+        have tl2: "list_tl (0 \<triangleright> asn_put Nil k v) = asn_put Nil k v" by (rule list_tl_cons[OF nat0 recvN])
+        have ihNil: "asn_put (asn_put Nil k v) k w = asn_put Nil k w" by (rule forallE[OF IH nil_nat])
+        have rw: "asn_put b (S k) w = 0 \<triangleright> asn_put Nil k w"
+          using eqSym[OF c] asn_put_S_nil[OF w k]
+          by (rule eqSubst[where Q = "\<lambda>z. asn_put z (S k) w = 0 \<triangleright> asn_put Nil k w"])
+        have s1: "asn_put (0 \<triangleright> asn_put Nil k v) (S k) w
+                  = 0 \<triangleright> asn_put (list_tl (0 \<triangleright> asn_put Nil k v)) k w"
+          using hd2 r2 by (rule eqSubst[where Q = "\<lambda>z. asn_put (0 \<triangleright> asn_put Nil k v) (S k) w = z \<triangleright> asn_put (list_tl (0 \<triangleright> asn_put Nil k v)) k w"])
+        have s2: "asn_put (0 \<triangleright> asn_put Nil k v) (S k) w = 0 \<triangleright> asn_put (asn_put Nil k v) k w"
+          using tl2 s1 by (rule eqSubst[where Q = "\<lambda>z. asn_put (0 \<triangleright> asn_put Nil k v) (S k) w = 0 \<triangleright> asn_put z k w"])
+        have s3: "asn_put (0 \<triangleright> asn_put Nil k v) (S k) w = 0 \<triangleright> asn_put Nil k w"
+          using ihNil s2 by (rule eqSubst[where Q = "\<lambda>z. asn_put (0 \<triangleright> asn_put Nil k v) (S k) w = 0 \<triangleright> z"])
+        have eL: "asn_put (asn_put b (S k) v) (S k) w = 0 \<triangleright> asn_put Nil k w"
+          using eqSym[OF rv] s3 by (rule eqSubst[where Q = "\<lambda>z. asn_put z (S k) w = 0 \<triangleright> asn_put Nil k w"])
+        show "asn_put (asn_put b (S k) v) (S k) w = asn_put b (S k) w"
+          using eL eqSym[OF rw] by (rule eq_trans)
+      next
+        assume c: "\<not> b = Nil"
+        have tlB: "list_tl b N" using B by simp
+        have hdB: "list_hd b N" using B by simp
+        have recvN: "asn_put (list_tl b) k v N" by (rule asn_put_N[OF tlB k v])
+        have rv: "asn_put b (S k) v = list_hd b \<triangleright> asn_put (list_tl b) k v" by (rule asn_put_S_ne[OF B v k c])
+        have cne: "\<not> list_hd b \<triangleright> asn_put (list_tl b) k v = Nil" using hdB recvN by simp
+        have consN: "list_hd b \<triangleright> asn_put (list_tl b) k v N" by (rule cons_nat[OF hdB recvN])
+        have r2: "asn_put (list_hd b \<triangleright> asn_put (list_tl b) k v) (S k) w
+                  = list_hd (list_hd b \<triangleright> asn_put (list_tl b) k v)
+                      \<triangleright> asn_put (list_tl (list_hd b \<triangleright> asn_put (list_tl b) k v)) k w"
+          by (rule asn_put_S_ne[OF consN w k cne])
+        have hd2: "list_hd (list_hd b \<triangleright> asn_put (list_tl b) k v) = list_hd b" by (rule list_hd_cons[OF hdB recvN])
+        have tl2: "list_tl (list_hd b \<triangleright> asn_put (list_tl b) k v) = asn_put (list_tl b) k v" by (rule list_tl_cons[OF hdB recvN])
+        have ihB: "asn_put (asn_put (list_tl b) k v) k w = asn_put (list_tl b) k w" by (rule forallE[OF IH tlB])
+        have rw: "asn_put b (S k) w = list_hd b \<triangleright> asn_put (list_tl b) k w" by (rule asn_put_S_ne[OF B w k c])
+        have s1: "asn_put (list_hd b \<triangleright> asn_put (list_tl b) k v) (S k) w
+                  = list_hd b \<triangleright> asn_put (list_tl (list_hd b \<triangleright> asn_put (list_tl b) k v)) k w"
+          using hd2 r2 by (rule eqSubst[where Q = "\<lambda>z. asn_put (list_hd b \<triangleright> asn_put (list_tl b) k v) (S k) w = z \<triangleright> asn_put (list_tl (list_hd b \<triangleright> asn_put (list_tl b) k v)) k w"])
+        have s2: "asn_put (list_hd b \<triangleright> asn_put (list_tl b) k v) (S k) w
+                  = list_hd b \<triangleright> asn_put (asn_put (list_tl b) k v) k w"
+          using tl2 s1 by (rule eqSubst[where Q = "\<lambda>z. asn_put (list_hd b \<triangleright> asn_put (list_tl b) k v) (S k) w = list_hd b \<triangleright> asn_put z k w"])
+        have s3: "asn_put (list_hd b \<triangleright> asn_put (list_tl b) k v) (S k) w
+                  = list_hd b \<triangleright> asn_put (list_tl b) k w"
+          using ihB s2 by (rule eqSubst[where Q = "\<lambda>z. asn_put (list_hd b \<triangleright> asn_put (list_tl b) k v) (S k) w = list_hd b \<triangleright> z"])
+        have eL: "asn_put (asn_put b (S k) v) (S k) w = list_hd b \<triangleright> asn_put (list_tl b) k w"
+          using eqSym[OF rv] s3 by (rule eqSubst[where Q = "\<lambda>z. asn_put z (S k) w = list_hd b \<triangleright> asn_put (list_tl b) k w"])
+        show "asn_put (asn_put b (S k) v) (S k) w = asn_put b (S k) w"
+          using eL eqSym[OF rw] by (rule eq_trans)
+      qed
+    qed
+  qed
+  show ?thesis by (rule forallE[OF main A])
 qed
 
 lemma nat_ind_sound:
@@ -741,6 +1027,7 @@ lemma nat_ind_sound:
       and step: "\<And>C. sat_hyp (pack_F F_EQ \<langle>pack_T T_VAR i, pack_T T_VAR i\<rangle> \<triangleright> p \<triangleright> G) C
                   \<Longrightarrow> sat (subst_F p i (pack_T T_SUC (pack_T T_VAR i))) C"
       and an: "eval a A N"
+      and AN: "A N"
   shows "sat (subst_F p i a) A"
 proof -
   let ?z = "pack_T T_ZERO 0"
@@ -778,7 +1065,7 @@ proof -
       have Gm: "sat_hyp G ?Am"
         using G i m fresh satG by (rule sat_hyp_put)
       have ev: "eval ?vi ?Am = m"
-        by (rule eval_var_put[OF i m])
+        by (rule eval_var_put[OF AN i m])
       have me: "m = eval ?vi ?Am"
         using ev by (rule eqSym)
       have evN: "eval ?vi ?Am N"
@@ -818,7 +1105,7 @@ proof -
       have Sm: "S m N"
         by (rule natS[OF m])
       have ow: "asn_put ?Am i (S m) = asn_put A i (S m)"
-        by (rule asn_put_overwrite[OF i m Sm])
+        by (rule asn_put_overwrite[OF AN i m Sm])
       show "sat p (asn_put A i (S m))"
         using ow ps' by (rule eqSubst[where Q="\<lambda>C. sat p C"])
     qed
@@ -845,6 +1132,7 @@ lemma nat_ind_sound_put:
         "\<And>m. m N \<Longrightarrow> sat_hyp (pack_F F_EQ \<langle>pack_T T_VAR i, pack_T T_VAR i\<rangle> \<triangleright> p \<triangleright> G) (asn_put A i m) \<Longrightarrow>
           sat (subst_F p i (pack_T T_SUC (pack_T T_VAR i))) (asn_put A i m)"
       and an: "eval a A N"
+      and AN: "A N"
   shows "sat (subst_F p i a) A"
 proof -
   let ?z = "pack_T T_ZERO 0"
@@ -885,7 +1173,7 @@ proof -
       have Gm: "sat_hyp G ?Am"
         using G i m fresh satG by (rule sat_hyp_put)
       have ev: "eval ?vi ?Am = m"
-        by (rule eval_var_put[OF i m])
+        by (rule eval_var_put[OF AN i m])
       have me: "m = eval ?vi ?Am"
         using ev by (rule eqSym)
       have evN: "eval ?vi ?Am N"
@@ -941,7 +1229,7 @@ proof -
       have Sm: "S m N"
         by (rule natS[OF m])
       have ow: "asn_put ?Am i (S m) = asn_put A i (S m)"
-        by (rule asn_put_overwrite[OF i m Sm])
+        by (rule asn_put_overwrite[OF AN i m Sm])
       show "sat p (asn_put A i (S m))"
         using ow ps'
         by (rule eqSubst[where Q="\<lambda>C. sat p C"])
@@ -5551,6 +5839,7 @@ lemma check_ind_sound:
         "\<And>K A2. A2 N \<Longrightarrow> K N \<Longrightarrow> mem K rest \<Longrightarrow>
           sat_hyp (hyp_of K) A2 \<Longrightarrow> sat (conc_of K) A2"
       and satG: "sat_hyp (hyp_of J) A"
+      and AN: "A N"
   shows "sat (conc_of J) A"
 proof -
   let ?f = "conc_of J"
@@ -5702,7 +5991,7 @@ have satQa: "sat ?eqaa A"
         have KN: "?K N"
           using HN CN by simp
         have Am: "?Am N"
-          using i m by (rule asn_put_N)
+          using AN i m by (rule asn_put_N)
         have hp: "hyp_of ?K = ?H"
           by (rule cpx_proj[OF HN CN])
         have hp': "?H = hyp_of ?K"
@@ -5731,7 +6020,7 @@ have satQa: "sat ?eqaa A"
           by (rule eqSubst[where Q="\<lambda>f. sat f ?Am"])
       qed
       have sq: "sat (subst_F q ?i ?a) A"
-        using q i a G fresh satG base step an
+        using q i a G fresh satG base step an AN
         by (rule nat_ind_sound_put)
       show "sat ?f A"
         using qa sq
@@ -6726,6 +7015,7 @@ lemma valid_step_sound:
       and prevN: "\<And>K A2. A2 N \<Longrightarrow> K N \<Longrightarrow> mem K rest \<Longrightarrow>
                     sat_hyp (hyp_of K) A2 \<Longrightarrow> sat (conc_of K) A2"
       and satG: "sat_hyp (hyp_of J) A"
+      and AN: "A N"
   shows "sat (conc_of J) A"
 proof -
   have cJ: "conc_of J N"
@@ -6837,7 +7127,7 @@ proof -
         next
           assume g3: "check_ind J rest"
           show ?thesis
-            by (rule check_ind_sound[OF J rest g3 prev prevN satG])
+            by (rule check_ind_sound[OF J rest g3 prev prevN satG AN])
         next
           assume n3: "\<not> check_ind J rest"
           have R4:
@@ -7025,6 +7315,9 @@ next
         next
           show "sat_hyp (hyp_of h) A"
             by (rule satGh)
+        next
+          show "A N"
+            by (rule A)
         qed
         show "sat (conc_of J) A"
           using hJ sh
@@ -7046,122 +7339,10 @@ next
   qed
 qed
 
-lemma check_list_sound:
-  assumes pf: "pf N"
-  shows "\<And>J A. check_list pf \<Longrightarrow> J N \<Longrightarrow> mem J pf \<Longrightarrow>
-                sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A"
-proof (rule check_list_induct[OF pf])
-  show "\<And>J A. check_list Nil \<Longrightarrow> J N \<Longrightarrow> mem J Nil \<Longrightarrow>
-               sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A"
-  proof -
-    fix J A
-    assume chk: "check_list Nil"
-       and J: "J N"
-       and m: "mem J Nil"
-       and satG: "sat_hyp (hyp_of J) A"
-    show "sat (conc_of J) A"
-      by (rule exF[OF m mem_nil])
-  qed
-next
-  fix h t A
-  assume h: "h N"
-     and t: "t N"
-     and IH:
-       "\<And>J. check_list t \<Longrightarrow> J N \<Longrightarrow> mem J t \<Longrightarrow>
-          sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A"
-  show "\<And>J. check_list (Cons h t) \<Longrightarrow> J N \<Longrightarrow>
-               mem J (Cons h t) \<Longrightarrow>
-               sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A"
-  proof -
-    fix J
-    assume cl: "check_list (Cons h t)"
-       and J: "J N"
-       and mJ: "mem J (Cons h t)"
-       and satG: "sat_hyp (hyp_of J) A"
-    have hne: "\<not> Cons h t = Nil"
-      using h t by simp
-    have R0:
-      "if Cons h t = Nil then True
-       else if valid_step (list_hd (Cons h t)) (list_tl (Cons h t))
-       then check_list (list_tl (Cons h t))
-       else False"
-      using cl
-      by (rule defI[OF check_list_def[where pf="Cons h t"]])
-    have R:
-      "if Cons h t = Nil then True
-       else if valid_step h t then check_list t else False"
-      using R0
-      by (simp only: list_hd_cons[OF h t] list_tl_cons[OF h t])
-    have R1:
-      "if valid_step h t then check_list t else False"
-      using hne R by (rule notcond_thenE)
-    show "sat (conc_of J) A"
-    proof (rule cases_bool[where q="valid_step h t"])
-      show "valid_step h t B"
-        by (rule valid_step_bool[OF h t])
-    next
-      assume vs: "valid_step h t"
-      have clt: "check_list t"
-        using vs R1 by (rule cond_thenE)
-      have mJ':
-        "if h = J then True else mem J t"
-        using mJ h t J
-        by (simp add: mem_cons[OF h t J])
-      show "sat (conc_of J) A"
-      proof (rule cases_bool[where q="h = J"])
-        show "(h = J) B"
-          by (rule eqBool[OF h J])
-      next
-        assume hJ: "h = J"
-        have Jh: "J = h"
-          using hJ by (rule eqSym)
-        have satGh: "sat_hyp (hyp_of h) A"
-          using Jh satG
-          by (rule eqSubst[where Q="\<lambda>z. sat_hyp (hyp_of z) A"])
-        have sh: "sat (conc_of h) A"
-        proof (rule valid_step_sound[OF h t vs])
-          fix K
-          assume K: "K N"
-             and mK: "mem K t"
-             and satK: "sat_hyp (hyp_of K) A"
-          show "sat (conc_of K) A"
-            using clt K mK satK by (rule IH)
-        next
-          fix K A2
-          assume A2: "A2 N"
-             and K: "K N"
-             and mK: "mem K t"
-             and satK: "sat_hyp (hyp_of K) A2"
-          show "sat (conc_of K) A2"
-            using A2 clt K mK satK
-            by (rule check_list_sound_N[OF t])
-        next
-          show "sat_hyp (hyp_of h) A"
-            by (rule satGh)
-        qed
-        show "sat (conc_of J) A"
-          using hJ sh
-          by (rule eqSubst[where Q="\<lambda>z. sat (conc_of z) A"])
-      next
-        assume nhJ: "\<not> h = J"
-        have mJt: "mem J t"
-          using nhJ mJ' by (rule notcond_thenE)
-        show "sat (conc_of J) A"
-          using clt J mJt satG by (rule IH)
-      qed
-    next
-      assume nvs: "\<not> valid_step h t"
-      have F: "False"
-        using nvs R1 by (rule notcond_thenE)
-      show "sat (conc_of J) A"
-        by (rule exF[OF F not_false])
-    qed
-  qed
-qed
-
 lemma soundness_bridge:
   assumes vp: "is_valid_proof p J"
       and satG: "sat_hyp (hyp_of J) A"
+      and AN: "A N"
   shows "sat (conc_of J) A"
 proof -
   have vpB: "is_valid_proof p J B"
@@ -7219,7 +7400,7 @@ proof -
       have mJ: "J \<in> p"
         using hJ mh by (rule eqSubst[where Q="\<lambda>x. x \<in> p"])
       show ?thesis
-        using p cp JN mJ satG by (rule check_list_sound)
+        using p AN cp JN mJ satG by (rule check_list_sound_N)
     next
       assume nhJ: "\<not> list_hd p = J"
       have F: "False" using nhJ inner by (rule notcond_thenE)
@@ -7243,7 +7424,7 @@ proof (unfold_locales)
     by (rule sat_eqE')
   show "\<And>a b A. a N \<Longrightarrow> b N \<Longrightarrow> sat (mk_neq a b) A \<Longrightarrow> eval a A \<noteq> eval b A"  
     by (rule sat_neqE')
-  show "\<And>p J A. is_valid_proof p J \<Longrightarrow> sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A"
+  show "\<And>p J A. is_valid_proof p J \<Longrightarrow> sat_hyp (hyp_of J) A \<Longrightarrow> A N \<Longrightarrow> sat (conc_of J) A"
     by (rule soundness_bridge)
 qed
 
