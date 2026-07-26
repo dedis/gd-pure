@@ -469,7 +469,7 @@ lemma mono_pack_F:
   unfolding pack_F_def by (rule pair_mono_2[OF tg x y h])
 
 
-section \<open>4.  Interpret bga_full. transfers `consistent` to this instance\<close>
+section \<open>4.  Interpret bga_fuller; transfers `consistent` (hence syntactic consistency) to this instance\<close>
 
 interpretation conc2: bga_fuller
   tag_T load_T pack_T tag_F load_F pack_F fresh_T fresh_F fresh_H dfns dfn_is
@@ -494,5 +494,13 @@ interpretation conc2: bga_fuller
               app_try_def app_y_def app_x_def app_d_def check_app_def
               valid_step_def check_list_def is_valid_proof_def)+
   done
+
+section \<open>5.  BGA is consistent\<close>
+
+theorem BGA_syntactically_consistent:
+  assumes "a N" and "b N" and "p1 N" and "p2 N"
+  shows "\<not> (is_valid_proof p1 \<langle>Nil, conc2.mk_eq a b\<rangle> \<and>
+             is_valid_proof p2 \<langle>Nil, conc2.mk_neq a b\<rangle>)"
+  using assms by (rule conc2.syntactically_consistent)
 
 end

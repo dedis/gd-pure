@@ -44,15 +44,24 @@ locale suff_syntax =
 
 locale suff_semantics = suff_syntax +
   (*Semantics. sat checks whether the encoding of a formula is satisfied by an assignment. eval reduces a term under an assignment*)
-  fixes eval :: "tm \<Rightarrow> asn \<Rightarrow> val"
+
+  fixes evals :: "tm \<Rightarrow> asn \<Rightarrow> val \<Rightarrow> o"
   fixes sat_fm :: "fm \<Rightarrow> asn \<Rightarrow> o"
   fixes sat_hyp :: "hyp \<Rightarrow> asn \<Rightarrow> o"
 
   assumes sat_hyp_nil: "sat_hyp Nil A"
 
-  (*What Equations mean in the model *)
-  assumes sat_eqE:  "\<lbrakk>a N; b N\<rbrakk> \<Longrightarrow>sat_fm (mk_eq a b) A \<Longrightarrow> eval a A = eval b A"
-  assumes sat_neqE: "\<lbrakk>a N; b N\<rbrakk> \<Longrightarrow>sat_fm (mk_neq a b) A \<Longrightarrow> eval a A \<noteq> eval b A"
+  (* Evaluation is deterministic *)
+  assumes evals_det: "\<lbrakk>t N; A N; evals t A r; evals t A q\<rbrakk> \<Longrightarrow> r = q"
+
+  (* What equations mean in the model: the two sides evaluate to a common value
+     (resp. to distinct values). *)
+  assumes sat_eqE:
+    "\<lbrakk>a N; b N; sat_fm (mk_eq a b) A;
+      \<And>q. \<lbrakk>q N; evals a A q; evals b A q\<rbrakk> \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
+  assumes sat_neqE:
+    "\<lbrakk>a N; b N; sat_fm (mk_neq a b) A;
+      \<And>x y. \<lbrakk>x N; y N; evals a A x; evals b A y; x \<noteq> y\<rbrakk> \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
 
 locale consistent =  suff_semantics +
   (* Valid proofs yield satisfied formulas *)
@@ -134,24 +143,19 @@ proof -
       using neq_sat mk_neq_nat apply simp
       done
 
-    have eq_val: "eval a zero = eval b zero"
-      apply (rule sat_eqE)
-      using a_nat b_nat apply simp+
-      apply (rule eq_sat1)
-      done
-
-    have neq_val: "eval a zero  \<noteq> eval b zero"
-      apply (rule sat_neqE)
-      using a_nat b_nat apply simp+
-      apply (rule neq_sat1)
-      done
-
     show "False"
-      apply (rule exF[where P="eval a zero  = eval b zero "])
-       apply (rule eq_val)
-      apply (fold neq_def)
-      apply (rule neq_val)
-      done
+    proof (rule sat_eqE[OF a_nat b_nat eq_sat1])
+      fix q assume qN: "q N" and eaq: "evals a zero q" and ebq: "evals b zero q"
+      show "False"
+      proof (rule sat_neqE[OF a_nat b_nat neq_sat1])
+        fix x y assume xN: "x N" and yN: "y N"
+          and eax: "evals a zero x" and eby: "evals b zero y" and xy: "x \<noteq> y"
+        have xq: "x = q" by (rule evals_det[OF a_nat nat0 eax eaq])
+        have yq: "y = q" by (rule evals_det[OF b_nat nat0 eby ebq])
+        have xyeq: "x = y" by (rule eq_trans[OF xq eqSym[OF yq]])
+        show "False" by (rule exF[OF xyeq xy[unfolded neq_def]])
+      qed
+    qed
   qed
 qed
 
@@ -7618,6 +7622,9 @@ qed
 
 end
 
+(* ===== DEAD CODE: superseded by the fuel/step-indexed stack (bga_fuller).
+   This locale's soundness rested on the (unprovable-by-term-induction)
+   substitution lemmas sat_subst_F / sat_hyp_put, left. =====
 locale bga_subst_semantics = bga_semantics + bga_subst +
   fixes asn_put :: "asn \<Rightarrow> num \<Rightarrow> val \<Rightarrow> asn"
   assumes  asn_put_def:  "asn_put A i v :=  
@@ -7703,10 +7710,10 @@ qed
 
 (* 4th is maybe a bit hard?*)
 lemma sat_subst_F: "\<lbrakk>f N; i N; s N\<rbrakk> \<Longrightarrow> sat (subst_F f i s) A \<longleftrightarrow> sat f (asn_put A i (eval s A))"
-  sorry
+
 
 lemma sat_hyp_put: "\<lbrakk>G N; i N; v N; fresh_H i G; sat_hyp G A\<rbrakk> \<Longrightarrow> sat_hyp G (asn_put A i v)"
-  sorry
+
 
 lemma nth_suc_cons:
   assumes k: "k N" and h: "h N" and t: "t N" and nk: "nth k t N"
@@ -8534,6 +8541,7 @@ proof -
 qed
 
 end
+===== end DEAD CODE (bga_subst_semantics) ===== *)
 
 locale bga_subst_rule = bga_subst +
 
@@ -8875,6 +8883,10 @@ assumes is_valid_proof_def: "is_valid_proof pf J :=
     else if list_hd pf = J then check_list pf
     else False"
 
+(* ===== DEAD CODE: superseded by bga_fuller.
+   Contained the old functional-eval soundness (check_app_sound left)
+   and the old `sublocale consistent` interpretation. Commented out;
+   nothing live depends on it, and bijective_enc now interprets bga_fuller. =====
 locale bga_full = bga_subst_semantics + bga_proof_check
 begin
 
@@ -13596,7 +13608,7 @@ lemma check_app_sound:
                    sat_hyp (hyp_of K) A \<Longrightarrow> sat (conc_of K) A"
       and satG: "sat_hyp (hyp_of J) A"
   shows "sat (conc_of J) A"
-  sorry
+
 
 lemma find_structE:
   assumes J: "J N" and G: "G N" and rest: "rest N" and ptr: "ptr N"
@@ -14970,6 +14982,7 @@ proof -
 qed
 
 
+(* OLD interpretation (functional eval), retained inside the dead block for reference: *)
 sublocale consistent mk_eq mk_neq dfns is_valid_proof eval sat sat_hyp
 proof (unfold_locales)
   show "\<And>a b.   a N \<Longrightarrow> b N \<Longrightarrow> mk_eq a b N"                         
@@ -14989,8 +15002,9 @@ proof (unfold_locales)
 qed
 
 end
+===== end DEAD CODE (bga_full) ===== *)
 
-locale bga_fuller = bga_fuel_subst_semantics + bga_proof_check 
+locale bga_fuller = bga_fuel_subst_semantics + bga_proof_check
 
 begin 
 
@@ -22465,5 +22479,29 @@ proof -
   qed
 qed
 
-end 
+(* The step-indexed semantics is a model of the abstract `consistent`
+   locale, so `syntactically_consistent` transfers to it. *)
+sublocale consistent mk_eq mk_neq dfns is_valid_proof evals sat_fuel sat_hyp_fuel
+proof (unfold_locales)
+  show "\<And>a b. a N \<Longrightarrow> b N \<Longrightarrow> mk_eq a b N"
+    by (rule mk_eq_N')
+  show "\<And>a b. a N \<Longrightarrow> b N \<Longrightarrow> mk_neq a b N"
+    by (rule mk_neq_N')
+  show "\<And>p J. p N \<Longrightarrow> J N \<Longrightarrow> is_valid_proof p J B"
+    by (rule proof_is_bool)
+  show "\<And>A. sat_hyp_fuel Nil A"
+    by (rule sat_hyp_fuel_nil)
+  show "\<And>t A r q. t N \<Longrightarrow> A N \<Longrightarrow> evals t A r \<Longrightarrow> evals t A q \<Longrightarrow> r = q"
+    by (rule evals_functional)
+  show "\<And>a b A R. a N \<Longrightarrow> b N \<Longrightarrow> sat_fuel (mk_eq a b) A \<Longrightarrow>
+        (\<And>q. q N \<Longrightarrow> evals a A q \<Longrightarrow> evals b A q \<Longrightarrow> R) \<Longrightarrow> R"
+    by (rule sat_fuel_mk_eqE)
+  show "\<And>a b A R. a N \<Longrightarrow> b N \<Longrightarrow> sat_fuel (mk_neq a b) A \<Longrightarrow>
+        (\<And>x y. x N \<Longrightarrow> y N \<Longrightarrow> evals a A x \<Longrightarrow> evals b A y \<Longrightarrow> x \<noteq> y \<Longrightarrow> R) \<Longrightarrow> R"
+    by (rule sat_fuel_mk_neqE)
+  show "\<And>p J A. is_valid_proof p J \<Longrightarrow> sat_hyp_fuel (hyp_of J) A \<Longrightarrow> A N \<Longrightarrow> sat_fuel (conc_of J) A"
+    by (rule soundness_bridge_fuel)
+qed
+
+end
 end
