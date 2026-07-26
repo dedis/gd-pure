@@ -34,6 +34,7 @@ section \<open>2.  Concrete definitions of every derived function\<close>
 
 axiomatization
   eval               :: "tm \<Rightarrow> asn \<Rightarrow> val"                              and
+  eval_fuel          :: "num \<Rightarrow> tm \<Rightarrow> asn \<Rightarrow> val" and
   subst_T            :: "tm \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> tm"                          and
   subst_F            :: "fm \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> fm"                          and
   subst_body         :: "tm \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> tm"                          and
@@ -83,6 +84,27 @@ where
                     ((eval (cpx (cpy (load_T t))) A)\<triangleright> ((eval (cpy (cpy (load_T t))) A) \<triangleright> Nil))
              else 0)
        else 0)" and
+    eval_fuel_def: "eval_fuel k t A :=
+    if k = 0 then 0
+    else if tag_T t = T_VAR then S (nth (load_T t) A)
+    else if tag_T t = T_ZERO then S 0
+    else if tag_T t = T_SUC then
+      if eval_fuel (P k) (load_T t) A = 0 then 0
+      else S (S (P (eval_fuel (P k) (load_T t) A)))
+    else if tag_T t = T_PRED then
+      if eval_fuel (P k) (load_T t) A = 0 then 0
+      else S (P (P (eval_fuel (P k) (load_T t) A)))
+    else if tag_T t = T_IFZ then
+      if eval_fuel (P k) (cpx (load_T t)) A = 0 then 0
+      else if P (eval_fuel (P k) (cpx (load_T t)) A) = 0 then
+        eval_fuel (P k) (cpx (cpy (load_T t))) A
+      else eval_fuel (P k) (cpy (cpy (load_T t))) A
+    else
+      if eval_fuel (P k) (cpx (cpy (load_T t))) A = 0 then 0
+      else if eval_fuel (P k) (cpy (cpy (load_T t))) A = 0 then 0
+      else eval_fuel (P k) (nth (cpx (load_T t)) dfns)
+        (P (eval_fuel (P k) (cpx (cpy (load_T t))) A) \<triangleright>
+          P (eval_fuel (P k) (cpy (cpy (load_T t))) A) \<triangleright> Nil)" and
 
   subst_T_def: "subst_T t j v :=
     if tag_T t = T_VAR then
@@ -302,6 +324,8 @@ where
     else if list_hd prf = J then check_list prf
     else False"
 
+  
+
 
 axiomatization dfns :: "dfn" where dfns_N: "dfns N"
 
@@ -447,9 +471,9 @@ lemma mono_pack_F:
 
 section \<open>4.  Interpret bga_full. transfers `consistent` to this instance\<close>
 
-interpretation conc: bga_full
+interpretation conc2: bga_fuller
   tag_T load_T pack_T tag_F load_F pack_F fresh_T fresh_F fresh_H dfns dfn_is
-  eval
+  eval_fuel
   subst_T subst_F subst_body asn_put
   check_template rep_vars_T rep_vars_F find_phi find_eq check_subst
   check_eq_rules check_neq_rules
@@ -461,8 +485,8 @@ interpretation conc: bga_full
   apply (fact dfns_N pack_F_N tag_F_N load_F_N pack_T_N tag_T_N load_T_N
               tag_pack_F load_pack_F tag_pack_T load_pack_T pack_tag_F pack_tag_T
               decrease_F decrease_T tag_T_zero mono_pack_T mono_pack_F
-              fresh_T_def fresh_F_def fresh_H_def dfn_is_def asn_put_def
-              eval_def subst_T_def subst_F_def subst_body_def
+              fresh_T_def fresh_F_def fresh_H_def dfn_is_def eval_fuel_def
+              subst_T_def subst_F_def subst_body_def asn_put_def
               check_template_def rep_vars_T_def rep_vars_F_def find_phi_def
               find_eq_def check_subst_def check_eq_rules_def check_neq_rules_def
               check_ind_template_def find_ind_base_def check_ind_def
