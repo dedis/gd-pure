@@ -4711,11 +4711,12 @@ proof -
 qed
 
 section \<open>Encoded List Recursion\<close>
-
+(*
 axiomatization list_rec :: "num \<Rightarrow> (num \<Rightarrow> num \<Rightarrow> num) \<Rightarrow> List \<Rightarrow> num"
-  where list_rec_nil [simp]: "list_rec z F Nil = z"
+  where list_rec_nil [simp]: "list_rec z F Nil := z"
   and list_rec_cons [simp]:  "\<lbrakk>h N; t N\<rbrakk> \<Longrightarrow> list_rec z F (Cons h t) = F h (list_rec z F t)"
-
+*)
+(*
 lemma list_rec_N:
   fixes F :: "num \<Rightarrow> num \<Rightarrow> num"
   assumes xs: "xs N"
@@ -4791,7 +4792,7 @@ next
   show "g (Cons h t) = list_rec z F (Cons h t)"
     using gh rec' by (rule eq_trans)
 qed
-
+*)
 (*
  fun sum :: "List \<Rightarrow> num" where
    sum_nil: "sum Nil = 0" and
