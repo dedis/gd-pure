@@ -195,7 +195,7 @@ Formula Tags: Constructor Name : Syntax : Argument
 Definitions not fundamental to the logic (like arithmetic, list etc) will be made in locales and not as axioms.
 *)
 
-locale bga_bijective_encoding =
+locale bga_encoding =
   (*Term Encoding *)
   (* Tag of the current Constructor *)
   fixes tag_T :: "tm \<Rightarrow> tmtag"
@@ -398,7 +398,7 @@ qed
 
 end
 
-locale bga_dfns = bga_bijective_encoding + 
+locale bga_dfns = bga_encoding + 
   fixes dfns :: "dfn"
   fixes dfn_is :: "dfn \<Rightarrow> num \<Rightarrow> tm \<Rightarrow> o"
   assumes dfns_N: "dfns N"
@@ -1935,7 +1935,7 @@ qed
 
 end
 
-locale bga_subst = bga_bijective_encoding +
+locale bga_subst = bga_encoding +
   fixes subst_T        :: "tm \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> tm"
   (* subst_T t j v: Inside term 't', replace variable index 'j' with term 'v' *)
   assumes subst_T_def: "subst_T t j v := 
@@ -8623,7 +8623,7 @@ locale bga_subst_rule = bga_subst +
 (* checking the substitution rule *)
 assumes check_subst_def: "check_subst J rest := find_eq J rest rest"
 
-locale bga_eq_rule = bga_bijective_encoding +
+locale bga_eq_rule = bga_encoding +
 
 (*
 f - formula we are trying to append to the proof
@@ -8736,7 +8736,7 @@ assumes find_ind_base_def: "find_ind_base J a rest ptr :=
        find_ind_base J (cpx (load_F (conc_of J))) rest rest
     else False"
 
-locale bga_struct_rule = bga_bijective_encoding +
+locale bga_struct_rule = bga_encoding +
 
 
 fixes find_cut    :: "jdg \<Rightarrow> pf \<Rightarrow> pf \<Rightarrow> o"

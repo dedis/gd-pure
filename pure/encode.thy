@@ -1,4 +1,4 @@
-theory bijective_enc
+theory encode
   imports BGA_on_GA
 begin
 

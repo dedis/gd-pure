@@ -1,0 +1,467 @@
+\section{\QGA}
+\label{sec:qga}
+
+\texttt{GD.thy} axiomatizes grounded arithmetic as an object logic over
+Isabelle/Pure.  Beyond the propositional and arithmetic core it adds
+first-order quantifiers and a shorthand \isa{⊢} for framework implication, and
+we call the resulting system \QGA.
+
+\subsection{Formulas and terms}
+
+Two Pure types carry the embedding.  \isa{o} is the type of \QGA{} formulas and
+\isa{num} is the type of \QGA{} terms.  A \isa{judgment} declaration supplies
+the coercion \isa{Trueprop :: o ⇒ prop} that lets a formula be asserted at the
+framework level, so that a \QGA{} formula can appear as the conclusion of a
+Pure rule.
+
+\subsection{Propositional rules}
+
+Disjunction and negation are primitive.
+
+\begin{rulesiii}
+\irule{P}{P \vee Q}{$\vee$I1} &
+\irule{Q}{P \vee Q}{$\vee$I2} &
+\irule{\neg P \sep \neg Q}{\neg (P \vee Q)}{$\vee$I3}\\[3.2ex]
+\irule{\neg(P \vee Q)}{\neg P}{$\vee$E2} &
+\irule{\neg(P \vee Q)}{\neg Q}{$\vee$E3} &
+\irule{P \vee Q \sep \dis{P}{R} \sep \dis{Q}{R}}{R}{$\vee$E1}\\[4.6ex]
+\irule{P}{\neg\neg P}{$\neg\neg$I} &
+\irule{\neg\neg P}{P}{$\neg\neg$E} &
+\irule{P \sep \neg P}{Q}{exF}
+\end{rulesiii}
+
+\thy{gd-prop}
+
+\noindent
+The introduction rules are the classical ones and the De Morgan directions
+$\vee$E2 and $\vee$E3 are available unconditionally.  What is weakened is case
+analysis.  $\vee$E1 needs an actual proof of $P \vee Q$, and $P \vee Q$ is not
+derivable for arbitrary $P$: the law of excluded middle is a judgment to be
+established rather than an axiom, and it is written \isa{P B}.
+
+\subsection{Equality and the habeas quid judgments}
+
+Equality is a binary predicate on terms, \isa{num ⇒ num ⇒ o}, axiomatized by
+substitution and symmetry.
+
+\begin{rules}
+\irule{a = b \sep Q\,a}{Q\,b}{=E} &
+\irule{a = b}{b = a}{=S}
+\end{rules}
+
+\thy{gd-eq}
+
+\noindent
+Reflexivity is absent, and this is the pivot of the whole system.
+Transitivity follows from one substitution, \isa{eq\_trans: a = b ⟹ b = c ⟹ a =
+c}.  The third axiom, \isa{eq\_reflection}, lifts a derivable equation to the
+framework equality \isa{≡}, which is what lets Isabelle's simplifier operate on
+\QGA{} goals; it is a statement about the framework and adds nothing to the
+object logic.
+
+The two habeas quid judgments and the remaining connectives are definitions.
+
+\thy{gd-defs}
+
+\begin{definitionx}[Habeas quid]
+\isa{a N}, defined as \isa{a = a}, asserts that the term \isa{a} denotes a
+natural number, equivalently that the computation it names terminates.
+\isa{p B}, defined as \isa{p ∨ ¬p}, asserts that the formula \isa{p} is
+grounded.
+\end{definitionx}
+
+\noindent
+Since \isa{a N} unfolds to \isa{a = a}, reflexivity of equality says exactly
+that every term terminates, which is why it cannot be an axiom of a logic with
+unrestricted recursion.  Conjunction, implication and the biconditional are
+defined from $\vee$ and $\neg$ in the classical way, and their rules are then
+derived.  Conjunction comes out unconditional, while implication and the
+biconditional acquire habeas quid premises, because their derivations pass
+through $\vee$E1.
+
+\begin{rulesiii}
+\irule{p \sep q}{p \wedge q}{$\wedge$I} &
+\irule{p \wedge q}{p}{$\wedge$E1} &
+\irule{p \wedge q}{q}{$\wedge$E2}\\[3.2ex]
+\irule{a \B \sep \dis{a}{b}}{a \longrightarrow b}{$\longrightarrow$I} &
+\irule{a \longrightarrow b \sep a}{b}{$\longrightarrow$E} &
+\irule{a \B \sep b \B \sep \dis{a}{b} \sep \dis{b}{a}}
+      {a \longleftrightarrow b}{$\longleftrightarrow$I}
+\end{rulesiii}
+
+\noindent
+Two further derived rules are used constantly.  Case analysis on a grounded
+formula,
+\begin{center}
+\isa{cases\_bool: ⟦q B; q ⟹ p; ¬q ⟹ p⟧ ⟹ p},
+\end{center}
+and grounded proof by contradiction,
+\begin{center}
+\isa{grounded\_contradiction: ⟦p B; ¬p ⟹ q; ¬p ⟹ ¬q⟧ ⟹ p},\qquad
+\isa{contradiction: ⟦p B; ¬p ⟹ False⟧ ⟹ p}.
+\end{center}
+Both require the formula in question to be grounded.  The final consistency
+argument of \S\ref{sec:consistency} is an application of \isa{contradiction},
+and the groundedness premise it needs is the reason the abstract development
+assumes that proof checking is boolean.
+
+\subsection{Natural numbers}
+
+\begin{rulesiii}
+\iaxiom{0 \N}{0I} &
+\irule{\Suc{a} = \Suc{b}}{a = b}{S-inj} &
+\irule{a = b}{\Suc{a} = \Suc{b}}{S-cong}\\[3.2ex]
+\irule{a = b}{\Pre{a} = \Pre{b}}{P-cong} &
+\irule{a \N \sep b \N}{(a = b) \B}{eqBool} &
+\irule{a \N}{\Suc{a} \neq 0}{S$\neq$0}\\[3.2ex]
+\irule{a \N}{\Pre{\Suc{a}} = a}{PS} &
+\iaxiom{\Pre{0} = 0}{P0} &
+\irule{(a = b) \B}{a \N \wedge b \N}{eqE}\\[3.2ex]
+\multicolumn{1}{c}{\irule{\Pre{a} \N}{a \N}{predTI}} &
+\multicolumn{2}{c}{\irule{a \N \sep Q\,0 \sep \dis{x \N,\; Q\,x}{Q\,\Suc{x}}}{Q\,a}{Ind}}
+\end{rulesiii}
+
+\thy{gd-nat}
+
+\noindent
+\isa{eqBool} is the rule that converts termination into decidability: two
+terminating terms are either equal or not.  \isa{eqE} and \isa{predTIE} run in
+the opposite direction, recovering termination from groundedness of an equation
+and from termination of a predecessor.  Induction carries a habeas quid premise
+on the subject of the induction, and its step case may assume both \isa{x N}
+and the induction hypothesis.
+
+Truth and falsity are definitions.
+
+\thy{gd-truefalse}
+
+\noindent
+Derived facts of constant use are \isa{zeroRefl: zero = zero},
+\isa{natS: a N ⟹ S a N}, \isa{natSI: S a N ⟹ a N}, \isa{natP: a N ⟹ P a N},
+and the pair \isa{eq\_impl\_term: a = b ⟹ a N} and
+\isa{eq\_impl\_term2: a = b ⟹ b N}, by which a derivable equation witnesses the
+termination of both of its sides.
+
+\subsection{Entailment}
+\label{sec:entails}
+
+Entailment is a shorthand: its two rules make \isa{a ⊢ b} and the framework
+implication \isa{a ⟹ b} interderivable, so it is framework implication written
+as a formula, available wherever a formula is required.
+
+\begin{rules}
+\irule{\dis{a}{b}}{a \seq b}{$\seq$I} &
+\irule{a \seq b \sep a}{b}{$\seq$E}
+\end{rules}
+
+\thy{gd-entails}
+
+\noindent
+Unlike \isa{⟶} it has no groundedness premise on its introduction rule, which
+is what makes it usable in \S\ref{sec:list}, where the antecedent of the
+implication being inducted on cannot be shown grounded.
+
+\subsection{Quantifiers}
+
+\begin{rules}
+\irule{\dis{x \N}{Q\,x}}{\forall x.\,Q\,x}{$\forall$I} &
+\irule{\forall x.\,Q\,x \sep a \N}{Q\,a}{$\forall$E}\\[4.6ex]
+\irule{a \N \sep Q\,a}{\exists x.\,Q\,x}{$\exists$I} &
+\irule{\exists x.\,Q\,x \sep \dis{a \N,\; Q\,a}{R}}{R}{$\exists$E}
+\end{rules}
+
+\thy{gd-quant}
+
+\noindent
+Both quantifiers range over \isa{num} and are relativized to terminating
+witnesses.  $\forall$I proves the body for an arbitrary terminating
+eigenvariable, $\forall$E instantiates only at terminating terms, and
+$\exists$I must exhibit a terminating witness.  The negation-exchange rules for
+the quantifiers appear in the source only as commented-out axioms.  They are
+not part of the axiomatization and nothing downstream uses them.
+
+\subsection{Conditionals}
+
+The if-zero-else construct is written \isa{if c then a else b} and is
+polymorphic in the branches, so it serves both for term-valued and for
+formula-valued conditionals.
+
+\begin{rules}
+\irule{c \sep a \N}{(\text{if } c \text{ then } a \text{ else } b) = a}{condI1} &
+\irule{\neg c \sep b \N}{(\text{if } c \text{ then } a \text{ else } b) = b}{condI2}\\[3.2ex]
+\irule{c \sep (\text{if } c \text{ then } a \text{ else } b) \N}{a \N}{condE1} &
+\irule{(\text{if } c \text{ then } a \text{ else } b) \N}{c \B}{condE3}\\[3.2ex]
+\irule{c \sep Q\,(\text{if } c \text{ then } a \text{ else } b)}{Q\,a}{cond-then-E} &
+\irule{c \sep Q\,a}{Q\,(\text{if } c \text{ then } a \text{ else } b)}{cond-then-I}
+\end{rules}
+
+\thy{gd-cond}
+
+\noindent
+Each rule has a formula-level counterpart in which $=$ is replaced by
+$\longleftrightarrow$ and $\mathsf{N}$ by $\mathsf{B}$, and each ``then'' rule
+has an ``else'' twin.
+The last pair is the lazy form: once the guard is decided, an arbitrary context
+\isa{Q} transports across the conditional.  These are the rules that let a
+recursive definition be unfolded one branch at a time without evaluating the
+other branch.  The two totality lemmas
+\begin{center}
+\isa{condT: ⟦c B; a N; b N⟧ ⟹ (if c then a else b) N},\qquad
+\isa{condTB: ⟦c B; a B; b B⟧ ⟹ (if c then a else b) B}
+\end{center}
+are derived rather than assumed, and they carry most of the groundedness proofs
+about the encoded checkers of \S\ref{sec:bga}.
+
+\subsection{The definitional mechanism}
+\label{sec:defmech}
+
+A recursive definition is admitted with no termination side condition.  The
+constant is introduced by \isa{axiomatization} and its defining equation is an
+axiom of the form \isa{f x := body}.
+
+\begin{rules}
+\irule{a := b \sep Q\,b}{Q\,a}{defE} &
+\irule{a := b \sep Q\,a}{Q\,b}{defI}
+\end{rules}
+
+\thy{gd-def}
+
+\noindent
+\isa{a := b} does not assert \isa{a = b}.  It asserts that \isa{a} and \isa{b}
+are interchangeable in every context \isa{Q}, whether or not either denotes a
+value.  That is what makes \isa{omega := omega} harmless: \isa{omega} is
+interchangeable with itself and \isa{omega N} is underivable.  The two rules
+are the unfolding and folding directions, and the \isa{unfold\_def} method of
+\texttt{unfold\_def.ML} applies them.
+
+\subsection{Arithmetic}
+
+The standard functions are introduced by exactly this mechanism.
+
+\thy{gd-arith}
+
+\noindent
+Comparison returns a term rather than a formula, so \isa{x ≤ y} evaluates to
+\isa{1} or \isa{0} and the associated formula is \isa{x ≤ y = 1}.  The constant
+\isa{omega} is included to exercise the claim that a divergent definition is
+admissible.  Termination lemmas such as \isa{add\_terminates},
+\isa{leq\_terminates} and \isa{less\_terminates} are proved by induction, as is
+termination of Ackermann's function, which is defined in the same file and is
+not primitive recursive.
+
+\subsection{Induction principles}
+
+Two derived induction principles carry most of the later work.
+
+\thy{gd-strong-induction}
+\thy{gd-list-induct}
+
+\noindent
+Strong induction is stated with the bounded hypothesis \isa{y ≤ x = 1}.  It is
+what makes recursion over the structure of an encoded term legitimate: a
+component of a code is numerically smaller than the code, so structural
+recursion becomes bounded numerical recursion.  \isa{list\_induct} is derived
+from it through the encoding of lists below.
+
+\subsection{Pairing}
+\label{sec:cpair}
+
+Pairing is the bridge from numbers to syntax.  It is defined recursively rather
+than by a closed formula.
+
+\thy{gd-cpair}
+
+\noindent
+The syntax \isa{⟨x, y⟩} abbreviates \isa{cpair x y} and nests to the right for
+tuples.  The inverses are recursive as well.
+
+\thy{gd-cpxcpy}
+
+\noindent
+\isa{cpi n x} projects the $n$th component of a right-nested tuple by iterating
+\isa{cpy} and applying \isa{cpx}.
+
+\thy{gd-cpi}
+
+\noindent
+The properties established for the pairing are exactly the ones the encoding of
+\S\ref{sec:encode} needs.
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\isa{cpair\_terminates} & \isa{x N ⟹ y N ⟹ ⟨x, y⟩ N}\\
+\isa{cpair\_suc}        & \isa{x N ⟹ y N ⟹ ⟨x, S(y)⟩ = ⟨x, y⟩ + x + S(y) + 1}\\
+\isa{cpx\_proj}, \isa{cpy\_proj} & the projection equations\\
+\isa{cpair\_inj}        & injectivity\\
+\isa{cpair\_surjective} & every number is a pair\\
+\isa{cpair\_reconstr}   & \isa{a N ⟹ ⟨cpx a, cpy a⟩ = a}\\
+\isa{cpx\_mono}, \isa{cpy\_mono} & each projection is bounded by its argument\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\thy{gd-cpair-proj}
+\thy{gd-cpair-inj}
+\thy{gd-cpair-surj}
+\thy{gd-cp-mono}
+
+\noindent
+The Cantor pairing is a bijection between $\mathbb{N}^2$ and $\mathbb{N}$, and
+both directions of that fact are used later:  injectivity gives the
+decomposition properties of the encoding, and surjectivity gives
+\isa{cpair\_reconstr}, which says that a number can always be taken apart and
+put back together.  Monotonicity feeds strong induction: since \isa{cpx x ≤ x}
+and \isa{cpy x ≤ x}, a recursion that descends into components terminates.
+
+\subsection{Lists}
+
+Hypothesis sets, assignments, definition lists and proofs are all lists, so
+lists are the last piece of \QGA{} infrastructure.  \isa{Nil} is $0$ and
+\isa{Cons} is a shifted pair, which makes the list encoding a bijection with
+$\mathbb{N}$ and removes the need for any well-formedness predicate on list
+codes.
+
+\thy{gd-list}
+
+\noindent
+The derived facts are the expected ones: \isa{nil\_nat},
+\isa{cons\_nat: ⟦n N; xs N⟧ ⟹ Cons n xs N}, disjointness of the two
+constructors, the projection equations \isa{list\_hd (Cons n xs) = n} and
+\isa{list\_tl (Cons n xs) = xs}, reconstruction
+\isa{cons\_reconstr: ⟦x N; ¬(x = Nil)⟧ ⟹ Cons (list\_hd x) (list\_tl x) = x},
+injectivity \isa{cons\_inj}, exhaustiveness
+\isa{list\_cases: x N ⟹ (x = Nil) ∨ (∃n xs. x = Cons n xs)}, and
+\isa{list\_induct}.  Together these are the characteristic properties of an
+inductive datatype, obtained with no datatype package.
+
+Four list functions are defined recursively and used throughout
+\S\ref{sec:bga}.
+
+\thy{gd-mem}
+\thy{gd-nth}
+\thy{gd-len}
+\thy{gd-subset}
+
+\noindent
+The two habeas quid results about them that the proof checker relies on are
+\isa{mem\_bool: ⟦x N; G N⟧ ⟹ mem x G B} and
+\isa{nth\_in\_range\_N: ⟦xs N; i < len xs = 1⟧ ⟹ nth i xs N}.
+
+\subsection{Summary}
+\label{sec:qga-summary}
+
+Table \ref{tab:qga-defs} collects the definitions of \texttt{GD.thy} and
+Table \ref{tab:qga-rules} its inference rules, both in the notation of \QGA{}
+rather than in Isabelle syntax.  A definition written with $\triangleq$ is an
+abbreviation, unfolded by the framework.  A definition written with $:=$ is a
+\QGA{} recursive definition in the sense of \S\ref{sec:defmech}, admitted with
+no termination obligation and used only through \textsc{defE} and
+\textsc{defI}.
+
+\begin{table}[p]
+\centering
+\begin{tabular}{@{}ll@{}}
+\toprule
+\multicolumn{2}{@{}l}{\textbf{Abbreviations}}\\
+\midrule
+$a \neq b$          & $\triangleq \neg (a = b)$\\
+$p \B$              & $\triangleq p \vee \neg p$\\
+$a \N$              & $\triangleq a = a$\\
+$p \wedge q$        & $\triangleq \neg(\neg p \vee \neg q)$\\
+$p \longrightarrow q$   & $\triangleq \neg p \vee q$\\
+$p \longleftrightarrow q$ & $\triangleq (p \longrightarrow q) \wedge (q \longrightarrow p)$\\
+$\fn{True}$         & $\triangleq 0 = 0$\\
+$\fn{False}$        & $\triangleq \Suc{0} = 0$\\
+$x > y$             & $\triangleq 1 - (x \leq y)$\\
+$x \geq y$          & $\triangleq 1 - (x < y)$\\
+$\fn{Nil}$          & $\triangleq 0$\\
+$\fn{Cons}\;n\;xs$  & $\triangleq \langle n, xs\rangle + 1$\\
+$\fn{hd}\;x$        & $\triangleq \fn{cpx}\,\Pre{x}$\\
+$\fn{tl}\;x$        & $\triangleq \fn{cpy}\,\Pre{x}$\\
+\midrule
+\multicolumn{2}{@{}l}{\textbf{Recursive definitions}}\\
+\midrule
+$x + y$   & $:= \ite{y = 0}{x}{\Suc{x + \Pre{y}}}$\\
+$x - y$   & $:= \ite{y = 0}{x}{\Pre{x - \Pre{y}}}$\\
+$x * y$   & $:= \ite{y = 0}{0}{x + (x * \Pre{y})}$\\
+$x \leq y$ & $:= \ite{x = 0}{1}{\ite{y = 0}{0}{\Pre{x} \leq \Pre{y}}}$\\
+$x < y$   & $:= \ite{y = 0}{0}{\ite{x = 0}{1}{\Pre{x} < \Pre{y}}}$\\
+$\fn{div}\;x\;y$ & $:= \ite{(x < y) = 1}{0}{\Suc{\fn{div}\;(x - y)\;y}}$\\
+$\omega$  & $:= \omega$\\
+$\langle x, y\rangle$ & $:= \ite{y = 0}{\fn{div}\;(x * \Suc{x})\;2}
+                            {\langle x, \Pre{y}\rangle + x + y + 1}$\\
+$\fn{cpx}\;x$ & $:= \ite{x = 0}{0}{\ite{\fn{cpx}\,\Pre{x} = 0}
+                    {\Suc{\fn{cpy}\,\Pre{x}}}{\Pre{\fn{cpx}\,\Pre{x}}}}$\\
+$\fn{cpy}\;x$ & $:= \ite{\fn{cpx}\,\Pre{x} = 0}{0}{\Suc{\fn{cpy}\,\Pre{x}}}$\\
+$\fn{cpi}'\;n\;x$ & $:= \ite{n = 0}{0}{\ite{n = 1}{x}{\fn{cpy}\,(\fn{cpi}'\;(n-1)\;x)}}$\\
+$x \in G$ & $:= \ite{G = \fn{Nil}}{\fn{False}}
+                {\ite{\fn{hd}\,G = x}{\fn{True}}{x \in \fn{tl}\,G}}$\\
+$\fn{nth}\;i\;xs$ & $:= \ite{xs = \fn{Nil}}{0}
+                {\ite{i = 0}{\fn{hd}\,xs}{\fn{nth}\;(i-1)\;(\fn{tl}\,xs)}}$\\
+$\fn{len}\;xs$ & $:= \ite{xs = \fn{Nil}}{0}{\Suc{\fn{len}\,(\fn{tl}\,xs)}}$\\
+$\fn{subset}\;G'\;G$ & $:= \ite{G' = \fn{Nil}}{\fn{True}}
+                {\fn{hd}\,G' \in G \wedge \fn{subset}\;(\fn{tl}\,G')\;G}$\\
+$\fn{ack}\;x\;y$ & $:= \ite{x = 0}{y + 1}{\ite{y = 0}{\fn{ack}\,\Pre{x}\,1}
+                {\fn{ack}\,\Pre{x}\,(\fn{ack}\;x\;\Pre{y})}}$\\
+\bottomrule
+\end{tabular}
+\caption{Definitions of \QGA.  $\langle x, y\rangle$ is the Cantor pairing and
+$\fn{cpx}$, $\fn{cpy}$ its projections.}
+\label{tab:qga-defs}
+\end{table}
+
+\begin{table}[p]
+\centering\small
+\begin{tabular}{@{}c@{\hspace{1.4em}}c@{\hspace{1.4em}}c@{}}
+\multicolumn{3}{@{}l}{\textbf{Propositional}}\\[0.9ex]
+\irule{P}{P \vee Q}{$\vee$I1} &
+\irule{Q}{P \vee Q}{$\vee$I2} &
+\irule{\neg P \sep \neg Q}{\neg (P \vee Q)}{$\vee$I3}\\[2.4ex]
+\irule{\neg(P \vee Q)}{\neg P}{$\vee$E2} &
+\irule{\neg(P \vee Q)}{\neg Q}{$\vee$E3} &
+\irule{P \vee Q \sep \dis{P}{R} \sep \dis{Q}{R}}{R}{$\vee$E1}\\[3.6ex]
+\irule{P}{\neg\neg P}{$\neg\neg$I} &
+\irule{\neg\neg P}{P}{$\neg\neg$E} &
+\irule{P \sep \neg P}{Q}{exF}\\[2.8ex]
+\multicolumn{3}{@{}l}{\textbf{Equality}}\\[0.9ex]
+\irule{a = b \sep Q\,a}{Q\,b}{=E} &
+\irule{a = b}{b = a}{=S} &
+\\[2.8ex]
+\multicolumn{3}{@{}l}{\textbf{Natural numbers}}\\[0.9ex]
+\iaxiom{0 \N}{0I} &
+\irule{\Suc{a} = \Suc{b}}{a = b}{S-inj} &
+\irule{a = b}{\Suc{a} = \Suc{b}}{S-cong}\\[2.4ex]
+\irule{a = b}{\Pre{a} = \Pre{b}}{P-cong} &
+\irule{a \N \sep b \N}{(a = b) \B}{eqBool} &
+\irule{a \N}{\Suc{a} \neq 0}{S$\neq$0}\\[2.4ex]
+\irule{a \N}{\Pre{\Suc{a}} = a}{PS} &
+\iaxiom{\Pre{0} = 0}{P0} &
+\irule{(a = b) \B}{a \N \wedge b \N}{eqE}\\[2.4ex]
+\irule{\Pre{a} \N}{a \N}{predTI} &
+\multicolumn{2}{c}{\irule{a \N \sep Q\,0 \sep \dis{x \N,\; Q\,x}{Q\,\Suc{x}}}{Q\,a}{Ind}}\\[2.8ex]
+\multicolumn{3}{@{}l}{\textbf{Entailment and quantifiers}}\\[0.9ex]
+\irule{\dis{a}{b}}{a \seq b}{$\seq$I} &
+\irule{a \seq b \sep a}{b}{$\seq$E} &
+\irule{\dis{x \N}{Q\,x}}{\forall x.\,Q\,x}{$\forall$I}\\[3.6ex]
+\irule{\forall x.\,Q\,x \sep a \N}{Q\,a}{$\forall$E} &
+\irule{a \N \sep Q\,a}{\exists x.\,Q\,x}{$\exists$I} &
+\irule{\exists x.\,Q\,x \sep \dis{a \N,\; Q\,a}{R}}{R}{$\exists$E}\\[2.8ex]
+\multicolumn{3}{@{}l}{\textbf{Conditionals}}\\[0.9ex]
+\multicolumn{1}{@{}c}{\irule{c \sep a \N}{(\ite{c}{a}{b}) = a}{condI1}} &
+\multicolumn{2}{c}{\irule{\neg c \sep b \N}{(\ite{c}{a}{b}) = b}{condI2}}\\[2.4ex]
+\multicolumn{1}{@{}c}{\irule{c \sep (\ite{c}{a}{b}) \N}{a \N}{condE1}} &
+\multicolumn{2}{c}{\irule{\neg c \sep (\ite{c}{a}{b}) \N}{b \N}{condE2}}\\[2.4ex]
+\multicolumn{1}{@{}c}{\irule{(\ite{c}{a}{b}) \N}{c \B}{condE3}} &
+\multicolumn{2}{c}{\irule{c \sep Q\,(\ite{c}{a}{b})}{Q\,a}{cond-then-E}}\\[2.4ex]
+\multicolumn{1}{@{}c}{\irule{c \sep Q\,a}{Q\,(\ite{c}{a}{b})}{cond-then-I}} &
+\multicolumn{2}{c}{\irule{\neg c \sep Q\,b}{Q\,(\ite{c}{a}{b})}{cond-else-I}}\\[2.8ex]
+\multicolumn{3}{@{}l}{\textbf{Definitions}}\\[0.9ex]
+\irule{a := b \sep Q\,b}{Q\,a}{defE} &
+\irule{a := b \sep Q\,a}{Q\,b}{defI} &
+\end{tabular}
+\caption{Inference rules of \QGA.  Each conditional rule has a formula-level
+twin with $=$ replaced by $\longleftrightarrow$ and $\mathsf{N}$ by
+$\mathsf{B}$, and each ``then'' rule has an ``else'' twin.}
+\label{tab:qga-rules}
+\end{table}

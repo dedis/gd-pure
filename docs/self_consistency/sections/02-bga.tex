@@ -1,0 +1,733 @@
+\section{\BGA{} arithmetized in \QGA}
+\label{sec:bga}
+
+\texttt{BGA\_on\_GA.thy} encodes basic grounded arithmetic as \QGA{} natural
+numbers and proves its proof checker sound with respect to the encoded
+semantics.  The file is a tower of locales, so the whole argument is carried
+out under a fixed, small set of assumptions about the encoding and no concrete
+G\"odel numbering appears in it.
+
+This section walks through the locales in order and explains every constant
+they fix.  Throughout, $\Gamma \seq \varphi$ is a \BGA{} judgment, $\pi$ and
+$\rho$ range over encoded proofs, $A$ over assignments, and $D$ over the
+background definition list.  Notation like $q[v_i \mapsto a]$ abbreviates
+\isa{subst\_F q i a}.
+
+\subsection{The system being encoded}
+
+\BGA{} has terms and formulas, and no logical connectives at all.
+
+\[
+\begin{array}{lcl}
+t &::=& v_j \mid 0 \mid \Suc{t} \mid \Pre{t} \mid t\,0?\,t : t \mid d_i(t, t)\\
+\varphi &::=& t = t \mid t \neq t
+\end{array}
+\]
+
+\noindent
+A variable $v_j$ is a natural number $j$, and its value under an assignment is
+the $j$th entry of the assignment list.  \BGA{} has no binders, so nothing
+scopes over a variable and the index is simply a position.  Conditional
+evaluation is if-zero-else, which keeps terms and formulas from being mutually
+recursive.  Function application is restricted to two arguments, and the
+functions come from a fixed background list $D$, where position $i$ holds the
+body of $d_i(v_0, v_1)$.  Disequality is a primitive, so $a \neq b$ is not the
+negation of $a = b$; \BGA{} has no negation to form.  A judgment is a sequent
+$\Gamma \seq \varphi$ with $\Gamma$ a finite list of formulas.
+
+\subsection{Codes}
+
+There is one \QGA{} type, \isa{num}.  The type synonyms below are
+documentation.
+
+\thy{bga-types}
+
+\noindent
+A judgment is the pair \isa{⟨G, c⟩}, written \isa{G ⊩ c}, with \isa{hyp\_of}
+and \isa{conc\_of} as projections.  A hypothesis set is a list of formulas and
+a proof is a list of judgments, read head first, each justified by the
+judgments after it.
+
+\subsection{The locale tower}
+\label{sec:tower}
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Locale} & \textbf{Extends} & \textbf{Fixes}\\
+\midrule
+\isa{suff\_syntax}    & ---                   & \isa{mk\_eq}, \isa{mk\_neq}, \isa{dfns}, \isa{is\_valid\_proof}\\
+\isa{suff\_semantics} & \isa{suff\_syntax}    & \isa{evals}, \isa{sat\_fm}, \isa{sat\_hyp}\\
+\isa{consistent}      & \isa{suff\_semantics} & ---\\
+\midrule
+\isa{bga\_encoding}   & ---                   & the six encoder operations, the three\\
+                      &                       & freshness predicates\\
+\isa{bga\_dfns}       & \isa{bga\_encoding}   & \isa{dfns}, \isa{dfn\_is}\\
+\isa{bga\_fuel\_semantics} & \isa{bga\_dfns}  & \isa{eval\_fuel}\\
+\isa{bga\_subst}      & \isa{bga\_encoding}   & \isa{subst\_T}, \isa{subst\_F}, \isa{subst\_body}\\
+\isa{bga\_fuel\_subst\_semantics} & \isa{bga\_fuel\_semantics}, & \isa{asn\_put}\\
+                      & \isa{bga\_subst}      & \\
+\midrule
+\isa{bga\_subst\_rule}  & \isa{bga\_subst}    & \isa{check\_template}, \isa{rep\_vars\_T},\\
+                        &                     & \isa{rep\_vars\_F}, \isa{find\_phi}, \isa{find\_eq},\\
+                        &                     & \isa{check\_subst}\\
+\isa{bga\_eq\_rule}     & \isa{bga\_encoding} & \isa{check\_eq\_rules}, \isa{check\_neq\_rules}\\
+\isa{bga\_ind\_rule}    & \isa{bga\_subst\_rule} & \isa{check\_ind\_template},\\
+                        &                     & \isa{find\_ind\_base}, \isa{check\_ind}\\
+\isa{bga\_struct\_rule} & \isa{bga\_encoding} & \isa{find\_cut}, \isa{check\_cut},\\
+                        &                     & \isa{find\_struct}, \isa{check\_struct}\\
+\isa{bga\_app\_rule}    & \isa{bga\_subst\_rule}, & \isa{app\_try}, \isa{app\_y}, \isa{app\_x},\\
+                        & \isa{bga\_dfns}     & \isa{app\_d}, \isa{check\_app}\\
+\isa{bga\_proof\_check} & the five rule locales & \isa{valid\_step}, \isa{check\_list},\\
+                        &                     & \isa{is\_valid\_proof}\\
+\midrule
+\isa{bga\_fuller}       & \isa{bga\_fuel\_subst\_semantics}, & ---\\
+                        & \isa{bga\_proof\_check} & \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Two locales are defined in the file and not used by \isa{bga\_fuller}:
+\isa{bga\_semantics}, which fixes the exact evaluator \isa{eval}, and
+\isa{bga\_subst\_semantics}, which combines it with substitution.  They are
+described in \S\ref{sec:fuel} because the exact evaluator is the clearest
+statement of what the encoded semantics means.
+
+Almost every constant is fixed with an assumption of the form \isa{f x := body}
+rather than being defined.  A locale cannot make a recursive definition, and in
+\QGA{} it does not need to: fixing a constant together with its \isa{:=}
+equation is exactly what \S\ref{sec:defmech} admits, and the equation is all
+the proofs ever use.
+
+\subsection{The consistency skeleton}
+\label{sec:skeleton}
+
+Before any encoding is fixed, the shape of the final argument is stated.
+
+\thy{bga-suff-syntax}
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\isa{mk\_eq :: tm ⇒ tm ⇒ fm} & builds the code of $a = b$ from the codes of $a$ and $b$\\
+\isa{mk\_neq :: tm ⇒ tm ⇒ fm} & the same for $a \neq b$\\
+\isa{dfns :: dfn} & the code of the background definition list $D$\\
+\isa{is\_valid\_proof :: pf ⇒ jdg ⇒ o} & ``$\pi$ is a proof of $J$''\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+The assumptions are only habeas quid: encoded formulas are numbers, and
+\isa{is\_valid\_proof p J} is a grounded formula whenever \isa{p} and \isa{J}
+are numbers.  The second is the grounded-logic form of decidability of proof
+checking, and it is what makes the concluding proof by contradiction available.
+
+\thy{bga-suff-semantics}
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\isa{evals :: tm ⇒ asn ⇒ val ⇒ o} & ``$t$ evaluates to $r$ under $A$''\\
+\isa{sat\_fm :: fm ⇒ asn ⇒ o} & ``the formula coded by $f$ holds under $A$''\\
+\isa{sat\_hyp :: hyp ⇒ asn ⇒ o} & ``every formula in $\Gamma$ holds under $A$''\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Three assumptions: the empty hypothesis list is satisfied by every assignment,
+evaluation is deterministic, and a satisfied encoded equation yields a common
+value for its two sides while a satisfied encoded disequality yields two
+distinct values.
+
+\thy{bga-consistent}
+
+\noindent
+\isa{consistent} adds soundness of the checker and derives syntactic
+consistency.  The derivation is short.  Assume both proofs exist.  The
+statement is grounded by \isa{proof\_bool}, so \isa{contradiction} applies.
+Soundness under the empty hypothesis list and the assignment \isa{0} gives
+\isa{sat\_fm (mk\_eq a b) 0} and \isa{sat\_fm (mk\_neq a b) 0}.  The first
+produces a value \isa{q} reached by both \isa{a} and \isa{b}, the second
+produces \isa{x} and \isa{y} with \isa{x ≠ y}, determinism forces
+\isa{x = q = y}, and \isa{exF} closes the goal.  The habeas quid premises
+\isa{a N}, \isa{b N}, \isa{p1 N} and \isa{p2 N} are needed before the formula
+being contradicted can be shown grounded.
+
+\subsection{Encoded syntax}
+
+Terms and formulas are tagged pairs, with six term tags and two formula tags.
+
+\thy{bga-tags}
+
+\begin{center}
+\begin{tabular}{@{}llll@{}}
+\toprule
+Tag & Constructor & Notation & Payload\\
+\midrule
+\isa{T\_VAR}  & variable      & $v_j$              & $j$\\
+\isa{T\_ZERO} & zero          & $0$                & ignored\\
+\isa{T\_SUC}  & successor     & $\Suc{a}$          & $a$\\
+\isa{T\_PRED} & predecessor   & $\Pre{a}$          & $a$\\
+\isa{T\_IFZ}  & if-zero-else  & $c\;0?\,a:b$       & $\langle c, \langle a, b\rangle\rangle$\\
+\isa{T\_APP}  & application   & $d_i(a,b)$         & $\langle i, \langle a, b\rangle\rangle$\\
+\midrule
+\isa{F\_EQ}   & equality      & $a = b$            & $\langle a, b\rangle$\\
+\isa{F\_NEQ}  & disequality   & $a \neq b$         & $\langle a, b\rangle$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{\isa{bga\_encoding}}
+\label{sec:encoder-interface}
+
+\thy{bga-enc-fixes}
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\isa{tag\_T :: tm ⇒ tmtag} & the constructor tag of a term code\\
+\isa{load\_T :: tm ⇒ tm}   & the payload of a term code\\
+\isa{pack\_T :: tmtag ⇒ tm ⇒ tm} & builds a term code from tag and payload\\
+\isa{tag\_F}, \isa{load\_F}, \isa{pack\_F} & the same three for formula codes\\
+\isa{fresh\_T :: num ⇒ tm ⇒ o} & every variable in the term has index below $k$\\
+\isa{fresh\_F :: num ⇒ fm ⇒ o} & the same for a formula\\
+\isa{fresh\_H :: num ⇒ hyp ⇒ o} & the same for every formula in a list\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Freshness is defined by recursion over the tag, and in mathematical notation it
+reads
+\[
+\fn{fresh}_T(k, t) =
+\begin{cases}
+j < k                                        & t = v_j\\
+\top                                         & t = 0\\
+\fn{fresh}_T(k, a)                           & t = \Suc{a} \text{ or } t = \Pre{a}\\
+\fn{fresh}_T(k, c) \wedge \fn{fresh}_T(k, a) \wedge \fn{fresh}_T(k, b)
+                                             & t = (c\,0?\,a:b)\\
+\fn{fresh}_T(k, a) \wedge \fn{fresh}_T(k, b) & t = d_i(a, b)\\
+\bot                                         & \text{tag out of range}
+\end{cases}
+\]
+with $\fn{fresh}_F(k, \varphi)$ the conjunction over the two sides of
+$\varphi$ and $\fn{fresh}_H(k, \Gamma)$ the conjunction over the members of
+$\Gamma$.  The last line is the treatment of a number whose tag is not one of
+the six: it is fresh for no $k$.  Freshness is used once, in the induction rule
+of \S\ref{sec:ind-rule}, to guarantee that the induction variable does not
+occur in the hypotheses.
+
+The assumptions on the interface are the following, and they are the only
+properties of the encoding used anywhere in the development.
+
+\thy{bga-enc-axioms}
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+habeas quid & \isa{pack}, \isa{tag} and \isa{load} preserve \isa{N}\\
+injectivity & \isa{tag (pack t L) = t} and \isa{load (pack t L) = L}\\
+retraction & \isa{pack (tag f) (load f) = f}\\
+decrease & \isa{f ≠ 0 ⟹ load f < f = 1}, payloads are strictly smaller\\
+base case & \isa{tag\_T 0 = T\_ZERO}, the code $0$ is the term $0$\\
+monotonicity & \isa{pack} is monotone in its payload\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{remarkx}[Injective, not surjective]
+What the concrete encoding of \S\ref{sec:encode} provides, and all that is
+used, is an \emph{injective} map from \BGA{} syntax into $\mathbb{N}$.  It is
+not surjective: a number whose tag lies outside the constructor range encodes
+no \BGA{} term, and no attempt is made to exclude such numbers or to recognize
+the well-formed ones.  The assumption that does hold for every number is the
+retraction property \isa{pack (tag f) (load f) = f}, which follows from the
+Cantor pairing being a bijection on $\mathbb{N}$ and says only that a code can
+be taken apart and put back together.  Ill-formed codes are harmless: the
+evaluator gives them the application semantics, freshness rejects them, and
+soundness never needs them to denote anything.
+\end{remarkx}
+
+\noindent
+The decrease and monotonicity assumptions are what allow
+\isa{strong\_induction} to serve as structural induction over encoded terms.
+Decrease gives the descent: the payload of a nonzero code is a strictly smaller
+number, so recursion into subterms is bounded numerical recursion.
+Monotonicity is used differently, to justify the bounds of the searches in
+\S\ref{sec:subst-rule}.  The first lemma proved from them is
+\isa{fresh\_T\_bool}, that freshness is a grounded formula.
+
+\subsection{\isa{bga\_dfns}}
+
+\thy{bga-dfns}
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\isa{dfns :: dfn} & the code of the definition list $D$, a list of term codes\\
+\isa{dfn\_is :: dfn ⇒ num ⇒ tm ⇒ o} & ``$d$ is in range, $D_d$ is $b$, and $b$ has arity $\leq k$''\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Written out, $\fn{dfn\_is}(d, k, b)$ holds when $d < |D|$, $D_d = b$ and
+$\fn{fresh}_T(k, b)$.  The range test is written as a nested conditional rather
+than a conjunction so that $\fn{nth}\,d\,D$ is never mentioned when $d$ is out
+of range.  The application rule instantiates it at $k = 2$, which is the sense
+in which \BGA{} definitions are binary: the body may mention $v_0$ and $v_1$
+and nothing else.
+
+\subsection{Semantics}
+\label{sec:fuel}
+
+Two evaluators appear in the file.  The direct one, fixed by
+\isa{bga\_semantics}, is the natural reading of the \BGA{} big-step semantics,
+and writing it down at all depends on \QGA{} tolerating divergent definitions.
+
+\thy{bga-eval}
+
+\noindent
+In mathematical notation, with $A$ an assignment,
+\[
+\fn{eval}(t, A) =
+\begin{cases}
+\fn{nth}\,j\,A                     & t = v_j\\
+0                                  & t = 0\\
+\Suc{\fn{eval}(a, A)}              & t = \Suc{a}\\
+\Pre{\fn{eval}(a, A)}              & t = \Pre{a}\\
+\fn{eval}(a, A) \text{ or } \fn{eval}(b, A)
+                                   & t = (c\,0?\,a:b), \text{ on } \fn{eval}(c, A) = 0\\
+\fn{eval}(D_i,\; [\fn{eval}(a, A),\, \fn{eval}(b, A)])
+                                   & t = d_i(a, b)
+\end{cases}
+\]
+The application case in the sources is wrapped in two guards of the form
+\isa{eval a A = eval a A}.  Those are habeas quid tests: the arguments are
+evaluated first, and the body is entered only if both terminate, which makes
+the encoded semantics call by value.
+
+The consistency argument runs through the step-indexed variant instead, fixed
+by \isa{bga\_fuel\_semantics}.  Its result is offset by one, so that
+$\fn{eval\_fuel}(k, t, A) = 0$ means ``no result within budget $k$'' and
+$\fn{eval\_fuel}(k, t, A) = 1 + v$ means ``the value is $v$''.  The offset is
+what lets a single \isa{num} carry both outcomes, at the cost of an explicit
+$\Pre{\cdot}$ on every recursive result.
+
+\thy{bga-eval-fuel}
+\thy{bga-evals}
+
+\noindent
+\isa{evals t A r} says that $t$ evaluates to $r$ under $A$ for some budget:
+\[
+\fn{evals}(t, A, r) \;\;\equiv\;\; \exists k.\; \fn{eval\_fuel}(k, t, A) = \Suc{r}.
+\]
+
+Satisfaction comes in the same two forms.  For the direct evaluator,
+\isa{bga\_semantics} defines
+
+\thy{bga-sat}
+
+\noindent
+that is, $\fn{sat}(\varphi, A)$ compares $\fn{eval}$ of the two sides, with the
+comparison chosen by the formula tag, and $\fn{sat\_hyp}$ quantifies over the
+members of the list.  For the step-indexed evaluator, satisfaction of an
+equation also has to require both sides to converge:
+
+\thy{bga-sat-fuel}
+\thy{bga-sat-hyp-fuel}
+
+\[
+\fn{sat\_fuel}(\varphi, A) \;\;\equiv\;\;
+\exists x, y.\;\; \fn{evals}(a, A, x) \wedge \fn{evals}(b, A, y) \wedge
+\begin{cases} x = y & \text{tag } \varphi = \fn{F\_EQ}\\
+              x \neq y & \text{otherwise}\end{cases}
+\]
+where $a$ and $b$ are the two sides of $\varphi$.  A formula whose sides
+diverge is unsatisfied under every assignment, which is the property the
+consistency argument ultimately rests on.
+
+\subsection{\isa{bga\_subst} and \isa{asn\_put}}
+
+\thy{bga-subst}
+\thy{bga-asn-put}
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\isa{subst\_T :: tm ⇒ tm ⇒ tm ⇒ tm} & $t[v_j \mapsto v]$, replace variable $j$ inside a term\\
+\isa{subst\_F :: fm ⇒ tm ⇒ tm ⇒ fm} & the same inside a formula, side by side\\
+\isa{subst\_body :: tm ⇒ tm ⇒ tm ⇒ tm} & $b[v_0 \mapsto x,\, v_1 \mapsto y]$, simultaneous\\
+\isa{asn\_put :: asn ⇒ num ⇒ val ⇒ asn} & $A[i \mapsto v]$, update an assignment\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+All three substitutions recurse over the tag and rebuild with \isa{pack\_T}.
+Two details are worth noting.  In the \isa{T\_ZERO} case \isa{subst\_T} returns
+\isa{pack\_T T\_ZERO 0} rather than the original code, which normalizes the
+ignored payload of a zero.  In the \isa{T\_APP} case the definition index
+\isa{cpx (load\_T t)} is carried through untouched, since it is not a term.
+\isa{subst\_body} is the two-variable version used by the application rule, and
+it exists separately because that rule substitutes both arguments at once.
+\isa{asn\_put A i v} walks down $i$ entries and replaces the one it finds,
+padding with zeros when $i$ runs past the end of the list, so that an
+assignment is a total map from indices to values.
+
+\subsection{The proof rules of \BGA}
+\label{sec:rules}
+
+The rules are given below in sequent form, and each is realized as one branch
+of the encoded checker.  Here $\Gamma$ is a list of encoded formulas,
+$\varphi$ an encoded formula, and $\varphi[a]$ a formula with occurrences of
+$a$ marked, which is realized by the template search of
+\S\ref{sec:subst-rule}.  The turnstile is the \BGA{} sequent arrow, written
+\isa{⊩} in the sources.
+
+\begin{rules}
+\iaxiom{\Gamma, \varphi \seq \varphi}{hyp} &
+\iaxiom{\Gamma \seq 0 = 0}{0I}\\[2.4ex]
+\irule{\Gamma \seq a = b}{\Gamma \seq b = a}{=S} &
+\irule{\Gamma \seq a = b \sep \Gamma \seq \varphi[a]}{\Gamma \seq \varphi[b]}{=E}\\[2.4ex]
+\irule{\Gamma \seq a = b}{\Gamma \seq \Suc{a} = \Suc{b}}{S=I} &
+\irule{\Gamma \seq \Suc{a} = \Suc{b}}{\Gamma \seq a = b}{S=E}\\[2.4ex]
+\irule{\Gamma \seq a \N}{\Gamma \seq \Pre{\Suc{a}} = a}{PI} &
+\irule{\Gamma \seq a \N}{\Gamma \seq \Suc{a} \neq 0}{S{\neq}0I}\\[2.4ex]
+\irule{\Gamma \seq c = 0 \sep \Gamma \seq a \N}{\Gamma \seq (c\,0?\,a:b) = a}{?I1} &
+\irule{\Gamma \seq c \neq 0 \sep \Gamma \seq b \N}{\Gamma \seq (c\,0?\,a:b) = b}{?I2}\\[2.4ex]
+\irule{\Gamma \seq a \neq b}{\Gamma \seq b \neq a}{{\neq}S} &
+\irule{\Gamma \seq a \neq b}{\Gamma \seq \Suc{a} \neq \Suc{b}}{{\neq}SI}\\[2.4ex]
+\irule{\Gamma \seq \Suc{a} \neq \Suc{b}}{\Gamma \seq a \neq b}{S{\neq}E} &
+\irule{\Gamma \seq a \sep \Gamma, a \seq c}{\Gamma \seq c}{cut}\\[2.4ex]
+\irule{\Gamma' \seq \varphi \sep \Gamma' \subseteq \Gamma}{\Gamma \seq \varphi}{wk} &
+\irule{\begin{array}{c}
+        \Gamma \seq a \N \sep \Gamma \seq \varphi[0]\\
+        \Gamma, v_i \N, \varphi[v_i] \seq \varphi[\Suc{v_i}]
+       \end{array}}{\Gamma \seq \varphi[a]}{Ind}\\[4.4ex]
+\multicolumn{2}{c}{%
+\irule{\Gamma \seq a_0 \N \sep \Gamma \seq a_1 \N \sep
+       \Gamma \seq \varphi[\,D_d\langle a_0, a_1\rangle\,]}
+      {\Gamma \seq \varphi[\,d(a_0, a_1)\,]}{app}}
+\end{rules}
+
+\noindent
+Termination is not a separate judgment form in \BGA.  $a \N$ abbreviates the
+formula $a = a$.  Almost every rule is an introduction rule, and the only
+elimination is $=$E.
+
+The checker never applies a rule forwards.  It is given a judgment $J$ and the
+tail $\rho$ of the proof, and asks whether $J$ could have been produced by some
+rule from judgments occurring in $\rho$.  Every rule with a premise therefore
+becomes a search through $\rho$, and the rules whose premises mention a
+$\varphi[\cdot]$ become a search through $\rho$ combined with a search for a
+template.
+
+\subsection{\isa{bga\_subst\_rule}}
+\label{sec:subst-rule}
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\isa{rep\_vars\_T :: tm ⇒ tm ⇒ tm} & replaces every leaf of a term by a given variable\\
+\isa{rep\_vars\_F :: fm ⇒ tm ⇒ fm} & the same on both sides of a formula\\
+\isa{check\_template} & searches for a template below a bound\\
+\isa{find\_phi} & searches $\rho$ for the premise $\Gamma \seq \varphi[a]$\\
+\isa{find\_eq} & searches $\rho$ for the equation $\Gamma \seq a = b$\\
+\isa{check\_subst :: jdg ⇒ pf ⇒ o} & the rule $=$E as a whole\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+The substitution rule is the one place where the checker has to invent
+something.  To justify $\Gamma \seq \varphi[b]$ it must produce three things: a
+premise $\Gamma \seq \varphi[a]$ somewhere in $\rho$, an equation
+$\Gamma \seq a = b$ somewhere in $\rho$, and a \emph{template} $p$, a formula
+with a designated variable $v_i$, such that
+\[
+p[v_i \mapsto a] = \varphi[a] \qquad\text{and}\qquad p[v_i \mapsto b] = \varphi[b].
+\]
+The template records which occurrences of $a$ are being rewritten.  Nothing in
+the conclusion says what it is, so it is searched for.
+
+\paragraph{Choosing the variable.}
+The designated variable must not already occur in the judgment, or substituting
+into the template would disturb something else.  The index chosen is $J + 1$,
+where $J$ is the code of the whole judgment.  This is fresh because a variable
+$v_j$ is encoded as $\fn{pack}_T(\fn{T\_VAR}, j)$, which is a pair with second
+component $j$, and pairing and packing are monotone in that component, so
+$j \leq J$ for every variable occurring anywhere in $J$.  Monotonicity of
+\isa{pack} in \S\ref{sec:encoder-interface} is assumed for this argument.
+
+\paragraph{Bounding the search.}
+Templates are enumerated downwards from
+$\fn{rep\_vars}_F(\varphi[b], J+1)$, the formula obtained by replacing every
+leaf of the conclusion by $v_{J+1}$:
+\[
+\fn{rep\_vars}_T(t, i) =
+\begin{cases}
+v_i                                        & t = v_j \text{ or } t = 0\\
+\Suc{\fn{rep\_vars}_T(a, i)}               & t = \Suc{a}\\
+\Pre{\fn{rep\_vars}_T(a, i)}               & t = \Pre{a}\\
+(\fn{rep\_vars}_T(c, i)\,0?\,\fn{rep\_vars}_T(a, i) : \fn{rep\_vars}_T(b, i))
+                                           & t = (c\,0?\,a:b)\\
+d_j(\fn{rep\_vars}_T(a, i), \fn{rep\_vars}_T(b, i))
+                                           & t = d_j(a, b)
+\end{cases}
+\]
+This is the template that abstracts \emph{every} leaf at once.  Its code
+bounds the code of every other candidate with the same constructor skeleton,
+since such a candidate differs from it only by leaving some leaves
+unabstracted, and a leaf is numerically smaller than $v_{J+1}$.
+\isa{check\_template} then counts $p$ down from that bound to zero and tests
+each value:
+\[
+\fn{check\_template}(f, \varphi, a, b, p, i) \;\;\Longleftrightarrow\;\;
+\exists q \leq p.\;\; q[v_i \mapsto a] = \varphi \;\wedge\; q[v_i \mapsto b] = f.
+\]
+
+\thy{bga-check-template}
+\thy{bga-rep-vars-t}
+
+\begin{remarkx}[The bound matters for completeness only]
+Soundness of the checker does not depend on the bound being correct.
+\isa{check\_template\_sound\_fuel} assumes that the search reported success and
+extracts the witness $q$ it found; a bound that was too small would make the
+checker reject proofs it ought to accept, which is a completeness failure, and
+would leave soundness untouched.  Nothing in this development proves
+completeness.
+\end{remarkx}
+
+\paragraph{Searching the proof.}
+With the template search in place, the two remaining searches walk the proof
+list.  In mathematical notation, writing $K \in \rho$ for membership in the
+proof list,
+\begin{align*}
+\fn{find\_phi}(J, a, b, \pi) &\;\Longleftrightarrow\;
+  \exists K \in \pi.\;\; \fn{hyp}(K) = \fn{hyp}(J) \;\wedge\;
+  \fn{check\_template}(\fn{conc}(J), \fn{conc}(K), a, b, \beta_J, J+1),\\
+\fn{find\_eq}(J, \rho, \pi) &\;\Longleftrightarrow\;
+  \exists K \in \pi.\;\; \fn{hyp}(K) = \fn{hyp}(J) \;\wedge\;
+  \fn{conc}(K) \text{ is } (a = b) \;\wedge\; \fn{find\_phi}(J, a, b, \rho),\\
+\fn{check\_subst}(J, \rho) &\;\Longleftrightarrow\; \fn{find\_eq}(J, \rho, \rho),
+\end{align*}
+where $\beta_J = \fn{rep\_vars}_F(\fn{conc}(J), J+1)$ is the template bound.
+Both searches carry two proof arguments.  The one named \isa{ptr} is the
+part still to be scanned and shrinks on each step, and the one named
+\isa{rest} is the whole tail of the proof and stays fixed, because the
+premise being looked for may sit anywhere in it.  The hypothesis test
+$\fn{hyp}(K) = \fn{hyp}(J)$ is what keeps the rule from silently changing the
+context.
+
+\thy{bga-find-phi}
+\thy{bga-find-eq}
+
+\subsection{\isa{bga\_eq\_rule}}
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\isa{check\_eq\_rules :: hyp ⇒ tm ⇒ tm ⇒ tmtag ⇒ tmtag ⇒ pf ⇒ o}
+  & the seven rules concluding an equation\\
+\isa{check\_neq\_rules :: hyp ⇒ tm ⇒ tm ⇒ tmtag ⇒ tmtag ⇒ pf ⇒ o}
+  & the four rules concluding a disequation\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Both take the two sides and their tags as separate arguments, already projected
+out of the conclusion by \isa{valid\_step}, so that the branches can test tags
+without recomputing them.
+
+\thy{bga-eq-rules}
+
+\noindent
+The seven branches are, in order, \textsc{0I}, \textsc{=S}, \textsc{S=I},
+\textsc{S=E}, \textsc{PI}, \textsc{?I2} and \textsc{?I1}.  Each is a membership
+test on \isa{rest}, so a judgment is justified only by judgments occurring
+later in the list, which is what makes \isa{check\_list} a well-founded
+recursion.  Reading the fifth branch as an example: the conclusion is
+$\Gamma \seq \Pre{u} = b$, the branch checks that $u$ is $\Suc{b}$ by
+inspecting tags and payloads, and it requires $\Gamma \seq b = b$ to appear in
+the proof, which is the habeas quid premise $b \N$ of \textsc{PI}.
+
+\thy{bga-neq-rules}
+
+\noindent
+and dually \textsc{$\neq$S}, \textsc{S$\neq$0I}, \textsc{$\neq$SI} and
+\textsc{S$\neq$E}.
+
+\subsection{\isa{bga\_ind\_rule}}
+\label{sec:ind-rule}
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\isa{check\_ind\_template} & tests one candidate template for the induction rule\\
+\isa{find\_ind\_base} & searches $\rho$ for the base case\\
+\isa{check\_ind :: jdg ⇒ pf ⇒ o} & the rule \textsc{Ind} as a whole\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Induction needs the same kind of template, and three premises rather than one.
+To justify $\Gamma \seq \varphi[a]$ it looks for a template $q$ with
+\[
+q[v_i \mapsto a] = \varphi[a], \qquad
+q[v_i \mapsto 0] \text{ present in } \rho, \qquad
+(\,v_i = v_i,\; q,\; \Gamma \seq q[v_i \mapsto \Suc{v_i}]\,) \text{ present in } \rho,
+\]
+that is,
+\begin{align*}
+\fn{check\_ind\_template}(f, \varphi, a, \Gamma, p, i, \rho)
+  &\;\Longleftrightarrow\; \exists q \leq p.\;\;
+   q[v_i \mapsto a] = f \;\wedge\; q[v_i \mapsto 0] = \varphi\\
+  &\qquad\wedge\;\;
+   \bigl(v_i = v_i,\, q,\, \Gamma \seq q[v_i \mapsto \Suc{v_i}]\bigr) \in \rho.
+\end{align*}
+
+\thy{bga-ind-template}
+\thy{bga-check-ind}
+
+\noindent
+\isa{check\_ind} guards the search with two conditions.  The habeas quid
+premise $\Gamma \seq a \N$, encoded as the judgment $\Gamma \seq a = a$, must
+be in the proof, and $\fn{fresh}_H(J+1, \Gamma)$ must hold, so that the
+variable used to build the template does not occur in the hypotheses.  The
+step case sought in the proof carries both the induction hypothesis $q$ and the
+termination assumption $v_i = v_i$ on the induction variable, which is what the
+semantic induction lemma of \S\ref{sec:proof} consumes.  \isa{find\_ind\_base}
+scans $\rho$ for the base case in the same style as \isa{find\_phi}.
+
+\subsection{\isa{bga\_struct\_rule}}
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\isa{find\_cut} & searches $\rho$ for the cut formula\\
+\isa{check\_cut :: jdg ⇒ pf ⇒ o} & the rule \textsc{cut}\\
+\isa{find\_struct} & searches $\rho$ for the weakened judgment\\
+\isa{check\_struct :: jdg ⇒ pf ⇒ o} & the rule \textsc{wk}\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\thy{bga-struct}
+
+\begin{align*}
+\fn{check\_cut}(J, \rho) &\;\Longleftrightarrow\;
+  \exists K \in \rho.\;\; \fn{hyp}(K) = \fn{hyp}(J) \;\wedge\;
+  \bigl(\fn{conc}(K),\, \fn{hyp}(J) \seq \fn{conc}(J)\bigr) \in \rho,\\
+\fn{check\_struct}(J, \rho) &\;\Longleftrightarrow\;
+  \exists K \in \rho.\;\; \fn{conc}(K) = \fn{conc}(J) \;\wedge\;
+  \fn{hyp}(K) \subseteq \fn{hyp}(J).
+\end{align*}
+
+\noindent
+The hypothesis rule is not a separate function.  It is the first branch of
+\isa{valid\_step}, the test \isa{mem (conc\_of J) (hyp\_of J)}.
+
+\subsection{\isa{bga\_app\_rule}}
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\isa{app\_try} & tests one triple $(d, x, y)$\\
+\isa{app\_y} & counts $y$ down\\
+\isa{app\_x} & counts $x$ down\\
+\isa{app\_d} & counts the definition index $d$ down\\
+\isa{check\_app :: jdg ⇒ pf ⇒ o} & the rule \textsc{app} as a whole\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\thy{bga-app}
+
+\noindent
+Application unfolds a definition.  To justify $\Gamma \seq \varphi[d(x,y)]$ the
+checker needs $\Gamma \seq x \N$, $\Gamma \seq y \N$ and a premise
+$\Gamma \seq \varphi[\,D_d[v_0 \mapsto x, v_1 \mapsto y]\,]$:
+\begin{align*}
+\fn{app\_try}(J, d, x, y, \rho) \;\Longleftrightarrow\;\;
+  & \fn{dfn\_is}(d, 2, D_d)
+    \;\wedge\; (\fn{hyp}(J) \seq x = x) \in \rho
+    \;\wedge\; (\fn{hyp}(J) \seq y = y) \in \rho\\
+  &\wedge\; \fn{find\_phi}\bigl(J,\; D_d[v_0 \mapsto x, v_1 \mapsto y],\; d(x,y),\; \rho\bigr).
+\end{align*}
+Note that \isa{find\_phi} is reused here with the two sides of the rewrite
+being the unfolded body and the application, so unfolding a definition is
+treated as one more instance of rewriting inside a template.
+
+None of $d$, $x$ and $y$ is determined by the conclusion, so all three are
+enumerated:
+\[
+\fn{check\_app}(J, \rho) \;\Longleftrightarrow\;
+\exists d < |D|.\;\; \exists x \leq \fn{conc}(J).\;\; \exists y \leq \fn{conc}(J).\;\;
+\fn{app\_try}(J, d, x, y, \rho).
+\]
+The three nested countdowns \isa{app\_d}, \isa{app\_x} and \isa{app\_y} are
+that triple search written as recursion, since \QGA{} has no bounded
+quantifier.  The bound $\fn{conc}(J)$ on the arguments is the same kind of
+bound as in \S\ref{sec:subst-rule}: the code of a subterm is at most the code
+of the formula containing it, and as before it is completeness rather than
+soundness that depends on it.
+
+\subsection{\isa{bga\_proof\_check}}
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\isa{valid\_step :: jdg ⇒ pf ⇒ o} & ``$J$ follows by one rule from judgments in $\rho$''\\
+\isa{check\_list :: pf ⇒ o} & every entry follows from the entries after it\\
+\isa{is\_valid\_proof :: pf ⇒ jdg ⇒ o} & ``$\pi$ is a valid proof whose head is $J$''\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\thy{bga-valid-step}
+
+\noindent
+\isa{valid\_step} is the disjunction of the branches, tried in order:
+membership for \textsc{hyp}, then cut, substitution, induction, application and
+weakening, and finally the equality or disequality rules according to the tag
+of the conclusion.  Written as a formula,
+\begin{align*}
+\fn{valid\_step}(J, \rho) \;\Longleftrightarrow\;\;
+& \fn{conc}(J) \in \fn{hyp}(J)
+  \;\vee\; \fn{check\_cut}(J, \rho)
+  \;\vee\; \fn{check\_subst}(J, \rho)\\
+&\vee\; \fn{check\_ind}(J, \rho)
+  \;\vee\; \fn{check\_app}(J, \rho)
+  \;\vee\; \fn{check\_struct}(J, \rho)\\
+&\vee\; \bigl(\text{tag } \fn{conc}(J) = \fn{F\_EQ}
+   \;?\; \fn{check\_eq\_rules}(\dots) : \fn{check\_neq\_rules}(\dots)\bigr).
+\end{align*}
+The order is not significant for soundness.  It is a sequence of nested
+conditionals rather than a disjunction because each branch has to be evaluated
+only when the earlier ones fail.
+
+\thy{bga-check-list}
+\thy{bga-is-valid-proof}
+
+\noindent
+A proof is valid when every entry follows from the entries after it, and it
+proves $J$ when additionally its head is $J$:
+\[
+\fn{check\_list}(\pi) \;\Longleftrightarrow\;
+\pi = \fn{Nil} \;\vee\;
+\bigl(\fn{valid\_step}(\fn{hd}\,\pi,\, \fn{tl}\,\pi) \wedge \fn{check\_list}(\fn{tl}\,\pi)\bigr),
+\]
+\[
+\fn{is\_valid\_proof}(\pi, J) \;\Longleftrightarrow\;
+\pi \neq \fn{Nil} \;\wedge\; \fn{hd}\,\pi = J \;\wedge\; \fn{check\_list}(\pi).
+\]
+Reading the list head first, with each entry justified by its tail, is what
+makes the recursion terminate and what the soundness induction of
+\S\ref{sec:list} follows.

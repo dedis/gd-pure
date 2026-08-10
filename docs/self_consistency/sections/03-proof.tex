@@ -1,0 +1,227 @@
+\section{The consistency proof}
+\label{sec:proof}
+
+This section follows the argument from the evaluator up to the final theorem.
+The intent is to make the shape of the proof and its load-bearing lemmas
+visible; the detailed proofs are left to a later instalment.
+
+\subsection{Shape of the argument}
+
+Everything reduces to one implication, called the soundness bridge:
+
+\begin{center}
+if \isa{p} checks as a proof of \isa{J}, and the hypotheses of \isa{J} are
+satisfied by an assignment \isa{A}, then the conclusion of \isa{J} is satisfied
+by \isa{A}.
+\end{center}
+
+\noindent
+Given it, \S\ref{sec:skeleton} closes the argument in half a page.  Proving it
+requires four things, and they are the subsections that follow.
+
+\begin{enumerate}
+\item The step-indexed evaluator determines at most one value, so that
+      \isa{evals} behaves as a partial function and satisfaction is well
+      behaved.
+\item Every branch of \isa{valid\_step} preserves satisfaction, assuming that
+      every judgment in the tail of the proof does.
+\item That local statement can be lifted along the proof list by induction.
+\item Satisfaction of an encoded equation and of an encoded disequality can be
+      unpacked into statements about values.
+\end{enumerate}
+
+\noindent
+A remark on technique before the details.  \QGA{} induction instantiates a
+schematic predicate \isa{Q}, so a statement can only be generalized before
+inducting if the generalization is part of the object-level formula.  Several
+proofs in this file are therefore stated internally in the form
+\isa{∀u. ∀A2. …} or with nested entailments \isa{… ⊢ (… ⊢ …)} and unpacked
+afterwards with \isa{forallE} and \isa{entailsE}.  \isa{eval\_fuel\_N} is the
+first instance: the induction on fuel runs on \isa{∀u. ∀A2. eval\_fuel k u A2 N}
+and the desired statement is recovered by two instantiations.
+
+\subsection{The evaluator is a partial function}
+
+The fuel evaluator is total as a function into \isa{num}, which is the
+statement \isa{eval\_fuel\_N: ⟦k N; t N; A N⟧ ⟹ eval\_fuel k t A N}, and $0$ is
+its ``no result'' value.  Success is preserved when the budget grows.
+
+\thy{bga-fuel-add}
+
+\noindent
+This is proved by induction on the increment, from the one-step version
+\isa{eval\_fuel\_success\_suc}.  Two successful runs with different budgets
+agree, since both can be raised to the common budget \isa{k + l}.
+
+\thy{bga-fuel-unique}
+
+\noindent
+The existential form follows, and it is the assumption \isa{evals\_det} that
+the abstract locale of \S\ref{sec:skeleton} demanded.
+
+\thy{bga-evals-functional}
+
+\noindent
+The remaining facts about the evaluator are one lemma per constructor, in two
+directions each: from a successful run one can read off the value of the
+subterms (\isa{eval\_fuel\_suc\_value}, \isa{eval\_fuel\_pred\_value},
+\isa{eval\_fuel\_ifz\_zero\_value}, \isa{eval\_fuel\_app\_value}), and from
+successful runs of the subterms one can build a successful run of the whole
+(\isa{eval\_fuel\_sucI} and its relatives).  Together they let \isa{evals} be
+used as an inductively defined big-step relation, which is how the rule
+soundness proofs consume it.
+
+\subsection{Soundness of a single step}
+
+The central local statement is the following.  It says that a checked step is
+sound relative to the tail of the proof, and it is what the induction of
+\S\ref{sec:list} will feed itself.
+
+\thy{bga-valid-step-sound}
+
+\noindent
+Its proof is a case analysis over the branches of \isa{valid\_step}, using
+\isa{cases\_bool} on each guard in turn, with one lemma per branch.  All the
+branch lemmas have the same premises as above and the same conclusion; they
+differ only in which checker they assume.
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Branch} & \textbf{Lemma}\\
+\midrule
+hypothesis          & inline, from \isa{sat\_hyp\_fuel\_mem}\\
+cut                 & \isa{check\_cut\_sound\_fuel}\\
+substitution of equals & \isa{check\_subst\_sound\_fuel}\\
+induction           & \isa{check\_ind\_sound\_fuel}\\
+application         & \isa{check\_app\_sound\_fuel}\\
+weakening           & \isa{check\_struct\_sound\_fuel}\\
+the seven equality rules   & \isa{check\_eq\_rules\_sound\_fuel}\\
+the four disequality rules & \isa{check\_neq\_rules\_sound\_fuel}\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Two of these carry the real content.
+
+\paragraph{The template lemma.}
+Substitution of equals, application and induction all reduce to the same
+semantic fact: if a template \isa{p} instantiated at \isa{a} is satisfied, and
+\isa{a} and \isa{b} evaluate to a common value, then the same template
+instantiated at \isa{b} is satisfied.
+
+\thy{bga-template-sound}
+
+\noindent
+It rests on a pair of substitution lemmas that relate syntactic substitution to
+updating the assignment.
+
+\thy{bga-subst-down}
+\thy{bga-subst-up}
+
+\noindent
+Given \isa{a} and \isa{b} that both evaluate to \isa{v}, the first pushes
+satisfaction of \isa{p[i ↦ a]} under \isa{A} down to satisfaction of \isa{p}
+under \isa{asn\_put A i v}, and the second lifts it back up to
+\isa{p[i ↦ b]}.  The search functions are then sound because they report
+success only when such a template exists, which is the content of
+\isa{check\_template\_sound\_fuel} and of
+
+\thy{bga-find-phi-sound}
+
+\noindent
+The premise \isa{prev} is the induction hypothesis of \S\ref{sec:list} in the
+form the search needs: every judgment occurring in \isa{rest} is sound.  The
+premise \isa{sub} records that the pointer walks a sublist of \isa{rest}, which
+is what keeps the recursion inside the part of the proof already known to be
+sound.  Application is the same lemma applied to the template
+$\varphi[\,\mathrm{body}_d[v_0 \mapsto x, v_1 \mapsto y]\,]$, with the two
+habeas quid premises supplying the values that \isa{subst\_body} needs.
+
+\paragraph{The induction rule.}
+Soundness of the induction rule is the one place where a semantic induction is
+performed, over the value of the term the rule inducts on.
+
+\thy{bga-nat-ind-sound}
+
+\noindent
+Read semantically: if the hypothesis list is satisfied, the base instance
+$p[v_i \mapsto 0]$ is satisfied, and the step is satisfied for every value
+\isa{m} put into the assignment at index \isa{i}, then the instance at \isa{a}
+is satisfied whenever \isa{a} evaluates to \isa{n}.  The proof establishes
+\isa{⋀m. m N ⟹ sat\_fuel p (asn\_put A i m)} by \QGA{} induction on \isa{m},
+with the base case supplied by \isa{sat\_fuel\_subst\_FD} applied to the
+encoded zero, and then instantiates it at \isa{n}.  The freshness premise
+\isa{fresh\_H i G} is what
+allows the assignment to be modified at \isa{i} without disturbing satisfaction
+of the hypotheses.  \isa{check\_ind\_sound\_fuel} then supplies the three
+premises from the corresponding judgments found in the proof list.
+
+\subsection{From steps to proofs}
+\label{sec:list}
+
+The lifting step is a dedicated induction principle over proof lists.  It is
+stated for arbitrary \isa{sat} and \isa{sat\_hyp}, so the same principle serves
+both semantics in the file.
+
+\thy{bga-check-list-induct}
+
+\noindent
+Internally it is proved by \isa{list\_induct} on a statement of the form
+\begin{center}
+\isa{∀A. ∀K. check\_list pf ⊢ (mem K pf ⊢ (sat\_hyp (hyp\_of K) A ⊢ sat (conc\_of K) A))},
+\end{center}
+The predicate being inducted on has to be a single formula, so the
+generalizations over the assignment and over the judgment sit inside it as
+\QGA{} quantifiers.  The implications are written with \isa{⊢} rather than
+\isa{⟶} because \isa{⟶} introduction needs its antecedent grounded, and
+\isa{sat\_hyp} unfolds to an existential over fuel that is not known to be
+grounded.
+
+Instantiating it with the step-indexed semantics and discharging the step case
+with \isa{valid\_step\_sound\_fuel} gives soundness for every judgment
+occurring in a checked list.
+
+\thy{bga-check-list-sound}
+
+\noindent
+Finally \isa{is\_valid\_proof} is unfolded.  Its two guards are decided with
+\isa{cases\_bool}, the head of the proof is shown to be a member of it by
+\isa{cons\_reconstr} and \isa{mem\_cons\_head}, and the previous lemma applies.
+
+\thy{bga-bridge}
+
+\subsection{Consistency}
+\label{sec:consistency}
+
+The two formula constructors are defined, and their satisfaction is unpacked.
+
+\thy{bga-mk-eq}
+\thy{bga-sat-eqE}
+\thy{bga-sat-neqE}
+
+\noindent
+Both unpacking lemmas go through \isa{tag\_pack\_F} and \isa{load\_pack\_F} to
+recover the two sides from the code, and then through the definition of
+\isa{sat\_fuel}.  Groundedness of proof checking, the last assumption of the
+skeleton, is \isa{proof\_is\_bool}, obtained from \isa{check\_list\_bool} by
+list induction and from a chain of \isa{condTB} steps over the branches of
+\isa{valid\_step}.
+
+With these in place, \isa{bga\_fuller}, the union of the step-indexed semantics
+with the proof checker, is declared a sublocale of \isa{consistent}.
+
+\thy{bga-sublocale}
+
+\noindent
+Each obligation is discharged by one of the lemmas above:
+\isa{mk\_eq\_N'} and \isa{mk\_neq\_N'} for habeas quid,
+\isa{proof\_is\_bool} for groundedness of the checker,
+\isa{sat\_hyp\_fuel\_nil} for the empty hypothesis list,
+\isa{evals\_functional} for determinism,
+\isa{sat\_fuel\_mk\_eqE} and \isa{sat\_fuel\_mk\_neqE} for the two unpacking
+assumptions, and \isa{soundness\_bridge\_fuel} for soundness.  The theorem
+\isa{syntactically\_consistent} of \S\ref{sec:skeleton} becomes available
+inside \isa{bga\_fuller}, and it remains to exhibit an encoding that satisfies
+the interface.
