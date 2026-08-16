@@ -257,21 +257,24 @@ proof -
     done
 qed
 
-(* Entailment reduces to almost the same as object-level implication \<longrightarrow>.
- * The difference is that the \<longrightarrow> introduction rule requires 'a' to be
- * proven boolean first ('a B'), while entailment does not. It is a
- * direct object-level mirroring of the meta-level a \<Longrightarrow> b.
- * Meta-level just means that it is of type prop \<Rightarrow> prop \<Rightarrow> prop,
- * while entailment mirrors this at the object level, that is, it's
- * of type o \<Rightarrow> o \<Rightarrow> o.
- * With entailment, GD can reason about deducability at the object level,
- * which adds a lot of expressive power.
+(* Entailment (entails / \<turnstile> :: o \<Rightarrow> o \<Rightarrow> o, with entailsI / entailsE) was REMOVED
+   It internalised the meta-level a \<Longrightarrow> b as an object formula
+  WITHOUT the habeas quid guard that implI carries (implI needs a B;
+ entailsI needed nothing).  this admits Curry's paradox:
+ 
+    axiomatization C :: o where C_def: "C := (C \<turnstile> False)"
+    note unfoldC = defI[where Q="\<lambda>z. z", OF C_def]
+    note foldC   = defE[where Q="\<lambda>z. z", OF C_def]
+    have contract: "C \<turnstile> False" \<dots>          (* C used twice *)
+    show "False" by (rule entailsE[OF contract foldC[OF contract]])
+
+ Its only uses were in BGA_on_GA.thy, to carry a hypothetical through an
+ induction motive (GD's induction motives must be of type o, and implI
+ needs the antecedent decided).  All of them are now \<longrightarrow>: ten checker
+ eliminators used an existing _bool lemma, and the soundness induction
+ check_list_induct_N uses the fuel-explicit sat_at / sat_hyp_at, which
+ ARE decided because eval_fuel is total (eval_fuel_N).
  *)
-axiomatization
-  entails :: "o \<Rightarrow> o \<Rightarrow> o"    (infixr "\<turnstile>" 10)
-where
-  entailsI: "\<lbrakk>a \<Longrightarrow> b\<rbrakk> \<Longrightarrow> (a \<turnstile> b)" and
-  entailsE: "\<lbrakk>a \<turnstile> b; a\<rbrakk> \<Longrightarrow> b"
 
 axiomatization
   forall :: "(num \<Rightarrow> o) \<Rightarrow> o"  (binder "\<forall>" [8] 9) and
@@ -285,6 +288,34 @@ where
   forAllNeg: "\<lbrakk>\<not>(\<forall>x. Q x); (Q x) B\<rbrakk> \<Longrightarrow> \<exists>x. \<not>(Q x)" and
   existsNeg: "\<lbrakk>\<not>(\<exists>x. Q x); (Q x) B\<rbrakk> \<Longrightarrow> \<forall>x. \<not>(Q x)" and
    *)
+
+section \<open>Negation of quantified statements\<close>
+                             
+axiomatization where
+  notForallI: "\<lbrakk>a N; \<not>(F a)\<rbrakk> \<Longrightarrow> \<not>(\<forall>x. F x)" and
+  notForallE: "\<lbrakk>\<not>(\<forall>x. F x); \<And>a. a N \<Longrightarrow> \<not>(F a) \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
+
+(* De Morgan \<not>\<forall> \<longleftrightarrow> \<exists>\<not> follows. *)
+
+lemma forAllNeg:
+  assumes not_all: "\<not>(\<forall>x. F x)"
+  shows "\<exists>x. \<not>(F x)"
+proof (rule notForallE[OF not_all])
+  fix a
+  assume a_nat: "a N"
+  assume not_Fa: "\<not>(F a)"
+  show "\<exists>x. \<not>(F x)" using a_nat not_Fa by (rule existsI)
+qed
+
+lemma exNotForall:
+  assumes ex_not: "\<exists>x. \<not>(F x)"
+  shows "\<not>(\<forall>x. F x)"
+proof (rule existsE[OF ex_not])
+  fix a
+  assume a_nat: "a N"
+  assume not_Fa: "\<not>(F a)"
+  show "\<not>(\<forall>x. F x)" using a_nat not_Fa by (rule notForallI)
+qed
 
 section \<open>Axiomatization of conditional evaluation in GD\<close>
 
@@ -428,6 +459,35 @@ ML_file "gd_subst.ML"
 
 section \<open>Definitional Mechanism in GD\<close>
 
+(* SIDE CONDITION ON := (2026-08-16).
+ * def is polymorphic, so := may introduce recursive definitions at type o
+ * as well as num (fresh_H_def, find_struct_def, check_template_def etc. in
+ * BGA_on_GA.thy all do this).  That is intended, BUT it is only sound under
+ * a positivity restriction:
+ *
+ *   in an o-valued definition  C := body,  the recursive occurrence of C
+ *   must NOT appear in the antecedent of an entailment (\<turnstile>).
+ *
+ * Without the restriction, Curry's paradox is derivable:
+ *
+ *   axiomatization C :: o where C_def: "C := (C \<turnstile> False)"
+ *   note unfoldC = defI[where Q="\<lambda>z. z", OF C_def]   (* C \<Longrightarrow> C \<turnstile> False *)
+ *   note foldC   = defE[where Q="\<lambda>z. z", OF C_def]   (* C \<turnstile> False \<Longrightarrow> C *)
+ *   have contract: "C \<turnstile> False"
+ *     by (rule entailsI, rule entailsE[OF unfoldC[OF _] _])   (* uses C twice *)
+ *   show "False" by (rule entailsE[OF contract foldC[OF contract]])
+ *
+ * The same definition with \<longrightarrow> in place of \<turnstile> is BLOCKED, because implI
+ * requires the antecedent to be decided (C B), which is unavailable.  That
+ * B premise is GD's guard against contraction on an ungrounded hypothesis;
+ * entailsI has no such guard, which is why the restriction attaches to
+ * \<turnstile> specifically.
+ *
+ * Every := definition currently in the development satisfies the
+ * restriction (recursive occurrences sit in then/else branches or under
+ * \<and>, never in a \<turnstile> antecedent).  Nothing checks it automatically.
+ *)
+
 axiomatization
   def :: \<open>'a \<Rightarrow> 'a \<Rightarrow> o\<close> (infix \<open>:=\<close> 10)
 where
@@ -458,19 +518,17 @@ apply (rule iffI[where a="a" and b="a"])
   done
 
 
-lemma eq_impl_term: "a = b \<Longrightarrow> a N"
-apply (rule entailsE[where a="a=b"])
-apply (unfold isNat_def)
-apply (subst "a=b", assumption)
-apply (rule entailsI, simp)
-done
+lemma eq_impl_term:
+  assumes h: "a = b"
+  shows "a N"
+  unfolding isNat_def
+  by (rule eq_trans[OF h eqSym[OF h]])
 
-lemma eq_impl_term2: "a = b \<Longrightarrow> b N"
-apply (rule entailsE[where a="a=b"])
-apply (unfold isNat_def)
-apply (subst "a=b", assumption)
-apply (rule entailsI, simp)
-done
+lemma eq_impl_term2:
+  assumes h: "a = b"
+  shows "b N"
+  unfolding isNat_def
+  by (rule eq_trans[OF eqSym[OF h] h])
 
 
 lemma [simp]: "\<not>c \<Longrightarrow> b N \<Longrightarrow> d N \<Longrightarrow> (if c then a else b) = d \<longleftrightarrow> b = d"
@@ -620,6 +678,7 @@ axiomatization
   less  :: "num \<Rightarrow> num \<Rightarrow> num"  (infix "<" 50)  and
   leq   :: "num \<Rightarrow> num \<Rightarrow> num"  (infix "\<le>" 50) and
   omega :: "'a"
+
 where
   add_def:   "add x y  := if y = 0 then x else S(add x (P y))"       and
   sub_def:   "sub x y  := if y = 0 then x else P(sub x (P y))"       and
@@ -632,6 +691,9 @@ where
                           else (less (P x) (P y))"                   and
   div_def:   "div x y  := if x < y = 1 then 0 else S(div (x - y) y)" and
   omega_def: "omega    := omega"
+
+definition modulo :: "num \<Rightarrow> num \<Rightarrow> num" (infix "mod" 80) where
+ " modulo x y \<equiv> x - (div x y)"
 
 definition greater :: "num \<Rightarrow> num \<Rightarrow> num" (infix ">" 50) where
   "greater x y \<equiv> 1 - (x \<le> y)"
@@ -5359,5 +5421,6 @@ next
       using b_bool[OF nc] e by simp
   qed
 qed
+
 
 end (* End of theory *)

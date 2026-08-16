@@ -518,6 +518,7 @@ proof -
     using pk H by simp
 qed
 
+(* DEADCODE
 lemma eval_fuel_sucD:
   assumes k: "k N" and H: "Q (eval_fuel (S k) t A)"
   shows "Q (eval_fuel_body k t A)"
@@ -534,6 +535,8 @@ proof -
     using pk body by simp
 qed
 
+*)
+(* DEADCODE
 lemma eval_fuel_suc_eq:
   assumes k: "k N" and bodyN: "eval_fuel_body k t A N"
   shows "eval_fuel (S k) t A = eval_fuel_body k t A"
@@ -544,6 +547,7 @@ proof -
     by (rule eval_fuel_sucI[where Q="\<lambda>z. z = eval_fuel_body k t A", OF k refl])
 qed
 
+*)
 lemma eval_fuel_var:
   assumes k: "k N" and tg: "tag_T t = T_VAR" and nthN: "nth (load_T t) A N"
   shows "eval_fuel (S k) t A = S (nth (load_T t) A)"
@@ -1675,6 +1679,7 @@ proof -
     by (rule sucInj[OF encodedEq])
 qed
 
+(* DEADCODE
 lemma eval_fuel_success_unique_encoded:
   assumes k: "k N" and l: "l N" and t: "t N" and A: "A N"
       and left: "eval_fuel k t A = S r" and right: "eval_fuel l t A = S q"
@@ -1686,6 +1691,7 @@ proof -
     by (rule sucCong[OF rq])
 qed
 
+*)
 definition evals :: "tm \<Rightarrow> asn \<Rightarrow> val \<Rightarrow> o" where
   "evals t A r \<equiv> \<exists>k. eval_fuel k t A = S r"
 
@@ -1749,6 +1755,7 @@ proof -
     by (rule evals_functional[OF t A runEv ev])
 qed
 
+(* DEADCODE
 lemma evals_fuel_unique_encoded:
   assumes k: "k N" and t: "t N" and A: "A N" and ev: "evals t A v" and run: "eval_fuel k t A = S r"
   shows "S r = S v"
@@ -1759,6 +1766,7 @@ proof -
     by (rule sucCong[OF rv])
 qed
 
+*)
 end
 
 locale bga_semantics = bga_dfns  +
@@ -1823,6 +1831,7 @@ proof -
     done
 qed
 
+(* DEADCODE
 lemma sat_hyp_mem: "f N \<Longrightarrow> f \<in> G \<Longrightarrow> sat_hyp G A \<Longrightarrow> sat f A"
   unfolding sat_hyp_def
 proof -
@@ -1833,6 +1842,8 @@ proof -
     apply (rule implE[where a = "f \<in> G"]) apply (rule imp) apply (rule f_in) done
 qed
 
+*)
+(* DEADCODE
 lemma sat_hyp_consI:
   assumes f: "f N"
       and G: "G N"
@@ -1879,6 +1890,8 @@ proof -
   qed
 qed
 
+*)
+(* DEADCODE
 lemma sat_hyp_subset: "subset G' G \<Longrightarrow> G' N \<Longrightarrow> G N \<Longrightarrow> sat_hyp G A \<Longrightarrow> sat_hyp G' A"
 proof -
   assume sub: "subset G' G" and G'_nat: "G' N" and satG: "sat_hyp G A" and G_nat: "G N"
@@ -1896,6 +1909,7 @@ proof -
   qed
 qed
 
+*)
 lemma eval_zero [simp]:
   "eval (pack_T T_ZERO 0) A = 0"
 proof -
@@ -3684,6 +3698,7 @@ proof -
   qed
 qed
 
+(* DEADCODE
 lemma evals_subst_T_result:
   assumes t: "t N" and i: "i N" and s: "s N" and A: "A N" and v: "v N"
       and evs: "evals s A v" and evsub: "evals (subst_T t i s) A r"
@@ -3698,6 +3713,7 @@ proof -
     by (rule evals_functional[OF t putN transported evt])
 qed
 
+*)
 lemma eval_fuel_subst_T_varI:
   assumes m: "m N" and n: "n N" and t: "t N" and i: "i N" and s: "s N" and A: "A N" and v: "v N"
       and srun: "eval_fuel m s A = S v" and tg: "tag_T t = T_VAR"
@@ -4527,8 +4543,10 @@ proof -
   qed
 qed
 
+(* DEADCODE
 lemmas evals_subst_T = evals_subst_TD evals_subst_TI
 
+*)
 lemma subst_F_N:
   assumes f: "f N" and i: "i N" and s: "s N"
   shows "subst_F f i s N"
@@ -4954,8 +4972,10 @@ proof -
   qed
 qed
 
+(* DEADCODE
 lemmas sat_fuel_subst_F = sat_fuel_subst_FD sat_fuel_subst_FI
 
+*)
 definition sat_hyp_fuel :: "hyp \<Rightarrow> asn \<Rightarrow> o" where
   "sat_hyp_fuel G A \<equiv> \<forall>f. f \<in> G \<longrightarrow> sat_fuel f A"
 
@@ -15483,10 +15503,12 @@ lemma app_yE:
       and H: "\<And>z. z N \<Longrightarrow> app_try J d x z rest \<Longrightarrow> R"
   shows R
 proof -
-  have main: "app_y J d x y rest \<turnstile> R"
+  have main: "app_y J d x y rest \<longrightarrow> R"
   proof (rule ind[OF y])
-    show "app_y J d x 0 rest \<turnstile> R"
-    proof (rule entailsI)
+    show "app_y J d x 0 rest \<longrightarrow> R"
+    proof (rule implI)
+      show "(app_y J d x 0 rest) B" by (rule app_y_bool[OF J d x nat0 rest dr])
+    next
       assume ay0: "app_y J d x 0 rest"
       have C:
         "if app_try J d x 0 rest then True
@@ -15518,9 +15540,12 @@ proof -
     qed
   next
     fix k
-    assume k: "k N" and IH: "app_y J d x k rest \<turnstile> R"
-    show "app_y J d x (S k) rest \<turnstile> R"
-    proof (rule entailsI)
+    assume k: "k N" and IH: "app_y J d x k rest \<longrightarrow> R"
+    have SkN: "S k N" by (rule natS[OF k])
+    show "app_y J d x (S k) rest \<longrightarrow> R"
+    proof (rule implI)
+      show "(app_y J d x (S k) rest) B" by (rule app_y_bool[OF J d x SkN rest dr])
+    next
       assume ayS: "app_y J d x (S k) rest"
       have sk: "S k N"
         by (rule natS[OF k])
@@ -15553,109 +15578,12 @@ proof -
         have recK: "app_y J d x k rest"
           using k rec by simp
         show R
-          using IH recK by (rule entailsE)
+          using IH recK by (rule implE)
       qed
     qed
   qed
   show R
-    using main ay by (rule entailsE)
-qed
-
-lemma app_xE:
-  assumes J: "J N" and d: "d N" and x: "x N" and rest: "rest N"
-      and dr: "d < len dfns = 1" and ax: "app_x J d x rest"
-      and H: "\<And>u v. u N \<Longrightarrow> v N \<Longrightarrow>
-        app_try J d u v rest \<Longrightarrow> R"
-  shows R
-proof -
-  have cJ: "conc_of J N"
-    using J by simp
-  have main: "app_x J d x rest \<turnstile> R"
-  proof (rule ind[OF x])
-    show "app_x J d 0 rest \<turnstile> R"
-    proof (rule entailsI)
-      assume ax0: "app_x J d 0 rest"
-      have C:
-        "if app_y J d 0 (conc_of J) rest then True
-         else if 0 > 0 = 1 then app_x J d (0 - 1) rest
-         else False"
-        using ax0
-        by (rule defI[OF app_x_def[where J=J and d=d and x=0 and rest=rest]])
-      have ayB: "app_y J d 0 (conc_of J) rest B"
-        by (rule app_y_bool[OF J d nat0 cJ rest dr])
-      show R
-      proof (rule cases_bool[where q="app_y J d 0 (conc_of J) rest"])
-        show "app_y J d 0 (conc_of J) rest B"
-          by (rule ayB)
-      next
-        assume ay: "app_y J d 0 (conc_of J) rest"
-        show R
-        proof (rule app_yE[OF J d nat0 cJ rest dr ay])
-          fix v
-          assume v: "v N" and app: "app_try J d 0 v rest"
-          show R
-            by (rule H[OF nat0 v app])
-        qed
-      next
-        assume nay: "\<not> app_y J d 0 (conc_of J) rest"
-        have tail:
-          "if 0 > 0 = 1 then app_x J d (0 - 1) rest
-           else False"
-          using nay C by (rule notcond_thenE)
-        have bot: "False"
-          using tail by simp
-        show R
-          by (rule exF[OF bot not_false])
-      qed
-    qed
-  next
-    fix k
-    assume k: "k N" and IH: "app_x J d k rest \<turnstile> R"
-    show "app_x J d (S k) rest \<turnstile> R"
-    proof (rule entailsI)
-      assume axS: "app_x J d (S k) rest"
-      have sk: "S k N"
-        by (rule natS[OF k])
-      have C:
-        "if app_y J d (S k) (conc_of J) rest then True
-         else if S k > 0 = 1 then app_x J d (S k - 1) rest
-         else False"
-        using axS
-        by (rule defI[OF app_x_def[where J=J and d=d and x="S k" and rest=rest]])
-      have ayB: "app_y J d (S k) (conc_of J) rest B"
-        by (rule app_y_bool[OF J d sk cJ rest dr])
-      show R
-      proof (rule cases_bool[where q="app_y J d (S k) (conc_of J) rest"])
-        show "app_y J d (S k) (conc_of J) rest B"
-          by (rule ayB)
-      next
-        assume ay: "app_y J d (S k) (conc_of J) rest"
-        show R
-        proof (rule app_yE[OF J d sk cJ rest dr ay])
-          fix v
-          assume v: "v N" and app: "app_try J d (S k) v rest"
-          show R
-            by (rule H[OF sk v app])
-        qed
-      next
-        assume nay: "\<not> app_y J d (S k) (conc_of J) rest"
-        have recCond:
-          "if S k > 0 = 1 then app_x J d (S k - 1) rest
-           else False"
-          using nay C by (rule notcond_thenE)
-        have gt: "S k > 0 = 1"
-          using k by simp
-        have rec: "app_x J d (S k - 1) rest"
-          using gt recCond by (rule cond_thenE)
-        have recK: "app_x J d k rest"
-          using k rec by simp
-        show R
-          using IH recK by (rule entailsE)
-      qed
-    qed
-  qed
-  show R
-    using main ax by (rule entailsE)
+    using main ay by (rule implE)
 qed
 
 lemma app_x_bool [auto]:
@@ -15696,6 +15624,108 @@ proof -
       apply (rule condTB[OF gB true_bool innerB])
       done
   qed
+qed
+
+lemma app_xE:
+  assumes J: "J N" and d: "d N" and x: "x N" and rest: "rest N"
+      and dr: "d < len dfns = 1" and ax: "app_x J d x rest"
+      and H: "\<And>u v. u N \<Longrightarrow> v N \<Longrightarrow>
+        app_try J d u v rest \<Longrightarrow> R"
+  shows R
+proof -
+  have cJ: "conc_of J N"
+    using J by simp
+  have main: "app_x J d x rest \<longrightarrow> R"
+  proof (rule ind[OF x])
+    show "app_x J d 0 rest \<longrightarrow> R"
+    proof (rule implI)
+      show "(app_x J d 0 rest) B" by (rule app_x_bool[OF J d nat0 rest dr])
+    next
+      assume ax0: "app_x J d 0 rest"
+      have C:
+        "if app_y J d 0 (conc_of J) rest then True
+         else if 0 > 0 = 1 then app_x J d (0 - 1) rest
+         else False"
+        using ax0
+        by (rule defI[OF app_x_def[where J=J and d=d and x=0 and rest=rest]])
+      have ayB: "app_y J d 0 (conc_of J) rest B"
+        by (rule app_y_bool[OF J d nat0 cJ rest dr])
+      show R
+      proof (rule cases_bool[where q="app_y J d 0 (conc_of J) rest"])
+        show "app_y J d 0 (conc_of J) rest B"
+          by (rule ayB)
+      next
+        assume ay: "app_y J d 0 (conc_of J) rest"
+        show R
+        proof (rule app_yE[OF J d nat0 cJ rest dr ay])
+          fix v
+          assume v: "v N" and app: "app_try J d 0 v rest"
+          show R
+            by (rule H[OF nat0 v app])
+        qed
+      next
+        assume nay: "\<not> app_y J d 0 (conc_of J) rest"
+        have tail:
+          "if 0 > 0 = 1 then app_x J d (0 - 1) rest
+           else False"
+          using nay C by (rule notcond_thenE)
+        have bot: "False"
+          using tail by simp
+        show R
+          by (rule exF[OF bot not_false])
+      qed
+    qed
+  next
+    fix k
+    assume k: "k N" and IH: "app_x J d k rest \<longrightarrow> R"
+    have SkN: "S k N" by (rule natS[OF k])
+    show "app_x J d (S k) rest \<longrightarrow> R"
+    proof (rule implI)
+      show "(app_x J d (S k) rest) B" by (rule app_x_bool[OF J d SkN rest dr])
+    next
+      assume axS: "app_x J d (S k) rest"
+      have sk: "S k N"
+        by (rule natS[OF k])
+      have C:
+        "if app_y J d (S k) (conc_of J) rest then True
+         else if S k > 0 = 1 then app_x J d (S k - 1) rest
+         else False"
+        using axS
+        by (rule defI[OF app_x_def[where J=J and d=d and x="S k" and rest=rest]])
+      have ayB: "app_y J d (S k) (conc_of J) rest B"
+        by (rule app_y_bool[OF J d sk cJ rest dr])
+      show R
+      proof (rule cases_bool[where q="app_y J d (S k) (conc_of J) rest"])
+        show "app_y J d (S k) (conc_of J) rest B"
+          by (rule ayB)
+      next
+        assume ay: "app_y J d (S k) (conc_of J) rest"
+        show R
+        proof (rule app_yE[OF J d sk cJ rest dr ay])
+          fix v
+          assume v: "v N" and app: "app_try J d (S k) v rest"
+          show R
+            by (rule H[OF sk v app])
+        qed
+      next
+        assume nay: "\<not> app_y J d (S k) (conc_of J) rest"
+        have recCond:
+          "if S k > 0 = 1 then app_x J d (S k - 1) rest
+           else False"
+          using nay C by (rule notcond_thenE)
+        have gt: "S k > 0 = 1"
+          using k by simp
+        have rec: "app_x J d (S k - 1) rest"
+          using gt recCond by (rule cond_thenE)
+        have recK: "app_x J d k rest"
+          using k rec by simp
+        show R
+          using IH recK by (rule implE)
+      qed
+    qed
+  qed
+  show R
+    using main ax by (rule implE)
 qed
 
 lemma app_d_bool [auto]:
@@ -15777,10 +15807,12 @@ proof -
     by (rule len_nat[OF dfns_N])
   have oneN: "(1::num) N"
     by simp
-  have main: "app_d J d rest \<turnstile> R"
+  have main: "app_d J d rest \<longrightarrow> R"
   proof (rule ind[OF d])
-    show "app_d J 0 rest \<turnstile> R"
-    proof (rule entailsI)
+    show "app_d J 0 rest \<longrightarrow> R"
+    proof (rule implI)
+      show "(app_d J 0 rest) B" by (rule app_d_bool[OF J nat0 rest])
+    next
       assume ad0: "app_d J 0 rest"
       have C:
         "if 0 < len dfns = 1 then
@@ -15840,9 +15872,12 @@ proof -
     qed
   next
     fix k
-    assume k: "k N" and IH: "app_d J k rest \<turnstile> R"
-    show "app_d J (S k) rest \<turnstile> R"
-    proof (rule entailsI)
+    assume k: "k N" and IH: "app_d J k rest \<longrightarrow> R"
+    have SkN: "S k N" by (rule natS[OF k])
+    show "app_d J (S k) rest \<longrightarrow> R"
+    proof (rule implI)
+      show "(app_d J (S k) rest) B" by (rule app_d_bool[OF J SkN rest])
+    next
       assume adS: "app_d J (S k) rest"
       have sk: "S k N"
         by (rule natS[OF k])
@@ -15894,7 +15929,7 @@ proof -
           have recK: "app_d J k rest"
             using k rec by simp
           show R
-            using IH recK by (rule entailsE)
+            using IH recK by (rule implE)
         qed
       next
         assume ndr: "\<not> S k < len dfns = 1"
@@ -15906,12 +15941,12 @@ proof -
         have recK: "app_d J k rest"
           using k rec by simp
         show R
-          using IH recK by (rule entailsE)
+          using IH recK by (rule implE)
       qed
     qed
   qed
   show R
-    using main ad by (rule entailsE)
+    using main ad by (rule implE)
 qed
 
 lemma check_appE:
@@ -18046,10 +18081,12 @@ lemma check_templateE:
           subst_F q i b = f \<Longrightarrow> R"
   shows R
 proof -
-  have main: "check_template f phi a b p i \<turnstile> R"
+  have main: "check_template f phi a b p i \<longrightarrow> R"
   proof (rule ind[OF p])
-    show "check_template f phi a b 0 i \<turnstile> R"
-    proof (rule entailsI)
+    show "check_template f phi a b 0 i \<longrightarrow> R"
+    proof (rule implI)
+      show "(check_template f phi a b 0 i) B" by (rule check_template_bool[OF f phi a b i nat0])
+    next
       assume chk0: "check_template f phi a b 0 i"
       have C0: "if subst_F 0 i a = phi \<and> subst_F 0 i b = f then True
                   else if 0 > 0 = 1 then check_template f phi a b (0 - 1) i
@@ -18092,9 +18129,12 @@ proof -
    next
     fix k
     assume k: "k N"
-       and IH: "check_template f phi a b k i \<turnstile> R"
-    show "check_template f phi a b (S k) i \<turnstile> R"
-    proof (rule entailsI)
+       and IH: "check_template f phi a b k i \<longrightarrow> R"
+    have SkN: "S k N" by (rule natS[OF k])
+    show "check_template f phi a b (S k) i \<longrightarrow> R"
+    proof (rule implI)
+      show "(check_template f phi a b (S k) i) B" by (rule check_template_bool[OF f phi a b i SkN])
+    next
       assume chks: "check_template f phi a b (S k) i"
       have C0: "if subst_F (S k) i a = phi \<and> subst_F (S k) i b = f then True
                   else if S k > 0 = 1 then check_template f phi a b (S k - 1) i
@@ -18139,12 +18179,12 @@ proof -
           using sk1 chkp
           by (rule eqSubst[where Q="\<lambda>q. check_template f phi a b q i"])
         show R
-          using IH chkk by (rule entailsE)
+          using IH chkk by (rule implE)
       qed
     qed
   qed
   show R
-    using main chk by (rule entailsE)
+    using main chk by (rule implE)
 qed
 
 lemma check_template_sound_fuel:
@@ -18204,13 +18244,17 @@ lemma find_phiE:
           check_template (conc_of J) (conc_of K) a b (rep_vars_F (conc_of J) (J + 1)) (J + 1) \<Longrightarrow> R"
   shows R
 proof -
-  have main: "subset ptr rest \<turnstile> (find_phi J a b ptr \<turnstile> R)"
+  have main: "subset ptr rest \<longrightarrow> (find_phi J a b ptr \<longrightarrow> R)"
   proof (rule list_induct[OF ptr])
-    show "subset Nil rest \<turnstile> (find_phi J a b Nil \<turnstile> R)"
-    proof (rule entailsI)
+    show "subset Nil rest \<longrightarrow> (find_phi J a b Nil \<longrightarrow> R)"
+    proof (rule implI)
+      show "(subset Nil rest) B" by (rule subset_bool[OF nil_nat rest])
+    next
       assume sub0: "subset Nil rest"
-      show "find_phi J a b Nil \<turnstile> R"
-      proof (rule entailsI)
+      show "find_phi J a b Nil \<longrightarrow> R"
+      proof (rule implI)
+        show "(find_phi J a b Nil) B" by (rule find_phi_bool[OF J a b nil_nat])
+      next
         assume fp0: "find_phi J a b Nil"
         have C0: "if Nil = Nil then False
                     else if hyp_of (list_hd Nil) = hyp_of J \<and>
@@ -18231,16 +18275,21 @@ proof -
     fix h t
     assume h: "h N"
        and t: "t N"
-       and IH: "subset t rest \<turnstile> (find_phi J a b t \<turnstile> R)"
-    show "subset (Cons h t) rest \<turnstile> (find_phi J a b (Cons h t) \<turnstile> R)"
-    proof (rule entailsI)
+       and IH: "subset t rest \<longrightarrow> (find_phi J a b t \<longrightarrow> R)"
+    have htN: "Cons h t N" using h t by simp
+    show "subset (Cons h t) rest \<longrightarrow> (find_phi J a b (Cons h t) \<longrightarrow> R)"
+    proof (rule implI)
+      show "(subset (Cons h t) rest) B" by (rule subset_bool[OF htN rest])
+    next
       assume subht: "subset (Cons h t) rest"
       have hrest: "mem h rest"
         using h t rest subht by (rule subset_cons_headE)
       have subt: "subset t rest"
         using h t rest subht by (rule subset_cons_tailE)
-      show "find_phi J a b (Cons h t) \<turnstile> R"
-      proof (rule entailsI)
+      show "find_phi J a b (Cons h t) \<longrightarrow> R"
+      proof (rule implI)
+        show "(find_phi J a b (Cons h t)) B" by (rule find_phi_bool[OF J a b htN])
+      next
         assume fpht: "find_phi J a b (Cons h t)"
         have C0: "if Cons h t = Nil then False
                     else if hyp_of (list_hd (Cons h t)) = hyp_of J \<and> 
@@ -18293,18 +18342,18 @@ proof -
           assume nboth: "\<not>(hyp_of h = hyp_of J \<and> check_template (conc_of J) (conc_of h) a b (rep_vars_F (conc_of J) (J + 1)) (J + 1))"
           have fpt: "find_phi J a b t"
             using nboth C1 by (rule notcond_thenE)
-          have IR: "find_phi J a b t \<turnstile> R"
-            using IH subt by (rule entailsE)
+          have IR: "find_phi J a b t \<longrightarrow> R"
+            using IH subt by (rule implE)
           show R
-            using IR fpt by (rule entailsE)
+            using IR fpt by (rule implE)
         qed
       qed
     qed
   qed
-  have IR: "find_phi J a b ptr \<turnstile> R"
-    using main sub by (rule entailsE)
+  have IR: "find_phi J a b ptr \<longrightarrow> R"
+    using main sub by (rule implE)
   show R
-    using IR fp by (rule entailsE)
+    using IR fp by (rule implE)
 qed
 
 lemma find_phi_sound_fuel:
@@ -18574,6 +18623,17 @@ proof -
   qed
 qed
 
+lemma find_struct_bool [auto]:
+  assumes J: "J N" and G: "G N" and ptr: "ptr N"
+  shows "find_struct J G ptr B"
+proof (rule list_induct[OF ptr])
+  show "find_struct J G Nil B" by (rule defE[OF find_struct_def[where ptr=Nil]], simp)
+next
+  fix h t assume h: "h N" and t: "t N" and IH: "find_struct J G t B"
+  show "find_struct J G (Cons h t) B"
+    by (rule defE[OF find_struct_def[where ptr="Cons h t"]], insert J G h t IH, simp+)
+qed
+
 lemma find_structE:
   assumes J: "J N" and G: "G N" and rest: "rest N" and ptr: "ptr N"
       and sub: "subset ptr rest"
@@ -18583,13 +18643,17 @@ lemma find_structE:
                    subset (hyp_of K) G \<Longrightarrow> R"
   shows R
 proof -
-  have main: "subset ptr rest \<turnstile> (find_struct J G ptr \<turnstile> R)"
+  have main: "subset ptr rest \<longrightarrow> (find_struct J G ptr \<longrightarrow> R)"
   proof (rule list_induct[OF ptr])
-    show "subset Nil rest \<turnstile> (find_struct J G Nil \<turnstile> R)"
-    proof (rule entailsI)
+    show "subset Nil rest \<longrightarrow> (find_struct J G Nil \<longrightarrow> R)"
+    proof (rule implI)
+      show "(subset Nil rest) B" by (rule subset_bool[OF nil_nat rest])
+    next
       assume sub0: "subset Nil rest"
-      show "find_struct J G Nil \<turnstile> R"
-      proof (rule entailsI)
+      show "find_struct J G Nil \<longrightarrow> R"
+      proof (rule implI)
+        show "(find_struct J G Nil) B" by (rule find_struct_bool[OF J G nil_nat])
+      next
         assume fs0: "find_struct J G Nil"
         have C0: "if Nil = Nil then False
                     else if conc_of (list_hd Nil) = conc_of J \<and>
@@ -18604,16 +18668,21 @@ proof -
   next
     fix h t
     assume h: "h N" and t: "t N"
-       and IH: "subset t rest \<turnstile> (find_struct J G t \<turnstile> R)"
-    show "subset (Cons h t) rest \<turnstile> (find_struct J G (Cons h t) \<turnstile> R)"
-    proof (rule entailsI)
+       and IH: "subset t rest \<longrightarrow> (find_struct J G t \<longrightarrow> R)"
+    have htN: "Cons h t N" using h t by simp
+    show "subset (Cons h t) rest \<longrightarrow> (find_struct J G (Cons h t) \<longrightarrow> R)"
+    proof (rule implI)
+      show "(subset (Cons h t) rest) B" by (rule subset_bool[OF htN rest])
+    next
       assume subht: "subset (Cons h t) rest"
       have hrest: "mem h rest"
         using h t rest subht by (rule subset_cons_headE)
       have subt: "subset t rest"
         using h t rest subht by (rule subset_cons_tailE)
-      show "find_struct J G (Cons h t) \<turnstile> R"
-      proof (rule entailsI)
+      show "find_struct J G (Cons h t) \<longrightarrow> R"
+      proof (rule implI)
+        show "(find_struct J G (Cons h t)) B" by (rule find_struct_bool[OF J G htN])
+      next
         assume fsht: "find_struct J G (Cons h t)"
         have C0: "if Cons h t = Nil then False
                     else if conc_of (list_hd (Cons h t)) = conc_of J \<and>
@@ -18648,14 +18717,14 @@ proof -
         next
           assume nboth: "\<not> (conc_of h = conc_of J \<and> subset (hyp_of h) G)"
           have fst: "find_struct J G t" using nboth C1 by (rule notcond_thenE)
-          have IR: "find_struct J G t \<turnstile> R" using IH subt by (rule entailsE)
-          show R using IR fst by (rule entailsE)
+          have IR: "find_struct J G t \<longrightarrow> R" using IH subt by (rule implE)
+          show R using IR fst by (rule implE)
         qed
       qed
     qed
   qed
-  have IR: "find_struct J G ptr \<turnstile> R" using main sub by (rule entailsE)
-  show R using IR fs by (rule entailsE)
+  have IR: "find_struct J G ptr \<longrightarrow> R" using main sub by (rule implE)
+  show R using IR fs by (rule implE)
 qed
 
 lemma check_struct_sound_fuel:
@@ -18732,6 +18801,40 @@ proof -
   qed
 qed
 
+lemma find_cut_bool [auto]:
+  assumes J: "J N" and rest: "rest N" and ptr: "ptr N"
+  shows "find_cut J rest ptr B"
+proof (rule list_induct[OF ptr])
+  show "find_cut J rest Nil B"
+    apply (rule defE[OF find_cut_def[where J=J and rest=rest and ptr=Nil]])
+    apply simp
+    done
+next
+  fix h t assume h: "h N" and t: "t N" and IH: "find_cut J rest t B"
+  show "find_cut J rest (Cons h t) B"
+  proof -
+    have htN: "h \<triangleright> t N" 
+      using h t by simp
+    have g0: "(h \<triangleright> t = \<emptyset>) B" 
+      apply (rule eqBool[OF htN]) 
+      apply simp 
+      done
+    have g1: "(hyp_of h = hyp_of J) B" 
+      using h J by simp
+    have cc: "conc_of h \<triangleright> hyp_of J \<tturnstile> conc_of J N" 
+      using h J by simp
+    have m: "mem (conc_of h \<triangleright> hyp_of J \<tturnstile> conc_of J) rest B"
+      by (rule mem_bool[OF cc rest])
+    show "find_cut J rest (h \<triangleright> t) B"
+      apply (rule defE[OF find_cut_def[where J=J and rest=rest and ptr="h \<triangleright> t"]])
+      apply (simp only: list_hd_cons[OF h t] list_tl_cons[OF h t])
+      apply (rule condTB[OF g0 false_bool])
+      apply (rule condTB[OF g1 _ IH])
+      apply (rule condTB[OF m true_bool IH])
+      done
+  qed
+qed
+
 lemma find_cutE:
   assumes J: "J N" and rest: "rest N" and ptr: "ptr N"
       and sub: "subset ptr rest"
@@ -18741,13 +18844,17 @@ lemma find_cutE:
                    mem (conc_of K \<triangleright> hyp_of J \<tturnstile> conc_of J) rest \<Longrightarrow> R"
   shows R
 proof -
-  have main: "subset ptr rest \<turnstile> (find_cut J rest ptr \<turnstile> R)"
+  have main: "subset ptr rest \<longrightarrow> (find_cut J rest ptr \<longrightarrow> R)"
   proof (rule list_induct[OF ptr])
-    show "subset Nil rest \<turnstile> (find_cut J rest Nil \<turnstile> R)"
-    proof (rule entailsI)
+    show "subset Nil rest \<longrightarrow> (find_cut J rest Nil \<longrightarrow> R)"
+    proof (rule implI)
+      show "(subset Nil rest) B" by (rule subset_bool[OF nil_nat rest])
+    next
       assume sub0: "subset Nil rest"
-      show "find_cut J rest Nil \<turnstile> R"
-      proof (rule entailsI)
+      show "find_cut J rest Nil \<longrightarrow> R"
+      proof (rule implI)
+        show "(find_cut J rest Nil) B" by (rule find_cut_bool[OF J rest nil_nat])
+      next
         assume fc0: "find_cut J rest Nil"
         have C0: "if Nil = Nil then False
                     else if hyp_of (list_hd Nil) = hyp_of J then
@@ -18767,16 +18874,21 @@ proof -
     fix h t
     assume h: "h N"
        and t: "t N"
-       and IH: "subset t rest \<turnstile> (find_cut J rest t \<turnstile> R)"
-    show "subset (Cons h t) rest \<turnstile> (find_cut J rest (Cons h t) \<turnstile> R)"
-    proof (rule entailsI)
+       and IH: "subset t rest \<longrightarrow> (find_cut J rest t \<longrightarrow> R)"
+    have htN: "Cons h t N" using h t by simp
+    show "subset (Cons h t) rest \<longrightarrow> (find_cut J rest (Cons h t) \<longrightarrow> R)"
+    proof (rule implI)
+      show "(subset (Cons h t) rest) B" by (rule subset_bool[OF htN rest])
+    next
       assume subht: "subset (Cons h t) rest"
       have hrest: "mem h rest"
         using h t rest subht by (rule subset_cons_headE)
       have subt: "subset t rest"
         using h t rest subht by (rule subset_cons_tailE)
-      show "find_cut J rest (Cons h t) \<turnstile> R"
-      proof (rule entailsI)
+      show "find_cut J rest (Cons h t) \<longrightarrow> R"
+      proof (rule implI)
+        show "(find_cut J rest (Cons h t)) B" by (rule find_cut_bool[OF J rest htN])
+      next
         assume fcht: "find_cut J rest (Cons h t)"
         have C0: "if Cons h t = Nil then False
                     else if hyp_of (list_hd (Cons h t)) = hyp_of J then
@@ -18830,27 +18942,27 @@ proof -
             assume nm: "\<not> mem (conc_of h \<triangleright> hyp_of J \<tturnstile> conc_of J) rest"
             have fct: "find_cut J rest t"
               using nm C2 by (rule notcond_thenE)
-            have IR: "find_cut J rest t \<turnstile> R"
-              using IH subt by (rule entailsE)
+            have IR: "find_cut J rest t \<longrightarrow> R"
+              using IH subt by (rule implE)
             show R
-              using IR fct by (rule entailsE)
+              using IR fct by (rule implE)
           qed
         next
           assume neq: "\<not> (hyp_of h = hyp_of J)"
           have fct: "find_cut J rest t"
             using neq C1 by (rule notcond_thenE)
-          have IR: "find_cut J rest t \<turnstile> R"
-            using IH subt by (rule entailsE)
+          have IR: "find_cut J rest t \<longrightarrow> R"
+            using IH subt by (rule implE)
           show R
-            using IR fct by (rule entailsE)
+            using IR fct by (rule implE)
         qed
       qed
     qed
   qed
-  have IR: "find_cut J rest ptr \<turnstile> R"
-    using main sub by (rule entailsE)
+  have IR: "find_cut J rest ptr \<longrightarrow> R"
+    using main sub by (rule implE)
   show R
-    using IR fc by (rule entailsE)
+    using IR fc by (rule implE)
 qed
 
 lemma check_cut_sound_fuel:
@@ -18904,6 +19016,56 @@ proof -
   qed
 qed
 
+lemma find_eq_bool [auto]:
+  assumes J: "J N" and rest: "rest N" and ptr: "ptr N"
+  shows "find_eq J rest ptr B"
+proof (rule list_induct[OF ptr])
+  show "find_eq J rest Nil B"
+    apply (rule defE[OF find_eq_def[where J=J and rest=rest and ptr=Nil]])
+    apply simp
+    done
+next
+  fix h t assume h: "h N" and t: "t N" and IH: "find_eq J rest t B"
+  show "find_eq J rest (Cons h t) B"
+  proof -
+    have htN: "h \<triangleright> t N" 
+      using h t by simp
+    have g0: "(h \<triangleright> t = \<emptyset>) B" 
+      apply (rule eqBool[OF htN]) 
+      apply simp 
+      done
+    have ch: "conc_of h N" 
+      using h by simp
+    have eqh: "(hyp_of h = hyp_of J) B" 
+      using h J by simp
+    have tgh: "tag_F (conc_of h) N" 
+      by (rule tag_F_N[OF ch])
+    have feqN: "F_EQ N" 
+      by simp
+    have eqtg: "(tag_F (conc_of h) = F_EQ) B" 
+      by (rule eqBool[OF tgh feqN])
+    have g1: "(hyp_of h = hyp_of J \<and> tag_F (conc_of h) = F_EQ) B"
+      using eqh eqtg by simp
+
+    have Lch: "load_F (conc_of h) N" 
+      by (rule load_F_N[OF ch])
+    have cxh: "cpx (load_F (conc_of h)) N" 
+      by (rule cpx_terminates[OF Lch])
+    have cyh: "cpy (load_F (conc_of h)) N" 
+      by (rule cpy_terminates[OF Lch])
+    have gphi: "find_phi J (cpx (load_F (conc_of h))) (cpy (load_F (conc_of h))) rest B"
+      by (rule find_phi_bool[OF J cxh cyh rest])
+
+    show "find_eq J rest (h \<triangleright> t) B"
+      apply (rule defE[OF find_eq_def[where J=J and rest=rest and ptr="h \<triangleright> t"]])
+      apply (simp only: list_hd_cons[OF h t] list_tl_cons[OF h t])
+      apply (rule condTB[OF g0 false_bool])
+      apply (rule condTB[OF g1 _ IH])
+      apply (rule condTB[OF gphi true_bool IH])
+      done
+  qed
+qed
+
 lemma find_eqE:
   assumes J: "J N" and rest: "rest N" and ptr: "ptr N"
       and sub: "subset ptr rest"
@@ -18916,13 +19078,17 @@ lemma find_eqE:
                      (cpy (load_F (conc_of K))) rest \<Longrightarrow> R"
   shows R
 proof -
-  have main: "subset ptr rest \<turnstile> (find_eq J rest ptr \<turnstile> R)"
+  have main: "subset ptr rest \<longrightarrow> (find_eq J rest ptr \<longrightarrow> R)"
   proof (rule list_induct[OF ptr])
-    show "subset Nil rest \<turnstile> (find_eq J rest Nil \<turnstile> R)"
-    proof (rule entailsI)
+    show "subset Nil rest \<longrightarrow> (find_eq J rest Nil \<longrightarrow> R)"
+    proof (rule implI)
+      show "(subset Nil rest) B" by (rule subset_bool[OF nil_nat rest])
+    next
       assume sub0: "subset Nil rest"
-      show "find_eq J rest Nil \<turnstile> R"
-      proof (rule entailsI)
+      show "find_eq J rest Nil \<longrightarrow> R"
+      proof (rule implI)
+        show "(find_eq J rest Nil) B" by (rule find_eq_bool[OF J rest nil_nat])
+      next
         assume fe0: "find_eq J rest Nil"
         have C0: "if Nil = Nil then False
                     else if hyp_of (list_hd Nil) = hyp_of J \<and>
@@ -18945,16 +19111,21 @@ proof -
     fix h t
     assume h: "h N"
        and t: "t N"
-       and IH: "subset t rest \<turnstile> (find_eq J rest t \<turnstile> R)"
-    show "subset (Cons h t) rest \<turnstile> (find_eq J rest (Cons h t) \<turnstile> R)"
-    proof (rule entailsI)
+       and IH: "subset t rest \<longrightarrow> (find_eq J rest t \<longrightarrow> R)"
+    have htN: "Cons h t N" using h t by simp
+    show "subset (Cons h t) rest \<longrightarrow> (find_eq J rest (Cons h t) \<longrightarrow> R)"
+    proof (rule implI)
+      show "(subset (Cons h t) rest) B" by (rule subset_bool[OF htN rest])
+    next
       assume subht: "subset (Cons h t) rest"
       have hrest: "mem h rest"
         using h t rest subht by (rule subset_cons_headE)
       have subt: "subset t rest"
         using h t rest subht by (rule subset_cons_tailE)
-      show "find_eq J rest (Cons h t) \<turnstile> R"
-      proof (rule entailsI)
+      show "find_eq J rest (Cons h t) \<longrightarrow> R"
+      proof (rule implI)
+        show "(find_eq J rest (Cons h t)) B" by (rule find_eq_bool[OF J rest htN])
+      next
         assume feht: "find_eq J rest (Cons h t)"
         have C0: "if Cons h t = Nil then False
                     else if hyp_of (list_hd (Cons h t)) = hyp_of J \<and>
@@ -19047,27 +19218,27 @@ proof -
                            (cpy (load_F (conc_of h))) rest"
             have fet: "find_eq J rest t"
               using nfp C2 by (rule notcond_thenE)
-            have IR: "find_eq J rest t \<turnstile> R"
-              using IH subt by (rule entailsE)
+            have IR: "find_eq J rest t \<longrightarrow> R"
+              using IH subt by (rule implE)
             show R
-              using IR fet by (rule entailsE)
+              using IR fet by (rule implE)
           qed
         next
           assume nboth: "\<not> (hyp_of h = hyp_of J \<and> tag_F (conc_of h) = F_EQ)"
           have fet: "find_eq J rest t"
             using nboth C1 by (rule notcond_thenE)
-          have IR: "find_eq J rest t \<turnstile> R"
-            using IH subt by (rule entailsE)
+          have IR: "find_eq J rest t \<longrightarrow> R"
+            using IH subt by (rule implE)
           show R
-            using IR fet by (rule entailsE)
+            using IR fet by (rule implE)
         qed
       qed
     qed
   qed
-  have IR: "find_eq J rest ptr \<turnstile> R"
-    using main sub by (rule entailsE)
+  have IR: "find_eq J rest ptr \<longrightarrow> R"
+    using main sub by (rule implE)
   show R
-    using IR fe by (rule entailsE)
+    using IR fe by (rule implE)
 qed
 
 lemma check_subst_sound_fuel:
@@ -19386,6 +19557,49 @@ next
     by auto
 qed
 
+lemma find_ind_base_bool [auto]:
+  assumes J: "J N" and a: "a N" and rest: "rest N" and ptr: "ptr N"
+  shows "find_ind_base J a rest ptr B"
+proof (rule list_induct[OF ptr])
+  show "find_ind_base J a rest Nil B"
+    apply (rule defE[OF find_ind_base_def[where J=J and a=a and rest=rest and ptr=Nil]])
+    apply simp
+    done
+next
+  fix h t assume h: "h N" and t: "t N" and IH: "find_ind_base J a rest t B"
+  show "find_ind_base J a rest (Cons h t) B"
+  proof -
+    have htN: "h \<triangleright> t N" 
+      using h t by simp
+    have g0: "(h \<triangleright> t = \<emptyset>) B" 
+      apply (rule eqBool[OF htN]) 
+      apply simp 
+      done
+    have cJ: "conc_of J N" 
+      using J by simp
+    have ch: "conc_of h N" 
+      using h by simp
+    have hj: "hyp_of J N" 
+      using J by simp
+    have SJ: "J + 1 N" 
+      using J by simp
+    have eqh: "(hyp_of h = hyp_of J) B" 
+      using h J by simp
+    have rep: "rep_vars_F (conc_of J) (J + 1) N" 
+      by (rule rep_vars_F_N[OF cJ SJ])
+    have git: "check_ind_template (conc_of J) (conc_of h) a (hyp_of J)
+                 (rep_vars_F (conc_of J) (J + 1)) (J + 1) rest B"
+      by (rule check_ind_template_bool[OF cJ ch a hj rep SJ rest])
+    show "find_ind_base J a rest (h \<triangleright> t) B"
+      apply (rule defE[OF find_ind_base_def[where J=J and a=a and rest=rest and ptr="h \<triangleright> t"]])
+      apply (simp only: list_hd_cons[OF h t] list_tl_cons[OF h t])
+      apply (rule condTB[OF g0 false_bool])
+      apply (rule condTB[OF eqh _ IH])
+      apply (rule condTB[OF git true_bool IH])
+      done
+  qed
+qed
+
 lemma find_ind_baseE:
   assumes J: "J N" and a: "a N"
       and rest: "rest N" and ptr: "ptr N"
@@ -19401,15 +19615,19 @@ lemma find_ind_baseE:
   shows R
 proof -
   have main:
-    "subset ptr rest \<turnstile> (find_ind_base J a rest ptr \<turnstile> R)"
+    "subset ptr rest \<longrightarrow> (find_ind_base J a rest ptr \<longrightarrow> R)"
   proof (rule list_induct[OF ptr])
     show
-      "subset Nil rest \<turnstile>
-       (find_ind_base J a rest Nil \<turnstile> R)"
-    proof (rule entailsI)
+      "subset Nil rest \<longrightarrow>
+       (find_ind_base J a rest Nil \<longrightarrow> R)"
+    proof (rule implI)
+      show "(subset Nil rest) B" by (rule subset_bool[OF nil_nat rest])
+    next
       assume sub0: "subset Nil rest"
-      show "find_ind_base J a rest Nil \<turnstile> R"
-      proof (rule entailsI)
+      show "find_ind_base J a rest Nil \<longrightarrow> R"
+      proof (rule implI)
+        show "(find_ind_base J a rest Nil) B" by (rule find_ind_base_bool[OF J a rest nil_nat])
+      next
         assume fib0: "find_ind_base J a rest Nil"
         have C0:
           "if Nil = Nil then False
@@ -19436,19 +19654,24 @@ proof -
     assume h: "h N"
        and t: "t N"
        and IH:
-         "subset t rest \<turnstile>
-          (find_ind_base J a rest t \<turnstile> R)"
+         "subset t rest \<longrightarrow>
+          (find_ind_base J a rest t \<longrightarrow> R)"
+    have htN: "Cons h t N" using h t by simp
     show
-      "subset (Cons h t) rest \<turnstile>
-       (find_ind_base J a rest (Cons h t) \<turnstile> R)"
-    proof (rule entailsI)
+      "subset (Cons h t) rest \<longrightarrow>
+       (find_ind_base J a rest (Cons h t) \<longrightarrow> R)"
+    proof (rule implI)
+      show "(subset (Cons h t) rest) B" by (rule subset_bool[OF htN rest])
+    next
       assume subht: "subset (Cons h t) rest"
       have hrest: "mem h rest"
         using h t rest subht by (rule subset_cons_headE)
       have subt: "subset t rest"
         using h t rest subht by (rule subset_cons_tailE)
-      show "find_ind_base J a rest (Cons h t) \<turnstile> R"
-      proof (rule entailsI)
+      show "find_ind_base J a rest (Cons h t) \<longrightarrow> R"
+      proof (rule implI)
+        show "(find_ind_base J a rest (Cons h t)) B" by (rule find_ind_base_bool[OF J a rest htN])
+      next
         assume fibht:
           "find_ind_base J a rest (Cons h t)"
         have C0:
@@ -19554,27 +19777,27 @@ proof -
                    (J + 1) rest"
             have fibt: "find_ind_base J a rest t"
               using nct C2 by (rule notcond_thenE)
-            have IR: "find_ind_base J a rest t \<turnstile> R"
-              using IH subt by (rule entailsE)
+            have IR: "find_ind_base J a rest t \<longrightarrow> R"
+              using IH subt by (rule implE)
             show R
-              using IR fibt by (rule entailsE)
+              using IR fibt by (rule implE)
           qed
         next
           assume nheq: "\<not> hyp_of h = hyp_of J"
           have fibt: "find_ind_base J a rest t"
             using nheq C1 by (rule notcond_thenE)
-          have IR: "find_ind_base J a rest t \<turnstile> R"
-            using IH subt by (rule entailsE)
+          have IR: "find_ind_base J a rest t \<longrightarrow> R"
+            using IH subt by (rule implE)
           show R
-            using IR fibt by (rule entailsE)
+            using IR fibt by (rule implE)
         qed
       qed
     qed
   qed
-  have IR: "find_ind_base J a rest ptr \<turnstile> R"
-    using main sub by (rule entailsE)
+  have IR: "find_ind_base J a rest ptr \<longrightarrow> R"
+    using main sub by (rule implE)
   show R
-    using IR fib by (rule entailsE)
+    using IR fib by (rule implE)
 qed
 
 lemma check_ind_templateE:
@@ -19593,10 +19816,12 @@ proof -
   have zN: "?z N"
     by (rule pack_T_N[OF _ nat0], simp)
   have main:
-    "check_ind_template f phi a G p i rest \<turnstile> R"
+    "check_ind_template f phi a G p i rest \<longrightarrow> R"
   proof (rule ind[OF p])
-    show "check_ind_template f phi a G 0 i rest \<turnstile> R"
-    proof (rule entailsI)
+    show "check_ind_template f phi a G 0 i rest \<longrightarrow> R"
+    proof (rule implI)
+      show "(check_ind_template f phi a G 0 i rest) B" by (rule check_ind_template_bool[OF f phi a G nat0 i rest])
+    next
       assume chk0: "check_ind_template f phi a G 0 i rest"
       have C0:
         "if subst_F 0 i a = f \<and>subst_F 0 i ?z = phi \<and>
@@ -19692,9 +19917,12 @@ proof -
   next
     fix k
     assume k: "k N"
-       and IH: "check_ind_template f phi a G k i rest \<turnstile> R"
-    show "check_ind_template f phi a G (S k) i rest \<turnstile> R"
-    proof (rule entailsI)
+       and IH: "check_ind_template f phi a G k i rest \<longrightarrow> R"
+    have SkN: "S k N" by (rule natS[OF k])
+    show "check_ind_template f phi a G (S k) i rest \<longrightarrow> R"
+    proof (rule implI)
+      show "(check_ind_template f phi a G (S k) i rest) B" by (rule check_ind_template_bool[OF f phi a G SkN i rest])
+    next
       assume chks:
         "check_ind_template f phi a G (S k) i rest"
       have C0:
@@ -19781,12 +20009,12 @@ proof -
           by (rule eqSubst[
             where Q="\<lambda>q. check_ind_template f phi a G q i rest"])
         show R
-          using IH chkk by (rule entailsE)
+          using IH chkk by (rule implE)
       qed
     qed
   qed
   show R
-    using main chk by (rule entailsE)
+    using main chk by (rule implE)
 qed
 
 lemma check_ind_sound_fuel:
@@ -21018,107 +21246,12 @@ proof -
 qed
 
 
-lemma find_struct_bool [auto]:
-  assumes J: "J N" and G: "G N" and ptr: "ptr N"
-  shows "find_struct J G ptr B"
-proof (rule list_induct[OF ptr])
-  show "find_struct J G Nil B" by (rule defE[OF find_struct_def[where ptr=Nil]], simp)
-next
-  fix h t assume h: "h N" and t: "t N" and IH: "find_struct J G t B"
-  show "find_struct J G (Cons h t) B"
-    by (rule defE[OF find_struct_def[where ptr="Cons h t"]], insert J G h t IH, simp+)
-qed
-
-lemma find_cut_bool [auto]:
-  assumes J: "J N" and rest: "rest N" and ptr: "ptr N"
-  shows "find_cut J rest ptr B"
-proof (rule list_induct[OF ptr])
-  show "find_cut J rest Nil B"
-    apply (rule defE[OF find_cut_def[where J=J and rest=rest and ptr=Nil]])
-    apply simp
-    done
-next
-  fix h t assume h: "h N" and t: "t N" and IH: "find_cut J rest t B"
-  show "find_cut J rest (Cons h t) B"
-  proof -
-    have htN: "h \<triangleright> t N" 
-      using h t by simp
-    have g0: "(h \<triangleright> t = \<emptyset>) B" 
-      apply (rule eqBool[OF htN]) 
-      apply simp 
-      done
-    have g1: "(hyp_of h = hyp_of J) B" 
-      using h J by simp
-    have cc: "conc_of h \<triangleright> hyp_of J \<tturnstile> conc_of J N" 
-      using h J by simp
-    have m: "mem (conc_of h \<triangleright> hyp_of J \<tturnstile> conc_of J) rest B"
-      by (rule mem_bool[OF cc rest])
-    show "find_cut J rest (h \<triangleright> t) B"
-      apply (rule defE[OF find_cut_def[where J=J and rest=rest and ptr="h \<triangleright> t"]])
-      apply (simp only: list_hd_cons[OF h t] list_tl_cons[OF h t])
-      apply (rule condTB[OF g0 false_bool])
-      apply (rule condTB[OF g1 _ IH])
-      apply (rule condTB[OF m true_bool IH])
-      done
-  qed
-qed
-
 lemma check_cut_bool [auto]:
   assumes J: "J N" and rest: "rest N"
   shows "check_cut J rest B"
   apply (rule defE[OF check_cut_def[where J=J and rest=rest]])
   apply (rule find_cut_bool[OF J rest rest])
   done
-
-lemma find_eq_bool [auto]:
-  assumes J: "J N" and rest: "rest N" and ptr: "ptr N"
-  shows "find_eq J rest ptr B"
-proof (rule list_induct[OF ptr])
-  show "find_eq J rest Nil B"
-    apply (rule defE[OF find_eq_def[where J=J and rest=rest and ptr=Nil]])
-    apply simp
-    done
-next
-  fix h t assume h: "h N" and t: "t N" and IH: "find_eq J rest t B"
-  show "find_eq J rest (Cons h t) B"
-  proof -
-    have htN: "h \<triangleright> t N" 
-      using h t by simp
-    have g0: "(h \<triangleright> t = \<emptyset>) B" 
-      apply (rule eqBool[OF htN]) 
-      apply simp 
-      done
-    have ch: "conc_of h N" 
-      using h by simp
-    have eqh: "(hyp_of h = hyp_of J) B" 
-      using h J by simp
-    have tgh: "tag_F (conc_of h) N" 
-      by (rule tag_F_N[OF ch])
-    have feqN: "F_EQ N" 
-      by simp
-    have eqtg: "(tag_F (conc_of h) = F_EQ) B" 
-      by (rule eqBool[OF tgh feqN])
-    have g1: "(hyp_of h = hyp_of J \<and> tag_F (conc_of h) = F_EQ) B"
-      using eqh eqtg by simp
-
-    have Lch: "load_F (conc_of h) N" 
-      by (rule load_F_N[OF ch])
-    have cxh: "cpx (load_F (conc_of h)) N" 
-      by (rule cpx_terminates[OF Lch])
-    have cyh: "cpy (load_F (conc_of h)) N" 
-      by (rule cpy_terminates[OF Lch])
-    have gphi: "find_phi J (cpx (load_F (conc_of h))) (cpy (load_F (conc_of h))) rest B"
-      by (rule find_phi_bool[OF J cxh cyh rest])
-
-    show "find_eq J rest (h \<triangleright> t) B"
-      apply (rule defE[OF find_eq_def[where J=J and rest=rest and ptr="h \<triangleright> t"]])
-      apply (simp only: list_hd_cons[OF h t] list_tl_cons[OF h t])
-      apply (rule condTB[OF g0 false_bool])
-      apply (rule condTB[OF g1 _ IH])
-      apply (rule condTB[OF gphi true_bool IH])
-      done
-  qed
-qed
 
 lemma check_subst_bool [auto]:
   assumes J: "J N" and rest: "rest N"
@@ -21137,49 +21270,6 @@ proof -
     apply (rule defE[OF check_struct_def[where J=J and rest=rest]])
     apply (rule find_struct_bool[OF J hj rest])
     done
-qed
-
-lemma find_ind_base_bool [auto]:
-  assumes J: "J N" and a: "a N" and rest: "rest N" and ptr: "ptr N"
-  shows "find_ind_base J a rest ptr B"
-proof (rule list_induct[OF ptr])
-  show "find_ind_base J a rest Nil B"
-    apply (rule defE[OF find_ind_base_def[where J=J and a=a and rest=rest and ptr=Nil]])
-    apply simp
-    done
-next
-  fix h t assume h: "h N" and t: "t N" and IH: "find_ind_base J a rest t B"
-  show "find_ind_base J a rest (Cons h t) B"
-  proof -
-    have htN: "h \<triangleright> t N" 
-      using h t by simp
-    have g0: "(h \<triangleright> t = \<emptyset>) B" 
-      apply (rule eqBool[OF htN]) 
-      apply simp 
-      done
-    have cJ: "conc_of J N" 
-      using J by simp
-    have ch: "conc_of h N" 
-      using h by simp
-    have hj: "hyp_of J N" 
-      using J by simp
-    have SJ: "J + 1 N" 
-      using J by simp
-    have eqh: "(hyp_of h = hyp_of J) B" 
-      using h J by simp
-    have rep: "rep_vars_F (conc_of J) (J + 1) N" 
-      by (rule rep_vars_F_N[OF cJ SJ])
-    have git: "check_ind_template (conc_of J) (conc_of h) a (hyp_of J)
-                 (rep_vars_F (conc_of J) (J + 1)) (J + 1) rest B"
-      by (rule check_ind_template_bool[OF cJ ch a hj rep SJ rest])
-    show "find_ind_base J a rest (h \<triangleright> t) B"
-      apply (rule defE[OF find_ind_base_def[where J=J and a=a and rest=rest and ptr="h \<triangleright> t"]])
-      apply (simp only: list_hd_cons[OF h t] list_tl_cons[OF h t])
-      apply (rule condTB[OF g0 false_bool])
-      apply (rule condTB[OF eqh _ IH])
-      apply (rule condTB[OF git true_bool IH])
-      done
-  qed
 qed
 
 lemma check_ind_bool [auto]:
@@ -21681,127 +21771,6 @@ proof -
   qed
 qed
 
-lemma check_list_induct_N:
-  assumes pf: "pf N"
-      and base: "\<And>J A. A N \<Longrightarrow> check_list Nil \<Longrightarrow> J N \<Longrightarrow> mem J Nil \<Longrightarrow>
-                   sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A"
-      and step: "\<And>h t. h N \<Longrightarrow> t N \<Longrightarrow>
-                   (\<And>J A. A N \<Longrightarrow> check_list t \<Longrightarrow> J N \<Longrightarrow> mem J t \<Longrightarrow>
-                      sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A) \<Longrightarrow>
-                   (\<And>J A. A N \<Longrightarrow> check_list (Cons h t) \<Longrightarrow>
-                      J N \<Longrightarrow> mem J (Cons h t) \<Longrightarrow>
-                      sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A)"
-  shows "\<And>J A. A N \<Longrightarrow> check_list pf \<Longrightarrow> J N \<Longrightarrow> mem J pf \<Longrightarrow>
-                sat_hyp (hyp_of J) A \<Longrightarrow> sat (conc_of J) A"
-proof -
-  have all: "\<forall>A. \<forall>K. check_list pf \<turnstile> (mem K pf \<turnstile> (sat_hyp (hyp_of K) A \<turnstile> sat (conc_of K) A))"
-  proof (rule list_induct[OF pf])
-    show "\<forall>A. \<forall>K. check_list Nil \<turnstile> (mem K Nil \<turnstile> (sat_hyp (hyp_of K) A \<turnstile> sat (conc_of K) A))"
-    proof (rule forallI) 
-      fix A
-      assume A: "A N"
-      show "\<forall>K. check_list Nil \<turnstile> (mem K Nil \<turnstile> (sat_hyp (hyp_of K) A \<turnstile> sat (conc_of K) A))"
-      proof (rule forallI)
-        fix K
-        assume K: "K N"
-        show "check_list Nil \<turnstile> (mem K Nil \<turnstile> (sat_hyp (hyp_of K) A \<turnstile> sat (conc_of K) A))"
-        proof (rule entailsI)
-          assume chk0: "check_list Nil"
-          show "mem K Nil \<turnstile> (sat_hyp (hyp_of K) A \<turnstile> sat (conc_of K) A)"
-          proof (rule entailsI)
-            assume Km: "mem K Nil"
-            show "sat_hyp (hyp_of K) A \<turnstile> sat (conc_of K) A"
-            proof (rule entailsI)
-              assume satK: "sat_hyp (hyp_of K) A"
-              show "sat (conc_of K) A"
-                using A chk0 K Km satK by (rule base)
-            qed
-          qed
-        qed
-      qed
-    qed
-  next
-    fix h t
-    assume h: "h N"
-       and t: "t N"
-       and IH: "\<forall>A. \<forall>K. check_list t \<turnstile> (mem K t \<turnstile> (sat_hyp (hyp_of K) A \<turnstile> sat (conc_of K) A))"
-    show "\<forall>A. \<forall>K. check_list (Cons h t) \<turnstile> (mem K (Cons h t) \<turnstile> (sat_hyp (hyp_of K) A \<turnstile> sat (conc_of K) A))"
-    proof (rule forallI)
-      fix A
-      assume A: "A N"
-      show "\<forall>K. check_list (Cons h t) \<turnstile> (mem K (Cons h t) \<turnstile> (sat_hyp (hyp_of K) A \<turnstile> sat (conc_of K) A))"
-      proof (rule forallI)
-        fix K
-        assume K: "K N"
-        show "check_list (Cons h t) \<turnstile> (mem K (Cons h t) \<turnstile> (sat_hyp (hyp_of K) A \<turnstile> sat (conc_of K) A))"
-        proof (rule entailsI)
-          assume chkht: "check_list (Cons h t)"
-          show "mem K (Cons h t) \<turnstile> (sat_hyp (hyp_of K) A \<turnstile> sat (conc_of K) A)"
-          proof (rule entailsI)
-            assume Km: "mem K (Cons h t)"
-            show "sat_hyp (hyp_of K) A \<turnstile> sat (conc_of K) A"
-            proof (rule entailsI)
-              assume satK: "sat_hyp (hyp_of K) A"
-              have tail:
-                "\<And>L A2. A2 N \<Longrightarrow> check_list t \<Longrightarrow> L N \<Longrightarrow> mem L t \<Longrightarrow>
-                   sat_hyp (hyp_of L) A2 \<Longrightarrow> sat (conc_of L) A2"
-              proof -
-                fix L A2
-                assume A2: "A2 N"
-                   and chkt: "check_list t"
-                   and L: "L N"
-                   and Lm: "mem L t"
-                   and satL: "sat_hyp (hyp_of L) A2"
-                have IA:
-                  "\<forall>K. check_list t \<turnstile>
-                     (mem K t \<turnstile>
-                       (sat_hyp (hyp_of K) A2 \<turnstile> sat (conc_of K) A2))"
-                  using IH A2 by (rule forallE)
-                have LI:
-                  "check_list t \<turnstile>
-                    (mem L t \<turnstile>
-                      (sat_hyp (hyp_of L) A2 \<turnstile> sat (conc_of L) A2))"
-                  using IA L by (rule forallE)
-                have LI1: "mem L t \<turnstile> (sat_hyp (hyp_of L) A2 \<turnstile> sat (conc_of L) A2)"
-                  using LI chkt by (rule entailsE)
-                have LI2: "sat_hyp (hyp_of L) A2 \<turnstile> sat (conc_of L) A2"
-                  using LI1 Lm by (rule entailsE)
-                show "sat (conc_of L) A2"
-                  using LI2 satL by (rule entailsE)
-              qed
-              show "sat (conc_of K) A"
-                using h t tail A chkht K Km satK by (rule step)
-            qed
-          qed
-        qed
-      qed
-    qed
-  qed
-  fix J A
-  assume A: "A N"
-     and chk: "check_list pf"
-     and J: "J N"
-     and Jm: "mem J pf"
-     and satG: "sat_hyp (hyp_of J) A"
-  have IA: 
-    "\<forall>K. check_list pf \<turnstile> (mem K pf \<turnstile> (sat_hyp (hyp_of K) A \<turnstile> sat (conc_of K) A))"
-    using all A by (rule forallE)
-  have one:
-    "check_list pf \<turnstile>
-      (mem J pf \<turnstile>
-        (sat_hyp (hyp_of J) A \<turnstile> sat (conc_of J) A))"
-    using IA J by (rule forallE)
-  have two:
-    "mem J pf \<turnstile>
-      (sat_hyp (hyp_of J) A \<turnstile> sat (conc_of J) A)"
-    using one chk by (rule entailsE)
-  have three:
-    "sat_hyp (hyp_of J) A \<turnstile> sat (conc_of J) A"
-    using two Jm by (rule entailsE)
-  show "sat (conc_of J) A"
-    using three satG by (rule entailsE)
-qed
-
 lemma check_eq_rules_bool [auto]:
   assumes G: "G N" and lhs: "lhs N" and rhs: "rhs N"
       and tg_L: "tg_L N" and tg_R: "tg_R N" and rest: "rest N"
@@ -22071,6 +22040,781 @@ proof -
     done
 qed
 
+(* ==== fuel-explicit satisfaction: replaces the work \<turnstile> was doing ==== *)
+subsection \<open>Evaluation success at a fixed fuel\<close>
+
+definition ev_ok :: "num \<Rightarrow> tm \<Rightarrow> asn \<Rightarrow> o" where
+  "ev_ok k t A \<equiv> \<not> (eval_fuel k t A = 0)"
+
+lemma ev_ok_bool [auto]:
+  assumes k: "k N" and t: "t N" and A: "A N"
+  shows "(ev_ok k t A) B"
+  unfolding ev_ok_def
+  by (rule notB, rule eval_fuel_zero_bool[OF k t A])
+
+lemma ev_ok_valueE:
+  assumes k: "k N" and t: "t N" and A: "A N" and ok: "ev_ok k t A"
+      and step: "\<And>r. r N \<Longrightarrow> eval_fuel k t A = S r \<Longrightarrow> R"
+  shows R
+proof (rule cases_nat_2[where x = "eval_fuel k t A"])
+  show "eval_fuel k t A N" by (rule eval_fuel_N[OF k t A])
+next
+  assume z: "eval_fuel k t A = 0"
+  have nz: "\<not> (eval_fuel k t A = 0)" using ok unfolding ev_ok_def .
+  show R by (rule exF[OF z nz])
+next
+  fix r assume r: "r N" and e: "eval_fuel k t A = S r"
+  show R by (rule step[OF r e])
+qed
+
+lemma ev_ok_valueI:
+  assumes r: "r N" and e: "eval_fuel k t A = S r"
+  shows "ev_ok k t A"
+  unfolding ev_ok_def
+proof (rule grounded_contradiction[where q = "S r = 0"])
+  show "(\<not> (eval_fuel k t A = 0)) B"
+    by (rule notB, rule eqBool[OF eq_impl_term[OF e] nat0])
+next
+  show "\<not> \<not> (eval_fuel k t A = 0) \<Longrightarrow> S r = 0"
+  proof -
+    assume nn: "\<not> \<not> (eval_fuel k t A = 0)"
+    have z: "eval_fuel k t A = 0" by (rule dNegE[OF nn])
+    show "S r = 0" by (rule eq_trans[OF eqSym[OF e] z])
+  qed
+next
+  show "\<not> \<not> (eval_fuel k t A = 0) \<Longrightarrow> \<not> (S r = 0)"
+    using sucNonZero[OF r] by (unfold neq_def)
+qed
+
+subsection \<open>Satisfaction at a fixed fuel\<close>
+
+abbreviation lhs_of :: "fm \<Rightarrow> tm" where "lhs_of f \<equiv> hyp_of (load_F f)"
+abbreviation rhs_of :: "fm \<Rightarrow> tm" where "rhs_of f \<equiv> conc_of (load_F f)"
+
+definition sat_at :: "num \<Rightarrow> fm \<Rightarrow> asn \<Rightarrow> o" where
+  "sat_at k f A \<equiv>
+     ev_ok k (lhs_of f) A
+     \<and> (ev_ok k (rhs_of f) A
+        \<and> (if tag_F f = F_EQ
+             then eval_fuel k (lhs_of f) A = eval_fuel k (rhs_of f) A
+             else \<not> (eval_fuel k (lhs_of f) A = eval_fuel k (rhs_of f) A)))"
+
+lemma sat_at_bool [auto]:
+  assumes k: "k N" and f: "f N" and A: "A N"
+  shows "(sat_at k f A) B"
+proof -
+  have lN: "load_F f N" by (rule load_F_N[OF f])
+  have xN: "lhs_of f N" using lN by simp
+  have yN: "rhs_of f N" using lN by simp
+  have exB: "(ev_ok k (lhs_of f) A) B" by (rule ev_ok_bool[OF k xN A])
+  have eyB: "(ev_ok k (rhs_of f) A) B" by (rule ev_ok_bool[OF k yN A])
+  have cmpB: "(eval_fuel k (lhs_of f) A = eval_fuel k (rhs_of f) A) B"
+    by (rule eqBool[OF eval_fuel_N[OF k xN A] eval_fuel_N[OF k yN A]])
+  have tagB: "(tag_F f = F_EQ) B" by (rule eqBool[OF tag_F_N[OF f] nat0])
+  have condB: "(if tag_F f = F_EQ
+                  then eval_fuel k (lhs_of f) A = eval_fuel k (rhs_of f) A
+                  else \<not> (eval_fuel k (lhs_of f) A = eval_fuel k (rhs_of f) A)) B"
+    by (rule condTB[OF tagB cmpB notB[OF cmpB]])
+  show ?thesis
+    unfolding sat_at_def using exB eyB condB by simp
+qed
+
+(* S is injective and a congruence, so an equation between eval_fuel RESULTS
+   is interchangeable with an equation between the VALUES they carry.  These
+   two lemmas replace the "by simp" steps that failed. *)
+
+(* Introducing a conditional whose branches are FORMULAS.  cond_thenQ_I /
+   cond_elseQ_I take a polymorphic Q :: 'a \<Rightarrow> o, and "\<lambda>z. z" gets its type
+   fixed to num \<Rightarrow> num before it ever meets the goal.  These two are the
+   o-typed specialisations, built from condI1B / condI2B, so no polymorphic
+   motive is involved. *)
+
+lemma cond_thenI:
+  assumes c: "c" and dB: "d B" and d: "d"
+  shows "if c then d else e"
+  by (rule implE[OF iffE2[OF condI1B[OF c dB]] d])
+
+lemma cond_elseI:
+  assumes nc: "\<not> c" and eB: "e B" and e: "e"
+  shows "if c then d else e"
+  by (rule implE[OF iffE2[OF condI2B[OF nc eB]] e])
+
+lemma val_eqI:
+  assumes x: "x N" and y: "y N"
+      and ex: "u = S x" and ey: "v = S y" and xy: "x = y"
+  shows "u = v"
+proof -
+  have sxy: "S x = S y" by (rule sucCong[OF xy])
+  have usy: "u = S y" by (rule eq_trans[OF ex sxy])
+  show ?thesis by (rule eq_trans[OF usy eqSym[OF ey]])
+qed
+
+lemma val_eqD:
+  assumes x: "x N" and y: "y N"
+      and ex: "u = S x" and ey: "v = S y" and uv: "u = v"
+  shows "x = y"
+proof -
+  have sxv: "S x = v" by (rule eq_trans[OF eqSym[OF ex] uv])
+  have sxsy: "S x = S y" by (rule eq_trans[OF sxv ey])
+  show ?thesis by (rule sucInj[OF sxsy])
+qed
+
+lemma cond_val_D:
+  assumes x: "x N" and y: "y N" and cB: "c B"
+      and ex: "u = S x" and ey: "v = S y"
+      and cnd: "if c then u = v else \<not> (u = v)"
+  shows "if c then x = y else x \<noteq> y"
+proof (rule cases_bool[where q = "c"])
+  show "c B" by (rule cB)
+next
+  assume cc: "c"
+  have uv: "u = v" by (rule cond_thenE[OF cc cnd])
+  have xy: "x = y" by (rule val_eqD[OF x y ex ey uv])
+  show ?thesis by (rule cond_thenI[OF cc eqBool[OF x y] xy])
+next
+  assume nc: "\<not> c"
+  have nuv: "\<not> (u = v)" by (rule notcond_thenE[OF nc cnd])
+  have nxy: "\<not> (x = y)"
+  proof (rule cases_bool[where q = "x = y"])
+    show "(x = y) B" by (rule eqBool[OF x y])
+  next
+    assume xy: "x = y"
+    have uv: "u = v" by (rule val_eqI[OF x y ex ey xy])
+    show "\<not> (x = y)" by (rule exF[OF uv nuv])
+  next
+    assume n: "\<not> (x = y)"
+    show "\<not> (x = y)" by (rule n)
+  qed
+  show ?thesis unfolding neq_def
+    by (rule cond_elseI[OF nc notB[OF eqBool[OF x y]] nxy])
+qed
+
+lemma cond_val_I:
+  assumes x: "x N" and y: "y N" and cB: "c B" and uN: "u N" and vN: "v N"
+      and ex: "u = S x" and ey: "v = S y"
+      and cnd: "if c then x = y else x \<noteq> y"
+  shows "if c then u = v else \<not> (u = v)"
+proof (rule cases_bool[where q = "c"])
+  show "c B" by (rule cB)
+next
+  assume cc: "c"
+  have xy: "x = y" by (rule cond_thenE[OF cc cnd])
+  have uv: "u = v" by (rule val_eqI[OF x y ex ey xy])
+  show ?thesis by (rule cond_thenI[OF cc eqBool[OF uN vN] uv])
+next
+  assume nc: "\<not> c"
+  have nxy0: "x \<noteq> y" by (rule notcond_thenE[OF nc cnd])
+  have nxy: "\<not> (x = y)" using nxy0 unfolding neq_def .
+  have nuv: "\<not> (u = v)"
+  proof (rule cases_bool[where q = "u = v"])
+    show "(u = v) B" by (rule eqBool[OF uN vN])
+  next
+    assume uv: "u = v"
+    have xy: "x = y" by (rule val_eqD[OF x y ex ey uv])
+    show "\<not> (u = v)" by (rule exF[OF xy nxy])
+  next
+    assume n: "\<not> (u = v)"
+    show "\<not> (u = v)" by (rule n)
+  qed
+  show ?thesis
+    by (rule cond_elseI[OF nc notB[OF eqBool[OF uN vN]] nuv])
+qed
+
+lemma sat_atE:
+  assumes k: "k N" and f: "f N" and A: "A N" and s: "sat_at k f A"
+      and step: "\<And>x y. x N \<Longrightarrow> y N \<Longrightarrow>
+        eval_fuel k (lhs_of f) A = S x \<Longrightarrow> eval_fuel k (rhs_of f) A = S y \<Longrightarrow>
+        (if tag_F f = F_EQ then x = y else x \<noteq> y) \<Longrightarrow> R"
+  shows R
+proof -
+  have lN: "load_F f N" by (rule load_F_N[OF f])
+  have xN: "lhs_of f N" using lN by simp
+  have yN: "rhs_of f N" using lN by simp
+  have okx: "ev_ok k (lhs_of f) A" using s unfolding sat_at_def by (rule conjE1)
+  have rest: "ev_ok k (rhs_of f) A
+              \<and> (if tag_F f = F_EQ
+                   then eval_fuel k (lhs_of f) A = eval_fuel k (rhs_of f) A
+                   else \<not> (eval_fuel k (lhs_of f) A = eval_fuel k (rhs_of f) A))"
+    using s unfolding sat_at_def by (rule conjE2)
+  have oky: "ev_ok k (rhs_of f) A" using rest by (rule conjE1)
+  have cmp: "if tag_F f = F_EQ
+               then eval_fuel k (lhs_of f) A = eval_fuel k (rhs_of f) A
+               else \<not> (eval_fuel k (lhs_of f) A = eval_fuel k (rhs_of f) A)"
+    using rest by (rule conjE2)
+  show R
+  proof (rule ev_ok_valueE[OF k xN A okx])
+    fix x assume x: "x N" and ex: "eval_fuel k (lhs_of f) A = S x"
+    show R
+    proof (rule ev_ok_valueE[OF k yN A oky])
+      fix y assume y: "y N" and ey: "eval_fuel k (rhs_of f) A = S y"
+      have rel: "if tag_F f = F_EQ then x = y else x \<noteq> y"
+        by (rule cond_val_D[OF x y eqBool[OF tag_F_N[OF f] nat0] ex ey cmp])
+      show R by (rule step[OF x y ex ey rel])
+    qed
+  qed
+qed
+
+lemma sat_atI:
+  assumes f: "f N" and x: "x N" and y: "y N"
+      and ex: "eval_fuel k (lhs_of f) A = S x"
+      and ey: "eval_fuel k (rhs_of f) A = S y"
+      and rel: "if tag_F f = F_EQ then x = y else x \<noteq> y"
+  shows "sat_at k f A"
+  unfolding sat_at_def
+proof (rule conjI)
+  show "ev_ok k (lhs_of f) A" by (rule ev_ok_valueI[OF x ex])
+next
+  show "ev_ok k (rhs_of f) A
+        \<and> (if tag_F f = F_EQ
+             then eval_fuel k (lhs_of f) A = eval_fuel k (rhs_of f) A
+             else \<not> (eval_fuel k (lhs_of f) A = eval_fuel k (rhs_of f) A))"
+  proof (rule conjI)
+    show "ev_ok k (rhs_of f) A" by (rule ev_ok_valueI[OF y ey])
+  next
+    show "if tag_F f = F_EQ
+            then eval_fuel k (lhs_of f) A = eval_fuel k (rhs_of f) A
+            else \<not> (eval_fuel k (lhs_of f) A = eval_fuel k (rhs_of f) A)"
+      by (rule cond_val_I[OF x y eqBool[OF tag_F_N[OF f] nat0]
+                             eq_impl_term[OF ex] eq_impl_term[OF ey] ex ey rel])
+  qed
+qed
+
+lemma sat_at_mono:
+  assumes k: "k N" and n: "n N" and f: "f N" and A: "A N" and s: "sat_at k f A"
+  shows "sat_at (k + n) f A"
+proof (rule sat_atE[OF k f A s])
+  fix x y assume x: "x N" and y: "y N"
+     and ex: "eval_fuel k (lhs_of f) A = S x"
+     and ey: "eval_fuel k (rhs_of f) A = S y"
+     and rel: "if tag_F f = F_EQ then x = y else x \<noteq> y"
+  have lN: "load_F f N" by (rule load_F_N[OF f])
+  have xN: "lhs_of f N" using lN by simp
+  have yN: "rhs_of f N" using lN by simp
+  have exU: "eval_fuel (k + n) (lhs_of f) A = S x"
+    by (rule eval_fuel_success_add[OF k n xN A ex])
+  have eyU: "eval_fuel (k + n) (rhs_of f) A = S y"
+    by (rule eval_fuel_success_add[OF k n yN A ey])
+  show ?thesis by (rule sat_atI[OF f x y exU eyU rel])
+qed
+
+subsection \<open>Bridge to sat_fuel\<close>
+
+lemma sat_atD:
+  assumes k: "k N" and f: "f N" and A: "A N" and s: "sat_at k f A"
+  shows "sat_fuel f A"
+proof (rule sat_atE[OF k f A s])
+  fix x y assume x: "x N" and y: "y N"
+     and ex: "eval_fuel k (lhs_of f) A = S x"
+     and ey: "eval_fuel k (rhs_of f) A = S y"
+     and rel: "if tag_F f = F_EQ then x = y else x \<noteq> y"
+  have evx: "evals (lhs_of f) A x" by (rule evalsI[OF k ex])
+  have evy: "evals (rhs_of f) A y" by (rule evalsI[OF k ey])
+  show ?thesis by (rule sat_fuelI[OF x y evx evy rel])
+qed
+
+lemma sat_at_exI:
+  assumes f: "f N" and A: "A N" and s: "sat_fuel f A"
+  shows "\<exists>k. sat_at k f A"
+proof (rule sat_fuelE[OF s])
+  fix x y assume x: "x N" and y: "y N"
+     and evx: "evals (lhs_of f) A x" and evy: "evals (rhs_of f) A y"
+     and rel: "if tag_F f = F_EQ then x = y else x \<noteq> y"
+  have lN: "load_F f N" by (rule load_F_N[OF f])
+  have xN: "lhs_of f N" using lN by simp
+  have yN: "rhs_of f N" using lN by simp
+  show ?thesis
+  proof (rule evalsE[OF evx])
+    fix k1 assume k1: "k1 N" and e1: "eval_fuel k1 (lhs_of f) A = S x"
+    show ?thesis
+    proof (rule evalsE[OF evy])
+      fix k2 assume k2: "k2 N" and e2: "eval_fuel k2 (rhs_of f) A = S y"
+      have kN: "k1 + k2 N" by (rule add_terminates[OF k1 k2])
+      have u1: "eval_fuel (k1 + k2) (lhs_of f) A = S x"
+        by (rule eval_fuel_success_add[OF k1 k2 xN A e1])
+      have comm: "k2 + k1 = k1 + k2" by (rule add_comm[OF k2 k1])
+      have u20: "eval_fuel (k2 + k1) (rhs_of f) A = S y"
+        by (rule eval_fuel_success_add[OF k2 k1 yN A e2])
+      have u2: "eval_fuel (k1 + k2) (rhs_of f) A = S y"
+        by (rule eqSubst[where a = "k2 + k1" and b = "k1 + k2"
+                           and Q = "\<lambda>z. eval_fuel z (rhs_of f) A = S y",
+                         OF comm u20])
+      have satk: "sat_at (k1 + k2) f A" by (rule sat_atI[OF f x y u1 u2 rel])
+      show ?thesis by (rule existsI[OF kN], rule satk)
+    qed
+  qed
+qed
+
+subsection \<open>Hypothesis lists\<close>
+
+definition sat_hyp_at :: "num \<Rightarrow> hyp \<Rightarrow> asn \<Rightarrow> o" where
+  "sat_hyp_at k G A \<equiv> \<forall>f. f \<in> G \<longrightarrow> sat_at k f A"
+
+lemma sat_hyp_at_nil [auto]: "sat_hyp_at k Nil A"
+  unfolding sat_hyp_at_def
+proof (rule forallI)
+  fix f assume f: "f N"
+  show "f \<in> Nil \<longrightarrow> sat_at k f A"
+  proof (rule implI)
+    show "(f \<in> Nil) B" by (rule mem_bool[OF f nil_nat])
+  next
+    assume m: "f \<in> Nil"
+    show "sat_at k f A" by (rule exF[OF m mem_nil])
+  qed
+qed
+
+lemma sat_hyp_atE:
+  assumes k: "k N" and G: "G N" and A: "A N" and f: "f N"
+      and s: "sat_hyp_at k G A" and m: "f \<in> G"
+  shows "sat_at k f A"
+proof -
+  have all: "\<forall>g. g \<in> G \<longrightarrow> sat_at k g A" using s unfolding sat_hyp_at_def .
+  have step: "f \<in> G \<longrightarrow> sat_at k f A" by (rule forallE[OF all f])
+  show ?thesis by (rule implE[OF step m])
+qed
+
+lemma sat_hyp_atI:
+  assumes k: "k N" and G: "G N" and A: "A N"
+      and H: "\<And>f. f N \<Longrightarrow> f \<in> G \<Longrightarrow> sat_at k f A"
+  shows "sat_hyp_at k G A"
+  unfolding sat_hyp_at_def
+proof (rule forallI)
+  fix f assume f: "f N"
+  show "f \<in> G \<longrightarrow> sat_at k f A"
+  proof (rule implI)
+    show "(f \<in> G) B" by (rule mem_bool[OF f G])
+  next
+    assume m: "f \<in> G"
+    show "sat_at k f A" by (rule H[OF f m])
+  qed
+qed
+
+(* The negative case is the reason notForallI/notForallE are needed: a
+   universal has to be REFUTED when some member of the list fails. *)
+lemma sat_hyp_at_bool [auto]:
+  assumes k: "k N" and G: "G N" and A: "A N"
+  shows "(sat_hyp_at k G A) B"
+proof (rule list_induct[OF G, where Q = "\<lambda>z. (sat_hyp_at k z A) B"])
+  show "(sat_hyp_at k Nil A) B"
+    unfolding bJudg_def by (rule disjI1, rule sat_hyp_at_nil)
+next
+  fix h t assume h: "h N" and t: "t N" and IH: "(sat_hyp_at k t A) B"
+  have htN: "Cons h t N" using h t by simp
+  show "(sat_hyp_at k (Cons h t) A) B"
+  proof (rule cases_bool[where q = "sat_at k h A"])
+    show "(sat_at k h A) B" by (rule sat_at_bool[OF k h A])
+  next
+    assume sh: "sat_at k h A"
+    show ?thesis
+    proof (rule cases_bool[where q = "sat_hyp_at k t A"])
+      show "(sat_hyp_at k t A) B" by (rule IH)
+    next
+      assume st: "sat_hyp_at k t A"
+      have pos: "sat_hyp_at k (Cons h t) A"
+      proof (rule sat_hyp_atI[OF k htN A])
+        fix f assume f: "f N" and m: "f \<in> (Cons h t)"
+        have m2: "if h = f then True else mem f t" using m h t f by simp
+        show "sat_at k f A"
+        proof (rule cases_bool[where q = "h = f"])
+          show "(h = f) B" by (rule eqBool[OF h f])
+        next
+          assume hf: "h = f"
+          show "sat_at k f A"
+            by (rule eqSubst[where a = h and b = f
+                               and Q = "\<lambda>z. sat_at k z A", OF hf sh])
+        next
+          assume nhf: "\<not> (h = f)"
+          have mft: "mem f t"
+          proof -
+            have e: "(if h = f then True else mem f t) \<longleftrightarrow> mem f t"
+              by (rule condI2B[OF nhf mem_bool[OF f t]])
+            show ?thesis using m2 e by simp
+          qed
+          show "sat_at k f A" by (rule sat_hyp_atE[OF k t A f st mft])
+        qed
+      qed
+      show ?thesis unfolding bJudg_def by (rule disjI1[OF pos])
+    next
+      (* tail fails: lift the tail's counterexample to Cons h t *)
+      assume nst: "\<not> (sat_hyp_at k t A)"
+      have nall_t: "\<not> (\<forall>f. f \<in> t \<longrightarrow> sat_at k f A)"
+        using nst unfolding sat_hyp_at_def .
+      have neg: "\<not> (sat_hyp_at k (Cons h t) A)"
+        unfolding sat_hyp_at_def
+      proof (rule notForallE[OF nall_t])
+        fix g assume g: "g N" and ng: "\<not> (g \<in> t \<longrightarrow> sat_at k g A)"
+        have nsg: "\<not> (sat_at k g A)"
+          using ng unfolding impl_def by (rule disjE3)
+        have nnmg: "\<not> \<not> (g \<in> t)"
+          using ng unfolding impl_def by (rule disjE2)
+        have mgt: "g \<in> t" by (rule dNegE[OF nnmg])
+        have mgc: "g \<in> (Cons h t)"
+        proof -
+          have e: "mem g (Cons h t) \<longleftrightarrow> (if h = g then True else mem g t)"
+            by (rule mem_cons[OF h t g])
+          have inner: "if h = g then True else mem g t"
+          proof (rule cases_bool[where q = "h = g"])
+            show "(h = g) B" by (rule eqBool[OF h g])
+          next
+            assume hg: "h = g"
+            show ?thesis by (rule cond_thenI[OF hg true_bool true])
+          next
+            assume nhg: "\<not> (h = g)"
+            show ?thesis by (rule cond_elseI[OF nhg mem_bool[OF g t] mgt])
+          qed
+          show ?thesis using e inner by simp
+        qed
+        have nnmgc: "\<not> \<not> (g \<in> (Cons h t))" by (rule dNegI[OF mgc])
+        have negc: "\<not> (g \<in> (Cons h t) \<longrightarrow> sat_at k g A)"
+          unfolding impl_def by (rule disjI3[OF nnmgc nsg])
+        show "\<not> (\<forall>f. f \<in> (Cons h t) \<longrightarrow> sat_at k f A)"
+          by (rule notForallI[OF g], rule negc)
+      qed
+      show ?thesis unfolding bJudg_def by (rule disjI2[OF neg])
+    qed
+  next
+    (* head fails: h is itself the counterexample *)
+    assume nsh: "\<not> (sat_at k h A)"
+    have mh: "h \<in> (Cons h t)" using h t by simp
+    have nnmh: "\<not> \<not> (h \<in> (Cons h t))" by (rule dNegI[OF mh])
+    have negh: "\<not> (h \<in> (Cons h t) \<longrightarrow> sat_at k h A)"
+      unfolding impl_def by (rule disjI3[OF nnmh nsh])
+    have neg: "\<not> (sat_hyp_at k (Cons h t) A)"
+      unfolding sat_hyp_at_def by (rule notForallI[OF h], rule negh)
+    show ?thesis unfolding bJudg_def by (rule disjI2[OF neg])
+  qed
+qed
+
+lemma sat_hyp_at_mono:
+  assumes k: "k N" and n: "n N" and G: "G N" and A: "A N" and s: "sat_hyp_at k G A"
+  shows "sat_hyp_at (k + n) G A"
+proof (rule sat_hyp_atI[OF add_terminates[OF k n] G A])
+  fix f assume f: "f N" and m: "f \<in> G"
+  have sk: "sat_at k f A" by (rule sat_hyp_atE[OF k G A f s m])
+  show "sat_at (k + n) f A" by (rule sat_at_mono[OF k n f A sk])
+qed
+
+(* Bridge for hypothesis lists.  The induction is over a SUBLIST G' of a
+   FIXED G, so the undecidable premise sat_hyp_fuel G A stays outside the
+   motive; the motive's own antecedent is subset G' G, which is decided
+   (subset_bool). *)
+lemma sat_hyp_at_exI_sub:
+  assumes G: "G N" and A: "A N" and sfG: "sat_hyp_fuel G A" and G': "G' N"
+  shows "subset G' G \<longrightarrow> (\<exists>k. sat_hyp_at k G' A)"
+proof (rule list_induct[OF G',
+         where Q = "\<lambda>z. subset z G \<longrightarrow> (\<exists>k. sat_hyp_at k z A)"])
+  show "subset Nil G \<longrightarrow> (\<exists>k. sat_hyp_at k Nil A)"
+  proof (rule implI)
+    show "(subset Nil G) B" by (rule subset_bool[OF nil_nat G])
+  next
+    assume "subset Nil G"
+    show "\<exists>k. sat_hyp_at k Nil A" by (rule existsI[OF nat0], rule sat_hyp_at_nil)
+  qed
+next
+  fix h t assume h: "h N" and t: "t N"
+     and IH: "subset t G \<longrightarrow> (\<exists>k. sat_hyp_at k t A)"
+  have htN: "Cons h t N" using h t by simp
+  show "subset (Cons h t) G \<longrightarrow> (\<exists>k. sat_hyp_at k (Cons h t) A)"
+  proof (rule implI)
+    show "(subset (Cons h t) G) B" by (rule subset_bool[OF htN G])
+  next
+    assume sub: "subset (Cons h t) G"
+    have sub': "mem h G \<and> subset t G" using sub h t G by simp
+    have mhG: "mem h G" using sub' by (rule conjE1)
+    have subt: "subset t G" using sub' by (rule conjE2)
+    have sfh: "sat_fuel h A" by (rule sat_hyp_fuel_mem[OF h mhG sfG])
+    have exh: "\<exists>k. sat_at k h A" by (rule sat_at_exI[OF h A sfh])
+    have ext: "\<exists>k. sat_hyp_at k t A" by (rule implE[OF IH subt])
+    show "\<exists>k. sat_hyp_at k (Cons h t) A"
+    proof (rule existsE[OF exh])
+      fix k1 assume k1: "k1 N" and s1: "sat_at k1 h A"
+      show ?thesis
+      proof (rule existsE[OF ext])
+        fix k2 assume k2: "k2 N" and s2: "sat_hyp_at k2 t A"
+        have kN: "k1 + k2 N" by (rule add_terminates[OF k1 k2])
+        have s1u: "sat_at (k1 + k2) h A" by (rule sat_at_mono[OF k1 k2 h A s1])
+        have comm: "k2 + k1 = k1 + k2" by (rule add_comm[OF k2 k1])
+        have s2u0: "sat_hyp_at (k2 + k1) t A"
+          by (rule sat_hyp_at_mono[OF k2 k1 t A s2])
+        have s2u: "sat_hyp_at (k1 + k2) t A"
+          by (rule eqSubst[where a = "k2 + k1" and b = "k1 + k2"
+                             and Q = "\<lambda>z. sat_hyp_at z t A", OF comm s2u0])
+        have both: "sat_hyp_at (k1 + k2) (Cons h t) A"
+        proof (rule sat_hyp_atI[OF kN htN A])
+          fix f assume f: "f N" and m: "f \<in> (Cons h t)"
+          have m2: "if h = f then True else mem f t" using m h t f by simp
+          show "sat_at (k1 + k2) f A"
+          proof (rule cases_bool[where q = "h = f"])
+            show "(h = f) B" by (rule eqBool[OF h f])
+          next
+            assume hf: "h = f"
+            show ?thesis
+              by (rule eqSubst[where a = h and b = f
+                                 and Q = "\<lambda>z. sat_at (k1 + k2) z A", OF hf s1u])
+          next
+            assume nhf: "\<not> (h = f)"
+            have mft: "mem f t"
+            proof -
+              have e: "(if h = f then True else mem f t) \<longleftrightarrow> mem f t"
+                by (rule condI2B[OF nhf mem_bool[OF f t]])
+              show ?thesis using m2 e by simp
+            qed
+            show ?thesis by (rule sat_hyp_atE[OF kN t A f s2u mft])
+          qed
+        qed
+        show ?thesis by (rule existsI[OF kN], rule both)
+      qed
+    qed
+  qed
+qed
+
+lemma sat_hyp_at_exI:
+  assumes G: "G N" and A: "A N" and sfG: "sat_hyp_fuel G A"
+  shows "\<exists>k. sat_hyp_at k G A"
+proof -
+  have refl: "subset G G" by (rule subset_refl[OF G])
+  have main: "subset G G \<longrightarrow> (\<exists>k. sat_hyp_at k G A)"
+    by (rule sat_hyp_at_exI_sub[OF G A sfG G])
+  show ?thesis by (rule implE[OF main refl])
+qed
+
+lemma sat_hyp_atD:
+  assumes k: "k N" and G: "G N" and A: "A N" and s: "sat_hyp_at k G A"
+  shows "sat_hyp_fuel G A"
+  unfolding sat_hyp_fuel_def
+proof (rule forallI)
+  fix f assume f: "f N"
+  show "f \<in> G \<longrightarrow> sat_fuel f A"
+  proof (rule implI)
+    show "(f \<in> G) B" by (rule mem_bool[OF f G])
+  next
+    assume m: "f \<in> G"
+    have sk: "sat_at k f A" by (rule sat_hyp_atE[OF k G A f s m])
+    show "sat_fuel f A" by (rule sat_atD[OF k f A sk])
+  qed
+qed
+
+lemma check_list_bool [auto]:
+  assumes pfn: "pf N"
+  shows "check_list pf B"
+proof (rule list_induct[OF pfn])
+  show "check_list Nil B"
+    apply (rule defE[OF check_list_def[where pf=Nil]])
+    apply simp
+    done
+next
+  fix h t assume h: "h N" and t: "t N" and IH: "check_list t B"
+  show "check_list (Cons h t) B"
+  proof -
+    have htN: "h \<triangleright> t N" 
+      using h t by simp
+    have g0: "(h \<triangleright> t = \<emptyset>) B" 
+      apply (rule eqBool[OF htN]) 
+      apply simp 
+      done
+    have vs: "valid_step h t B" 
+      by (rule valid_step_bool[OF h t])
+    show "check_list (h \<triangleright> t) B"
+      apply (rule defE[OF check_list_def[where pf="h \<triangleright> t"]])
+      apply (simp only: list_hd_cons[OF h t] list_tl_cons[OF h t])
+      apply (rule condTB[OF g0 true_bool])
+      apply (rule condTB[OF vs IH false_bool])
+      done
+  qed
+qed
+
+lemma check_list_induct_N:
+  assumes pf: "pf N"
+      and base: "\<And>J A. A N \<Longrightarrow> check_list Nil \<Longrightarrow> J N \<Longrightarrow> mem J Nil \<Longrightarrow>
+                   sat_hyp_fuel (hyp_of J) A \<Longrightarrow> sat_fuel (conc_of J) A"
+      and step: "\<And>h t. h N \<Longrightarrow> t N \<Longrightarrow>
+                   (\<And>J A. A N \<Longrightarrow> check_list t \<Longrightarrow> J N \<Longrightarrow> mem J t \<Longrightarrow>
+                      sat_hyp_fuel (hyp_of J) A \<Longrightarrow> sat_fuel (conc_of J) A) \<Longrightarrow>
+                   (\<And>J A. A N \<Longrightarrow> check_list (Cons h t) \<Longrightarrow>
+                      J N \<Longrightarrow> mem J (Cons h t) \<Longrightarrow>
+                      sat_hyp_fuel (hyp_of J) A \<Longrightarrow> sat_fuel (conc_of J) A)"
+  shows "\<And>J A. A N \<Longrightarrow> check_list pf \<Longrightarrow> J N \<Longrightarrow> mem J pf \<Longrightarrow>
+                sat_hyp_fuel (hyp_of J) A \<Longrightarrow> sat_fuel (conc_of J) A"
+proof -
+  have all: "\<forall>A. \<forall>K. \<forall>k. check_list pf \<longrightarrow>
+                (mem K pf \<longrightarrow>
+                  (sat_hyp_at k (hyp_of K) A \<longrightarrow> sat_fuel (conc_of K) A))"
+  proof (rule list_induct[OF pf,
+           where Q = "\<lambda>z. \<forall>A. \<forall>K. \<forall>k. check_list z \<longrightarrow>
+                (mem K z \<longrightarrow>
+                  (sat_hyp_at k (hyp_of K) A \<longrightarrow> sat_fuel (conc_of K) A))"])
+    show "\<forall>A. \<forall>K. \<forall>k. check_list Nil \<longrightarrow>
+              (mem K Nil \<longrightarrow>
+                (sat_hyp_at k (hyp_of K) A \<longrightarrow> sat_fuel (conc_of K) A))"
+    proof (rule forallI)
+      fix A assume A: "A N"
+      show "\<forall>K. \<forall>k. check_list Nil \<longrightarrow>
+                (mem K Nil \<longrightarrow>
+                  (sat_hyp_at k (hyp_of K) A \<longrightarrow> sat_fuel (conc_of K) A))"
+      proof (rule forallI)
+        fix K assume K: "K N"
+        have hypK: "hyp_of K N" using K by simp
+        show "\<forall>k. check_list Nil \<longrightarrow>
+                  (mem K Nil \<longrightarrow>
+                    (sat_hyp_at k (hyp_of K) A \<longrightarrow> sat_fuel (conc_of K) A))"
+        proof (rule forallI)
+          fix k assume k: "k N"
+          show "check_list Nil \<longrightarrow>
+                  (mem K Nil \<longrightarrow>
+                    (sat_hyp_at k (hyp_of K) A \<longrightarrow> sat_fuel (conc_of K) A))"
+          proof (rule implI)
+            show "(check_list Nil) B" by (rule check_list_bool[OF nil_nat])
+          next
+            assume chk0: "check_list Nil"
+            show "mem K Nil \<longrightarrow>
+                    (sat_hyp_at k (hyp_of K) A \<longrightarrow> sat_fuel (conc_of K) A)"
+            proof (rule implI)
+              show "(mem K Nil) B" by (rule mem_bool[OF K nil_nat])
+            next
+              assume Km: "mem K Nil"
+              show "sat_hyp_at k (hyp_of K) A \<longrightarrow> sat_fuel (conc_of K) A"
+              proof (rule implI)
+                show "(sat_hyp_at k (hyp_of K) A) B"
+                  by (rule sat_hyp_at_bool[OF k hypK A])
+              next
+                assume satK: "sat_hyp_at k (hyp_of K) A"
+                have satG: "sat_hyp_fuel (hyp_of K) A"
+                  by (rule sat_hyp_atD[OF k hypK A satK])
+                show "sat_fuel (conc_of K) A"
+                  using A chk0 K Km satG by (rule base)
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  next
+    fix h t
+    assume h: "h N" and t: "t N"
+       and IH: "\<forall>A. \<forall>K. \<forall>k. check_list t \<longrightarrow>
+                    (mem K t \<longrightarrow>
+                      (sat_hyp_at k (hyp_of K) A \<longrightarrow> sat_fuel (conc_of K) A))"
+    have htN: "Cons h t N" using h t by simp
+    show "\<forall>A. \<forall>K. \<forall>k. check_list (Cons h t) \<longrightarrow>
+              (mem K (Cons h t) \<longrightarrow>
+                (sat_hyp_at k (hyp_of K) A \<longrightarrow> sat_fuel (conc_of K) A))"
+    proof (rule forallI)
+      fix A assume A: "A N"
+      show "\<forall>K. \<forall>k. check_list (Cons h t) \<longrightarrow>
+                (mem K (Cons h t) \<longrightarrow>
+                  (sat_hyp_at k (hyp_of K) A \<longrightarrow> sat_fuel (conc_of K) A))"
+      proof (rule forallI)
+        fix K assume K: "K N"
+        have hypK: "hyp_of K N" using K by simp
+        show "\<forall>k. check_list (Cons h t) \<longrightarrow>
+                  (mem K (Cons h t) \<longrightarrow>
+                    (sat_hyp_at k (hyp_of K) A \<longrightarrow> sat_fuel (conc_of K) A))"
+        proof (rule forallI)
+          fix k assume k: "k N"
+          show "check_list (Cons h t) \<longrightarrow>
+                  (mem K (Cons h t) \<longrightarrow>
+                    (sat_hyp_at k (hyp_of K) A \<longrightarrow> sat_fuel (conc_of K) A))"
+          proof (rule implI)
+            show "(check_list (Cons h t)) B" by (rule check_list_bool[OF htN])
+          next
+            assume chkht: "check_list (Cons h t)"
+            show "mem K (Cons h t) \<longrightarrow>
+                    (sat_hyp_at k (hyp_of K) A \<longrightarrow> sat_fuel (conc_of K) A)"
+            proof (rule implI)
+              show "(mem K (Cons h t)) B" by (rule mem_bool[OF K htN])
+            next
+              assume Km: "mem K (Cons h t)"
+              show "sat_hyp_at k (hyp_of K) A \<longrightarrow> sat_fuel (conc_of K) A"
+              proof (rule implI)
+                show "(sat_hyp_at k (hyp_of K) A) B"
+                  by (rule sat_hyp_at_bool[OF k hypK A])
+              next
+                assume satK: "sat_hyp_at k (hyp_of K) A"
+                have satG: "sat_hyp_fuel (hyp_of K) A"
+                  by (rule sat_hyp_atD[OF k hypK A satK])
+                have tail:
+                  "\<And>L A2. A2 N \<Longrightarrow> check_list t \<Longrightarrow> L N \<Longrightarrow> mem L t \<Longrightarrow>
+                     sat_hyp_fuel (hyp_of L) A2 \<Longrightarrow> sat_fuel (conc_of L) A2"
+                proof -
+                  fix L A2
+                  assume A2: "A2 N"
+                     and chkt: "check_list t"
+                     and L: "L N"
+                     and Lm: "mem L t"
+                     and satL: "sat_hyp_fuel (hyp_of L) A2"
+                  have hypL: "hyp_of L N" using L by simp
+                  have exk: "\<exists>k2. sat_hyp_at k2 (hyp_of L) A2"
+                    by (rule sat_hyp_at_exI[OF hypL A2 satL])
+                  show "sat_fuel (conc_of L) A2"
+                  proof (rule existsE[OF exk])
+                    fix k2 assume k2: "k2 N"
+                       and s2: "sat_hyp_at k2 (hyp_of L) A2"
+                    have IA: "\<forall>K. \<forall>k. check_list t \<longrightarrow>
+                                 (mem K t \<longrightarrow>
+                                   (sat_hyp_at k (hyp_of K) A2 \<longrightarrow>
+                                     sat_fuel (conc_of K) A2))"
+                      by (rule forallE[OF IH A2])
+                    have IB: "\<forall>k. check_list t \<longrightarrow>
+                                 (mem L t \<longrightarrow>
+                                   (sat_hyp_at k (hyp_of L) A2 \<longrightarrow>
+                                     sat_fuel (conc_of L) A2))"
+                      by (rule forallE[OF IA L])
+                    have IC: "check_list t \<longrightarrow>
+                                 (mem L t \<longrightarrow>
+                                   (sat_hyp_at k2 (hyp_of L) A2 \<longrightarrow>
+                                     sat_fuel (conc_of L) A2))"
+                      by (rule forallE[OF IB k2])
+                    have I1: "mem L t \<longrightarrow>
+                                (sat_hyp_at k2 (hyp_of L) A2 \<longrightarrow>
+                                  sat_fuel (conc_of L) A2)"
+                      by (rule implE[OF IC chkt])
+                    have I2: "sat_hyp_at k2 (hyp_of L) A2 \<longrightarrow>
+                                sat_fuel (conc_of L) A2"
+                      by (rule implE[OF I1 Lm])
+                    show "sat_fuel (conc_of L) A2" by (rule implE[OF I2 s2])
+                  qed
+                qed
+                show "sat_fuel (conc_of K) A"
+                  using h t tail A chkht K Km satG by (rule step)
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+  fix J A
+  assume A: "A N"
+     and chk: "check_list pf"
+     and J: "J N"
+     and Jm: "mem J pf"
+     and satG: "sat_hyp_fuel (hyp_of J) A"
+  have hypJ: "hyp_of J N" using J by simp
+  have exk: "\<exists>k. sat_hyp_at k (hyp_of J) A"
+    by (rule sat_hyp_at_exI[OF hypJ A satG])
+  show "sat_fuel (conc_of J) A"
+  proof (rule existsE[OF exk])
+    fix k assume k: "k N" and sk: "sat_hyp_at k (hyp_of J) A"
+    have IA: "\<forall>K. \<forall>k. check_list pf \<longrightarrow>
+                 (mem K pf \<longrightarrow>
+                   (sat_hyp_at k (hyp_of K) A \<longrightarrow> sat_fuel (conc_of K) A))"
+      by (rule forallE[OF all A])
+    have IB: "\<forall>k. check_list pf \<longrightarrow>
+                 (mem J pf \<longrightarrow>
+                   (sat_hyp_at k (hyp_of J) A \<longrightarrow> sat_fuel (conc_of J) A))"
+      by (rule forallE[OF IA J])
+    have IC: "check_list pf \<longrightarrow>
+                 (mem J pf \<longrightarrow>
+                   (sat_hyp_at k (hyp_of J) A \<longrightarrow> sat_fuel (conc_of J) A))"
+      by (rule forallE[OF IB k])
+    have I1: "mem J pf \<longrightarrow>
+                (sat_hyp_at k (hyp_of J) A \<longrightarrow> sat_fuel (conc_of J) A)"
+      by (rule implE[OF IC chk])
+    have I2: "sat_hyp_at k (hyp_of J) A \<longrightarrow> sat_fuel (conc_of J) A"
+      by (rule implE[OF I1 Jm])
+    show "sat_fuel (conc_of J) A" by (rule implE[OF I2 sk])
+  qed
+qed
+
 lemma check_list_sound_fuel_N:
   assumes pf: "pf N"
   shows "\<And>J A. A N \<Longrightarrow> check_list pf \<Longrightarrow>
@@ -22288,35 +23032,6 @@ proof -
   show ?thesis
     unfolding mk_neq_def
     by (rule pack_F_N[OF _ ab], simp)
-qed
-
-lemma check_list_bool [auto]:
-  assumes pfn: "pf N"
-  shows "check_list pf B"
-proof (rule list_induct[OF pfn])
-  show "check_list Nil B"
-    apply (rule defE[OF check_list_def[where pf=Nil]])
-    apply simp
-    done
-next
-  fix h t assume h: "h N" and t: "t N" and IH: "check_list t B"
-  show "check_list (Cons h t) B"
-  proof -
-    have htN: "h \<triangleright> t N" 
-      using h t by simp
-    have g0: "(h \<triangleright> t = \<emptyset>) B" 
-      apply (rule eqBool[OF htN]) 
-      apply simp 
-      done
-    have vs: "valid_step h t B" 
-      by (rule valid_step_bool[OF h t])
-    show "check_list (h \<triangleright> t) B"
-      apply (rule defE[OF check_list_def[where pf="h \<triangleright> t"]])
-      apply (simp only: list_hd_cons[OF h t] list_tl_cons[OF h t])
-      apply (rule condTB[OF g0 true_bool])
-      apply (rule condTB[OF vs IH false_bool])
-      done
-  qed
 qed
 
 lemma proof_is_bool: "p N \<Longrightarrow> J N \<Longrightarrow> is_valid_proof p J B"
