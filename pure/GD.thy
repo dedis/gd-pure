@@ -317,6 +317,43 @@ proof (rule existsE[OF ex_not])
   show "\<not>(\<forall>x. F x)" using a_nat not_Fa by (rule notForallI)
 qed
 
+lemma disjComm:
+  assumes disj: "a \<or> b"
+  shows "b \<or> a"
+
+proof -
+
+  have c1: "a \<Longrightarrow> b \<or> a"
+    apply (rule disjI2)
+    apply simp
+    done
+  have c2: "b \<Longrightarrow> b \<or> a"
+    apply (rule disjI1)
+    apply simp
+    done
+  show ?thesis
+    using disj c1 c2 apply (rule disjE1)
+     apply simp+
+    done
+qed
+
+lemma notB:
+  assumes cB: "c B"
+  shows "(\<not>c) B"
+proof -
+  have disj1: "c \<or> \<not>c"
+    using cB by (simp add: bJudg_def)
+  have disj2: "\<not>c \<or> c"
+    using disj1 by (rule disjComm)
+  show ?thesis
+    apply (unfold bJudg_def)
+    apply (rule disjE1[OF disj2])
+     apply (rule disjI1, assumption)
+    apply (rule disjI2, rule dNegI, assumption)
+    done
+qed
+
+
 section \<open>Axiomatization of conditional evaluation in GD\<close>
 
 consts
@@ -5422,5 +5459,12 @@ next
   qed
 qed
 
+(*
+axiomatization C :: "o" where
+  C_def: "C := (C \<Longrightarrow> False)"
+
+lemma Curry: "False"
+  oops
+*)
 
 end (* End of theory *)

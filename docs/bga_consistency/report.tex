@@ -2,8 +2,7 @@
 \documentclass[11pt]{article}
 \input{preamble}
 
-\title{\bfseries Self-Consistency of Basic Grounded Arithmetic\\[2pt]
-       \large A consistency proof for \BGA{} carried out inside grounded
+\title{\bfseries A consistency proof for \BGA{} carried out inside grounded
        arithmetic in Isabelle/Pure}
 \author{Omar Muhammad}
 \date{\today}
@@ -18,24 +17,17 @@ inference rules with \emph{habeas quid} termination premises.  The existing
 mechanized consistency results for grounded arithmetic are carried out in
 Isabelle/HOL, that is, in a classical metatheory far stronger than the object
 logic.  This report documents a development that carries the argument out
-inside grounded arithmetic itself.  \QGA, an axiomatization of grounded
-arithmetic with object-level entailment and quantifiers, is embedded into
+inside a version of grounded arithmetic itself.  \QGA, an axiomatization of grounded
+arithmetic with quantifiers, is embedded into
 Isabelle/Pure in \texttt{GD.thy}.  Basic grounded arithmetic \BGA{} is
 arithmetized on top of it in \texttt{BGA\_on\_GA.thy}: terms, formulas,
 judgments, proofs, the operational semantics and the proof checker are encoded
 as \QGA{} natural numbers, and the checker is proved sound with respect to the
 encoded semantics under a small set of abstract assumptions about the encoding.
 A concrete Cantor-pairing encoding in \texttt{encode.thy} discharges those
-assumptions and yields
-\[
-  \neg\bigl(\textsf{is\_valid\_proof}\;p_1\;\langle \textsf{Nil},\,
-  \enc{a = b}\rangle \;\wedge\;
-  \textsf{is\_valid\_proof}\;p_2\;\langle \textsf{Nil},\, \enc{a \neq b}\rangle\bigr)
-\]
-as a theorem of \QGA.  Sections \ref{sec:qga} to \ref{sec:encode} state the
-rules and definitions of each layer and outline the consistency proof.  This is
-a first instalment: the detailed proofs, and the reduction of \QGA{} to \BGA{}
-that closes the self-consistency argument, are still to be written up.
+assumptions and yields, as a theorem of \QGA: for any two numbers
+coding \BGA{} terms $a$ and $b$, no numbers $p_1$ and $p_2$ code \BGA{} proofs, from
+empty hypotheses, of $a = b$ and of $a \neq b$ respectively.
 \end{abstract}
 
 \tableofcontents
@@ -57,7 +49,7 @@ The development consists of three theories, each importing the previous one.
 \texttt{BGA\_on\_GA.thy} & \texttt{GD}          & \BGA{} arithmetized in \QGA, and the\\
                          &                      & soundness proof for its proof checker\\[2pt]
 \texttt{encode.thy}      & \texttt{BGA\_on\_GA} & a concrete encoding discharging every\\
-                         &                      & assumption, and the theorem\\
+                         &                      & assumption, and the consistency theorem\\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -73,15 +65,34 @@ assumptions, and instantiates the result.
 
 \subsection{What is proved}
 
-The final theorem, \isa{BGA\_syntactically\_consistent}, says that there is no
-pair of numbers $p_1$, $p_2$ such that $p_1$ codes a \BGA{} proof of $a = b$
-from no hypotheses and $p_2$ codes a \BGA{} proof of $a \neq b$ from no
-hypotheses.  It is a statement about the encoded proof checker, and it is
-proved in \QGA: every quantifier in it is a \QGA{} quantifier, every function
-used to state it is a \QGA{} recursive definition, and every step of the proof
-is an application of a \QGA{} rule as axiomatized in \texttt{GD.thy}.
-Isabelle/Pure supplies the framework in which those rules are stated and
-applied, and contributes no logical strength of its own.
+The final theorem, \isa{BGA\_syntactically\_consistent}, says that for any two
+numbers coding \BGA{} terms $a$ and $b$, no numbers $p_1$ and $p_2$ code \BGA{}
+proofs, from empty hypotheses, of $a = b$ and of $a \neq b$ respectively. 
+
+Every step of its proof is an instance of a rule axiomatized in \texttt{GD.thy},
+or of a lemma derived from those rules.  The reason is structural.  Pure's kernel offers
+assumption, introduction and elimination for \isa{⟹} and \isa{⋀}, the rules for
+\isa{≡}, instantiation of schematic variables, and citation of an axiom.  Of
+these, only the last introduces an assertion: the others move an assertion
+between hypothesis and antecedent position, replace a schema by one of its
+instances, or operate on equalities.  With the axioms of \texttt{GD.thy}
+removed, Pure proves no assertion \isa{Trueprop φ} at all except from an
+assumption of that same \isa{φ}, because to Pure the \QGA{} connectives are
+uninterpreted constants.  Every \QGA{} formula established in the development
+therefore traces back to a \QGA{} rule.
+
+One kernel rule qualifies this: from \isa{A ≡ B} and \isa{A} one may infer
+\isa{B}, so an equality can introduce an assertion that occurs nowhere in its
+premises.  Within Pure, equalities arise only from $\alpha\beta\eta$-conversion,
+from congruence, from unfolding a \isa{definition}, or from mutual implication,
+none of which adds content.  They can also arise from an axiom, and two axioms
+of \texttt{GD.thy} are of that kind: \isa{eq\_reflection} (\isa{x = y ⟹ x ≡ y})
+and \isa{iff\_reflection} (\isa{p ⟷ q ⟹ p ≡ q}), which exist so that Isabelle's
+simplifier can act as a derived rule.  These two are the whole of the surface
+through which the framework can contribute strength, and each mirrors a \QGA{}
+rule together with congruence (\isa{eq\_reflection} mirrors \isa{eqSubst},
+whose context \isa{Q :: num ⇒ o} is already arbitrary) so they are expected
+to be conservative.
 
 \QGA{} is stronger than \BGA, so this is a consistency proof of a weaker system
 inside a stronger one, in the ordinary G\"odelian arrangement.  Its interest
