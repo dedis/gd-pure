@@ -2,9 +2,11 @@
 \label{sec:qga}
 
 \texttt{GD.thy} axiomatizes grounded arithmetic as an object logic over
-Isabelle/Pure.  Beyond the propositional and arithmetic core it adds
-first-order quantifiers and a shorthand \isa{⊢} for framework implication, and
-we call the resulting system \QGA.
+Isabelle/Pure.  The propositional and arithmetic core, and the definitional
+mechanism are from Kehrli's development, who established
+that grounded arithmetic can be axiomatized in Pure and reasoned in
+productively.\footnote{Sascha Kehrli, \emph{Formalizing Grounded Arithmetic atop
+Isabelle/Pure}, BSc thesis, Distributed Computing Group, ETH Z\"urich, 2025.}
 
 \subsection{Formulas and terms}
 
@@ -13,6 +15,35 @@ Two Pure types carry the embedding.  \isa{o} is the type of \QGA{} formulas and
 the coercion \isa{Trueprop :: o ⇒ prop} that lets a formula be asserted at the
 framework level, so that a \QGA{} formula can appear as the conclusion of a
 Pure rule.
+
+\subsection{Structural rules}
+\label{sec:structural}
+
+The rules in the rest of this section are written without a hypothesis context,
+because Pure maintains one.  Making it visible for a moment, a \QGA{} judgment is
+$\Gamma \seq \varphi$ with $\Gamma$ a finite set of formulas, and the framework
+supplies the operations that move judgments around.
+
+\begin{rulesiii}
+\iaxiom{\Gamma, \varphi \seq \varphi}{hyp} &
+\irule{\Gamma \seq \varphi}{\Gamma, \psi \seq \varphi}{weak} &
+\irule{\Gamma \seq \psi \sep \Gamma, \psi \seq \varphi}{\Gamma \seq \varphi}{cut}\\[3.2ex]
+\multicolumn{3}{c}{\irule{\Gamma \seq \varphi}
+  {[x \mapsto t]\Gamma \seq [x \mapsto t]\varphi}{inst}}
+\end{rulesiii}
+
+\noindent
+None of these is an axiom of \texttt{GD.thy}.  \textsc{hyp} is Pure's
+\isa{assume}, \textsc{weak} and \textsc{cut} are introduction and elimination of
+\isa{⟹}, and \textsc{inst} is instantiation of a schematic variable.  A rule
+written \isa{⟦P; Q⟧ ⟹ R} therefore means the judgment $P, Q \seq R$, and a
+theorem written that way holds for every instance of its free variables.
+Contraction and exchange do not appear at all, since $\Gamma$ is a set.
+
+One further operation has no sequent form.  If $\Gamma \seq \varphi$ is derived
+for a variable $x$ that occurs nowhere in $\Gamma$, the derivation is uniform in
+$x$, and Pure records this as \isa{⋀x}.  This is the eigenvariable condition, and
+it is what the premises of \textsc{Ind} and $\forall$I below rely on.
 
 \subsection{Propositional rules}
 
@@ -142,26 +173,8 @@ and the pair \isa{eq\_impl\_term: a = b ⟹ a N} and
 \isa{eq\_impl\_term2: a = b ⟹ b N}, by which a derivable equation witnesses the
 termination of both of its sides.
 
-\subsection{Entailment}
-\label{sec:entails}
-
-Entailment is a shorthand: its two rules make \isa{a ⊢ b} and the framework
-implication \isa{a ⟹ b} interderivable, so it is framework implication written
-as a formula, available wherever a formula is required.
-
-\begin{rules}
-\irule{\dis{a}{b}}{a \seq b}{$\seq$I} &
-\irule{a \seq b \sep a}{b}{$\seq$E}
-\end{rules}
-
-\thy{gd-entails}
-
-\noindent
-Unlike \isa{⟶} it has no groundedness premise on its introduction rule, which
-is what makes it usable in \S\ref{sec:list}, where the antecedent of the
-implication being inducted on cannot be shown grounded.
-
 \subsection{Quantifiers}
+\label{sec:quant}
 
 \begin{rules}
 \irule{\dis{x \N}{Q\,x}}{\forall x.\,Q\,x}{$\forall$I} &
@@ -175,10 +188,48 @@ implication being inducted on cannot be shown grounded.
 \noindent
 Both quantifiers range over \isa{num} and are relativized to terminating
 witnesses.  $\forall$I proves the body for an arbitrary terminating
-eigenvariable, $\forall$E instantiates only at terminating terms, and
-$\exists$I must exhibit a terminating witness.  The negation-exchange rules for
-the quantifiers appear in the source only as commented-out axioms.  They are
-not part of the axiomatization and nothing downstream uses them.
+eigenvariable, $\forall$E instantiates only at terminating terms, and $\exists$I
+must exhibit a terminating witness.
+
+Under these four rules a negated universal is inert.  \isa{forall} is a
+primitive constant, so no elimination rule matches $\neg(\forall x.\,Q\,x)$: the
+De Morgan rules $\vee$E2 and $\vee$E3 want a negated disjunction, $\neg\neg$E
+wants a double negation, and \textsc{exF} would first need $\forall x.\,Q\,x$
+itself, which $\forall$I supplies only from a uniform derivation.  Nor does any
+rule conclude $\neg(\forall x.\,Q\,x)$ from a counterexample.  Two further
+axioms supply both directions.
+
+\begin{rules}
+\irule{a \N \sep \neg (Q\,a)}{\neg (\forall x.\,Q\,x)}{$\neg\forall$I} &
+\irule{\neg (\forall x.\,Q\,x) \sep \dis{a \N,\; \neg (Q\,a)}{R}}{R}{$\neg\forall$E}
+\end{rules}
+
+\thy{gd-notforall}
+
+\noindent
+$\neg\forall$I refutes a universal from one terminating counterexample and
+$\neg\forall$E extracts one, so together they restore the duality between
+$\neg\forall$ and $\exists\neg$ as a pair of inference rules.  Each carries a
+habeas quid premise on the witness, which keeps them in line with the rest of the
+system: the counterexample has to be an actual number rather than a description
+of one.  \S\ref{sec:semantics:formulas} gives the semantic clause that justifies
+them.  They correspond to the rules taken as primitive in reflective grounded
+arithmetic, which are primitive there for the same reason.
+
+The dual pair for the existential needs no axiom.  From $\neg(\exists
+x.\,Q\,x)$, together with groundedness of $Q$ at the point under consideration,
+$\exists$I manufactures the positive partner and \textsc{exF} closes the case.
+This gives
+\begin{center}
+\isa{existsNeg: ⟦¬(∃x. Q x); ⋀x. x N ⟹ (Q x) B⟧ ⟹ ∀x. ¬(Q x)}
+\end{center}
+as a derived rule.  The asymmetry is the one just described.  $\exists$ has an
+introduction rule that applies to a local assumption, and $\forall$ does not.
+
+Where the new axioms are used is worth recording, since it is a single place.
+\S\ref{sec:proof} needs to decide whether a list of hypotheses is satisfied, and
+the negative case of that decision is the refutation of a universal.  Nothing
+else in the development appeals to either rule.
 
 \subsection{Conditionals}
 
@@ -414,6 +465,12 @@ $\fn{cpx}$, $\fn{cpy}$ its projections.}
 \begin{table}[p]
 \centering\small
 \begin{tabular}{@{}c@{\hspace{1.4em}}c@{\hspace{1.4em}}c@{}}
+\multicolumn{3}{@{}l}{\textbf{Structural (supplied by the framework)}}\\[0.9ex]
+\iaxiom{\Gamma, \varphi \seq \varphi}{hyp} &
+\irule{\Gamma \seq \varphi}{\Gamma, \psi \seq \varphi}{weak} &
+\irule{\Gamma \seq \psi \sep \Gamma, \psi \seq \varphi}{\Gamma \seq \varphi}{cut}\\[2.4ex]
+\multicolumn{3}{c}{\irule{\Gamma \seq \varphi}
+  {[x \mapsto t]\Gamma \seq [x \mapsto t]\varphi}{inst}}\\[2.8ex]
 \multicolumn{3}{@{}l}{\textbf{Propositional}}\\[0.9ex]
 \irule{P}{P \vee Q}{$\vee$I1} &
 \irule{Q}{P \vee Q}{$\vee$I2} &
@@ -440,13 +497,13 @@ $\fn{cpx}$, $\fn{cpy}$ its projections.}
 \irule{(a = b) \B}{a \N \wedge b \N}{eqE}\\[2.4ex]
 \irule{\Pre{a} \N}{a \N}{predTI} &
 \multicolumn{2}{c}{\irule{a \N \sep Q\,0 \sep \dis{x \N,\; Q\,x}{Q\,\Suc{x}}}{Q\,a}{Ind}}\\[2.8ex]
-\multicolumn{3}{@{}l}{\textbf{Entailment and quantifiers}}\\[0.9ex]
-\irule{\dis{a}{b}}{a \seq b}{$\seq$I} &
-\irule{a \seq b \sep a}{b}{$\seq$E} &
-\irule{\dis{x \N}{Q\,x}}{\forall x.\,Q\,x}{$\forall$I}\\[3.6ex]
+\multicolumn{3}{@{}l}{\textbf{Quantifiers}}\\[0.9ex]
+\irule{\dis{x \N}{Q\,x}}{\forall x.\,Q\,x}{$\forall$I} &
 \irule{\forall x.\,Q\,x \sep a \N}{Q\,a}{$\forall$E} &
-\irule{a \N \sep Q\,a}{\exists x.\,Q\,x}{$\exists$I} &
-\irule{\exists x.\,Q\,x \sep \dis{a \N,\; Q\,a}{R}}{R}{$\exists$E}\\[2.8ex]
+\irule{a \N \sep Q\,a}{\exists x.\,Q\,x}{$\exists$I}\\[3.6ex]
+\irule{\exists x.\,Q\,x \sep \dis{a \N,\; Q\,a}{R}}{R}{$\exists$E} &
+\irule{a \N \sep \neg (Q\,a)}{\neg (\forall x.\,Q\,x)}{$\neg\forall$I} &
+\irule{\neg (\forall x.\,Q\,x) \sep \dis{a \N,\; \neg (Q\,a)}{R}}{R}{$\neg\forall$E}\\[2.8ex]
 \multicolumn{3}{@{}l}{\textbf{Conditionals}}\\[0.9ex]
 \multicolumn{1}{@{}c}{\irule{c \sep a \N}{(\ite{c}{a}{b}) = a}{condI1}} &
 \multicolumn{2}{c}{\irule{\neg c \sep b \N}{(\ite{c}{a}{b}) = b}{condI2}}\\[2.4ex]
