@@ -351,6 +351,63 @@ where $a$ and $b$ are the two sides of $\varphi$.  A formula whose sides
 diverge is unsatisfied under every assignment, which is the property the
 consistency argument ultimately rests on.
 
+\subsection{Satisfaction at a fixed budget}
+\label{sec:satat}
+
+\isa{sat\_fuel} is not known to be grounded.  Unfolding it gives an existential
+over the budget, so deciding it would decide whether an evaluation converges.
+That matters for \S\ref{sec:list}, where satisfaction of the hypotheses appears
+as the antecedent of an implication inside an induction motive, and $\longrightarrow$
+introduction requires the antecedent to be grounded.
+
+The budget is the only source of the difficulty.  \isa{eval\_fuel} is total, so
+at a fixed $k$ every question about it is decided.  A second layer of definitions
+pins the budget.
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\isa{ev\_ok k t A} & $\triangleq \neg(\fn{eval\_fuel}(k,t,A) = 0)$, success within $k$\\
+\isa{sat\_at k f A} & both sides succeed within $k$ and compare as the tag requires\\
+\isa{sat\_hyp\_at k G A} & $\triangleq \forall f.\; f \in G \longrightarrow \fn{sat\_at}(k,f,A)$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+\isa{sat\_at} is quantifier free, so \isa{sat\_at\_bool} follows from
+\isa{eval\_fuel\_N} and \isa{eqBool}, on the pattern of
+\isa{eval\_fuel\_zero\_bool}.  \isa{sat\_hyp\_at\_bool} goes by list induction,
+and its negative case has to refute a universal, since some member of the list
+may fail.  That is the one place in the development where $\neg\forall$I and
+$\neg\forall$E of \S\ref{sec:quant} are used.
+
+Both predicates are monotone in the budget by \isa{eval\_fuel\_success\_add},
+which gives the two bridges back to \S\ref{sec:fuel}.
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\isa{sat\_hyp\_atD}     & \isa{sat\_hyp\_at k G A ⟹ sat\_hyp\_fuel G A}\\
+\isa{sat\_hyp\_at\_exI} & \isa{sat\_hyp\_fuel G A ⟹ ∃k. sat\_hyp\_at k G A}\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+The downward bridge is immediate.  The upward one needs one budget that serves
+every member of the list, and \isa{eval\_fuel\_success\_add} supplies it by
+addition, the same device \isa{eval\_fuel\_success\_unique} uses to compare two
+runs.
+
+The upward bridge has a subtlety.  Proving it by list induction on $G$ would put
+\isa{sat\_hyp\_fuel G A} in the antecedent of the motive, which is the problem it
+exists to solve.  It is therefore proved by induction over a sublist $G'$ of a
+fixed $G$.  The antecedent of the motive becomes \isa{subset G' G}, which
+\isa{subset\_bool} decides, while \isa{sat\_hyp\_fuel G A} stays outside the
+induction as an ordinary assumption.  Instantiating at $G' = G$ through
+\isa{subset\_refl} gives the statement.
+
 \subsection{\isa{bga\_subst} and \isa{asn\_put}}
 
 \thy{bga-subst}

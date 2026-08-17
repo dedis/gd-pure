@@ -35,10 +35,15 @@ A remark on technique before the details.  \QGA{} induction instantiates a
 schematic predicate \isa{Q}, so a statement can only be generalized before
 inducting if the generalization is part of the object-level formula.  Several
 proofs in this file are therefore stated internally in the form
-\isa{∀u. ∀A2. …} or with nested entailments \isa{… ⊢ (… ⊢ …)} and unpacked
-afterwards with \isa{forallE} and \isa{entailsE}.  \isa{eval\_fuel\_N} is the
-first instance: the induction on fuel runs on \isa{∀u. ∀A2. eval\_fuel k u A2 N}
-and the desired statement is recovered by two instantiations.
+\isa{∀u. ∀A2. …}, or as nested implications \isa{… ⟶ (… ⟶ …)}, and unpacked
+afterwards with \isa{forallE} and \isa{implE}.  \isa{eval\_fuel\_N} is the first
+instance: the induction on fuel runs on \isa{∀u. ∀A2. eval\_fuel k u A2 N} and
+the desired statement is recovered by two instantiations.
+
+Nesting an implication inside a motive has a price.  $\longrightarrow$ introduction
+requires its antecedent to be grounded, so every antecedent of such a motive
+needs a groundedness lemma.  The checkers all have one.  Satisfaction does not,
+and \S\ref{sec:satat} is what supplies it.
 
 \subsection{The evaluator is a partial function}
 
@@ -161,27 +166,43 @@ premises from the corresponding judgments found in the proof list.
 \subsection{From steps to proofs}
 \label{sec:list}
 
-The lifting step is a dedicated induction principle over proof lists.  It is
-stated for arbitrary \isa{sat} and \isa{sat\_hyp}, so the same principle serves
-both semantics in the file.
+The lifting step is a dedicated induction principle over proof lists.
 
 \thy{bga-check-list-induct}
 
 \noindent
+It is stated for \isa{sat\_fuel} and \isa{sat\_hyp\_fuel}.  Its only caller
+instantiates it at those two, and the indexed predicates it uses internally are
+defined in terms of them.
+
 Internally it is proved by \isa{list\_induct} on a statement of the form
 \begin{center}
-\isa{∀A. ∀K. check\_list pf ⊢ (mem K pf ⊢ (sat\_hyp (hyp\_of K) A ⊢ sat (conc\_of K) A))},
+\isa{∀A. ∀K. ∀k. check\_list pf ⟶ (mem K pf ⟶ (sat\_hyp\_at k (hyp\_of K) A ⟶ sat\_fuel (conc\_of K) A))}.
 \end{center}
 The predicate being inducted on has to be a single formula, so the
-generalizations over the assignment and over the judgment sit inside it as
-\QGA{} quantifiers.  The implications are written with \isa{⊢} rather than
-\isa{⟶} because \isa{⟶} introduction needs its antecedent grounded, and
-\isa{sat\_hyp} unfolds to an existential over fuel that is not known to be
-grounded.
+generalizations over the assignment, over the judgment and over the budget sit
+inside it as \QGA{} quantifiers.
 
-Instantiating it with the step-indexed semantics and discharging the step case
-with \isa{valid\_step\_sound\_fuel} gives soundness for every judgment
-occurring in a checked list.
+The three antecedents are why the budget is explicit.  Each one has to be
+grounded before $\longrightarrow$ can be introduced, and \isa{check\_list\_bool},
+\isa{mem\_bool} and \isa{sat\_hyp\_at\_bool} supply exactly that at the three
+levels.  The conclusion needs no such treatment, since $\longrightarrow$ introduction
+constrains only the antecedent, which is why \isa{sat\_fuel} appears there
+unindexed.  With \isa{sat\_hyp\_fuel} in the antecedent instead, the introduction
+would be blocked.
+
+The indexed predicate never leaves the proof.  The statement of the lemma is in
+\isa{sat\_hyp\_fuel} and \isa{sat\_fuel}, and the bridges of \S\ref{sec:satat}
+convert at the boundary.  \isa{sat\_hyp\_atD} runs downward at the two points
+where the induction hands control to \isa{base} and \isa{step}, both of which are
+stated in the unindexed predicates.  \isa{sat\_hyp\_at\_exI} runs upward twice,
+once in the tail case where the induction hypothesis needs a budget for the
+hypotheses of another judgment, and once at the end where the lemma's own
+assumption has to produce one.
+
+Instantiating the principle and discharging the step case with
+\isa{valid\_step\_sound\_fuel} gives soundness for every judgment occurring in a
+checked list.
 
 \thy{bga-check-list-sound}
 

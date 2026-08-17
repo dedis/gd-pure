@@ -64,7 +64,7 @@ span GD.thy '^  eq :: '                       '^  eq_reflection'               g
 span GD.thy '^definition neq'                 '^  where .*longleftrightarrow'  gd-defs
 span GD.thy '^  zero :: '                     '^ *"..lbrakk>a N; Q zero'       gd-nat
 span GD.thy '^definition True'                '^  where .*False .*equiv'       gd-truefalse
-span GD.thy '^  entails :: '                  '^  entailsE:'                   gd-entails
+span GD.thy '^  notForallI:'                 '^  notForallE:'                  gd-notforall
 span GD.thy '^  forall :: '                   '^  existsE:'                    gd-quant
 span GD.thy '^  cond :: '                     '^  cond_elseQ_I:'               gd-cond
 span GD.thy '^  def :: '                      '^  defI:'                       gd-def
@@ -139,7 +139,7 @@ span BGA_on_GA.thy '^lemma template_instance_sound_fuel' '^  shows "sat_fuel f A
 span BGA_on_GA.thy '^lemma find_phi_sound_fuel'     '^  shows "sat_fuel (conc_of J) A"'  bga-find-phi-sound
 span BGA_on_GA.thy '^lemma nat_ind_sound_put_fuel'  '^  shows "sat_fuel (subst_F p i a) A"' bga-nat-ind-sound
 span BGA_on_GA.thy '^lemma valid_step_sound_fuel'   '^  shows "sat_fuel (conc_of J) A"'  bga-valid-step-sound
-span BGA_on_GA.thy '^lemma check_list_induct_N'     '^ \{16\}sat_hyp (hyp_of J) A .*sat (conc_of J) A"' bga-check-list-induct 1
+span BGA_on_GA.thy '^lemma check_list_induct_N'     '^ \{16\}sat_hyp_fuel (hyp_of J) A .*sat_fuel (conc_of J) A"' bga-check-list-induct 1
 span BGA_on_GA.thy '^lemma check_list_sound_fuel_N' '^    sat_fuel (conc_of J) A"'       bga-check-list-sound
 span BGA_on_GA.thy '^lemma soundness_bridge_fuel'   '^  shows "sat_fuel (conc_of J) A"'  bga-bridge
 span BGA_on_GA.thy '^definition mk_eq ::'           '^    "mk_neq a b .*pack_F 1'        bga-mk-eq 1

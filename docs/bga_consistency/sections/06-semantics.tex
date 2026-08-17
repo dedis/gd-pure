@@ -1,0 +1,214 @@
+\section{A big-step semantics for \QGA}
+\label{sec:semantics}
+
+\providecommand{\tv}[1]{\ensuremath{\mathsf{#1}}}
+\providecommand{\bs}[1]{\ensuremath{\Downarrow_{#1}}}
+
+\S\ref{sec:reduction} is one route to a self-consistency result.  This section
+sketches the other, which is to give \QGA{} a semantics of its own and repeat the
+argument of \S\ref{sec:proof} with \QGA{} in place of \BGA.  Nothing here is
+formalized yet.  The purpose is to fix the shape of the semantics before the
+encoding work begins, because one clause in it determines the architecture of
+everything that follows.
+
+\subsection{What the proof needs}
+
+The consistency argument of \S\ref{sec:proof} has three moving parts.
+Evaluation is deterministic, the proof checker is sound with respect to
+evaluation, and \fn{False} evaluates to false.  Consistency is then immediate:
+a proof of \fn{False} would make \fn{False} evaluate to true, and determinism
+forbids that.
+
+Two constraints follow, and they are the constraints that matter.  The semantics
+has to be expressible as a \QGA{} recursive definition, since it will live inside
+\QGA{} rather than above it.  And the satisfaction predicate has to be decided at
+each fixed index, because the soundness proof is an induction whose motive
+carries satisfaction of the hypotheses in an antecedent position, and $\longrightarrow$
+introduction demands that the antecedent be grounded.  This second constraint is
+the whole reason \S\ref{sec:fuel} indexes evaluation by fuel, and it is the
+constraint that decides the design below.
+
+\subsection{Terms}
+
+Term evaluation is the semantics of \S\ref{sec:fuel} unchanged.  A judgment
+$\langle t, A\rangle \bs{k} v$ says that the term coded by $t$, under the
+assignment $A$, evaluates to the value $v$ within $k$ steps.  It is realized as
+a \QGA{} function \fn{eval\_fuel} returning $\Suc{v}$ on success and $0$ on
+timeout, which makes it total, so equality of results is decidable and the
+groundedness obligations discharge themselves.  Divergence is the absence of any
+$k$, and the relation $\langle t, A\rangle \Downarrow v$ abbreviates
+$\exists k.\ \langle t, A\rangle \bs{k} v$.  Fuel is monotone, so a successful
+evaluation stays successful when more is supplied.
+
+The definition list is a parameter of the semantics.  A constant introduced by
+$f\;\bar{x} \rec \fn{body}$ is evaluated by looking its body up and continuing,
+exactly as \fn{dfns} is consulted in \S\ref{sec:bga}.
+
+\subsection{Formulas}
+\label{sec:semantics:formulas}
+
+Formula evaluation is two-valued with gaps.  A formula either evaluates to
+\tv{tt}, or to \tv{ff}, or to neither, and the third case is what groundedness
+means.  Writing $\langle \varphi, A \rangle \Downarrow \tv{tt}$ and $\langle
+\varphi, A \rangle \Downarrow \tv{ff}$ for the two judgments, the clauses for the
+primitives are the strong three-valued ones.
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+$\langle s = t, A\rangle \Downarrow \tv{tt}$ &
+  if $\langle s, A\rangle \Downarrow n$ and $\langle t, A\rangle \Downarrow n$\\
+$\langle s = t, A\rangle \Downarrow \tv{ff}$ &
+  if $\langle s, A\rangle \Downarrow m$, $\langle t, A\rangle \Downarrow n$ and
+  $m \neq n$\\
+\midrule
+$\langle \neg\varphi, A\rangle \Downarrow \tv{tt}$ &
+  if $\langle \varphi, A\rangle \Downarrow \tv{ff}$\\
+$\langle \neg\varphi, A\rangle \Downarrow \tv{ff}$ &
+  if $\langle \varphi, A\rangle \Downarrow \tv{tt}$\\
+\midrule
+$\langle \varphi \vee \psi, A\rangle \Downarrow \tv{tt}$ &
+  if $\langle \varphi, A\rangle \Downarrow \tv{tt}$, or if
+  $\langle \psi, A\rangle \Downarrow \tv{tt}$\\
+$\langle \varphi \vee \psi, A\rangle \Downarrow \tv{ff}$ &
+  if $\langle \varphi, A\rangle \Downarrow \tv{ff}$ and
+  $\langle \psi, A\rangle \Downarrow \tv{ff}$\\
+\midrule
+$\langle \ite{c}{\varphi}{\psi}, A\rangle \Downarrow v$ &
+  if $\langle c, A\rangle \Downarrow \tv{tt}$ and
+  $\langle \varphi, A\rangle \Downarrow v$\\
+$\langle \ite{c}{\varphi}{\psi}, A\rangle \Downarrow v$ &
+  if $\langle c, A\rangle \Downarrow \tv{ff}$ and
+  $\langle \psi, A\rangle \Downarrow v$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Each clause is positive, so the whole definition is a monotone induction.  An
+equation is true when both sides converge to the same value and false when they
+converge to different ones, which is where habeas quid comes from: a divergent
+side gives neither clause, so the equation is ungrounded, and \isa{a N} is
+grounded exactly when $a$ converges.  Disjunction is true as soon as one disjunct
+is, whatever the other does, which is what makes $\vee$I1 and $\vee$I2 sound
+while excluded middle is not.  Nothing evaluates to \tv{tt} and \tv{ff} together,
+which is determinism and is proved by induction on the two derivations.
+
+\subsection{The quantifier clause}
+\label{sec:semantics:quant}
+
+Six of the eight clauses above are bounded searches, so they are $\Sigma_1$ and a
+\QGA{} recursive definition can perform them.  The quantifiers are where a choice
+has to be made, and the two candidate readings differ in exactly the property
+that \S\ref{sec:semantics} identified as decisive.
+
+The first reading is instance-wise.
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+$\langle \forall x.\,\varphi, A\rangle \Downarrow \tv{tt}$ &
+  if $\langle \varphi, A[x \mapsto n]\rangle \Downarrow \tv{tt}$ for every $n$\\
+$\langle \forall x.\,\varphi, A\rangle \Downarrow \tv{ff}$ &
+  if $\langle \varphi, A[x \mapsto n]\rangle \Downarrow \tv{ff}$ for some $n$\\
+\end{tabular}
+\end{center}
+
+\noindent
+This is the reading a classical reader expects, and it makes soundness of
+$\forall$I a substitution lemma and nothing more.  \QGA{} is first order, its
+terms denote numbers or nothing, and it has no term-level binder, so assignments
+suffice and no strengthening of the induction motive is required.  Determinism at
+the quantifier is equally easy, since one instance cannot be both true and false.
+
+Its defect is that the true clause quantifies over all $n$.  The predicate is not
+$\Sigma_1$, so no \QGA{} definition decides it, and the internal soundness proof
+would have satisfaction sitting undecided in an antecedent.  That is precisely
+the obstruction \S\ref{sec:proof} had to work around for \BGA, and there the
+obstruction was removable because the undecidability came from an unbounded
+search for fuel.  Here it comes from a universal quantification over the
+numerals, and fuel does not touch it.
+
+The second reading grounds a universal in the system's own proof search.
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+$\langle \forall x.\,\varphi, A\rangle \Downarrow \tv{tt}$ &
+  if some valid \QGA{} proof derives $x \N \seq \varphi$\\
+$\langle \forall x.\,\varphi, A\rangle \Downarrow \tv{ff}$ &
+  if some valid \QGA{} proof derives $\seq \neg\varphi[x \mapsto \bar{n}]$ for
+  some numeral $\bar{n}$\\
+\end{tabular}
+\end{center}
+
+\noindent
+Both clauses are searches over proof codes, so the predicate stays $\Sigma_1$ and
+a fuelled version of it is total and decided at each index, which is what the
+soundness induction needs.  Both mention derivability positively, so the
+simultaneous definition of the checker and the semantics remains a monotone
+induction and no Tarskian circularity arises.  The clauses for $\exists$ are the
+duals, with the true clause a search for a witness and the false clause a search
+for a proof of the schematic negation.
+
+This reading also settles the two axioms of \S\ref{sec:quant}.
+$\neg\forall$I is the false clause read from right to left, since a derivation of
+$\neg(Q\,a)$ together with $a \N$ is the certificate the clause asks for, and
+$\neg\forall$E is the same clause read from left to right.  Under the
+instance-wise reading they are equally sound.  Under either one they are
+justified rather than postulated, which is the reason they were added.
+
+We propose the second reading.  The cost is the architecture it forces.  The
+soundness case for $\forall$I has to produce a certificate with no residual
+hypotheses, while the induction hypothesis supplies only that the premise
+judgment is semantically true, so the hypotheses have to be converted back into
+derivations and discharged by \textsc{cut}.  That step is an internal
+completeness lemma, and it has to be established before soundness rather than
+after.  Reflective grounded arithmetic is organized this way for the same reason,
+and it is the main risk in the plan.
+
+\subsection{Obligations}
+
+Assuming the second reading, a self-consistency proof for \QGA{} needs the
+following, in this order.
+
+\begin{enumerate}
+\item An arithmetization of \QGA's own syntax, judgments, proofs and proof
+      checker, following \S\ref{sec:bga}.  This is needed to state consistency at
+      all, and the reflective clauses need it as well.
+\item The fuelled evaluation of terms and formulas, with monotonicity in the
+      index, and the decidedness lemma for satisfaction at a fixed index.
+\item Internal completeness: a formula that evaluates to \tv{tt} is derivable.
+\item Soundness: every rule of \S\ref{sec:qga} preserves truth.  The propositional
+      cases read off the clauses directly, the equality cases need a congruence
+      lemma for evaluation, \textsc{Ind} needs induction on the value of its
+      subject, and \textsc{defE} and \textsc{defI} need that a definition and its
+      body evaluate alike.
+\item Determinism, which under the reflective reading rests on soundness, because
+      a colliding pair of certificates has to be instantiated at a common numeral
+      before the contradiction appears.
+\item $\langle \fn{False}, A\rangle \Downarrow \tv{ff}$, which is one evaluation.
+\end{enumerate}
+
+\noindent
+Consistency follows from the last three.  Two of these items deserve a warning.
+Item 3 is the one \S\ref{sec:semantics:quant} identified as the cost of the
+design.  Item 4 has a trap of its own at the substitution rule: the obvious
+motive, truth under all satisfying assignments, is not inductive when
+substitution can replace a variable by a term that changes what the hypotheses
+say.  For a first-order system the standard motive is expected to suffice, and
+confirming that is part of the work.
+
+\subsection{What the semantics does not settle}
+
+Grounded truth under either reading is only recursively enumerable, so the
+diagonal argument produces an ungrounded sentence rather than a true and
+unprovable one, and a system that is consistent, effective and complete for its
+own semantics is not excluded.  That is why the arrangement is available at all.
+
+What remains open is whether the resulting proof deserves the name
+self-consistency.  The semantics interprets \QGA's $\forall$ by a search over
+\QGA{} proofs, so the argument is carried out in the same system it is about, and
+a Kripkean partial truth predicate is what makes that admissible.  A sceptical
+reader is entitled to ask for the adequacy statement relating the arithmetized
+syntax of item 1 to the Pure-level formulas of \S\ref{sec:levels}, and the
+present development does not supply it.  \S\ref{sec:reduction} avoids the
+question by a different route.
