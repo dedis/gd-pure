@@ -2,6 +2,10 @@
 \documentclass[11pt]{article}
 \input{preamble}
 
+\usepackage{xcolor}
+
+\newcommand{\omar}[1]{\textcolor{blue}{\textbf{[Omar: #1]}}}
+
 \title{\bfseries A consistency proof for \BGA{} carried out inside grounded
        arithmetic in Isabelle/Pure}
 \author{Omar Muhammad}
@@ -67,68 +71,97 @@ assumptions, and instantiates the result.
 
 The final theorem, \isa{BGA\_syntactically\_consistent}, says that for any two
 numbers coding \BGA{} terms $a$ and $b$, no numbers $p_1$ and $p_2$ code \BGA{}
-proofs, from empty hypotheses, of $a = b$ and of $a \neq b$ respectively. 
-
-Every step of its proof is an instance of a rule axiomatized in \texttt{GD.thy},
-or of a lemma derived from those rules.  The reason is structural.  Pure's kernel offers
-assumption, introduction and elimination for \isa{⟹} and \isa{⋀}, the rules for
-\isa{≡}, instantiation of schematic variables, and citation of an axiom.  Of
-these, only the last introduces an assertion: the others move an assertion
-between hypothesis and antecedent position, replace a schema by one of its
-instances, or operate on equalities.  With the axioms of \texttt{GD.thy}
-removed, Pure proves no assertion \isa{Trueprop φ} at all except from an
-assumption of that same \isa{φ}, because to Pure the \QGA{} connectives are
-uninterpreted constants.  Every \QGA{} formula established in the development
-therefore traces back to a \QGA{} rule.
-
-One kernel rule qualifies this: from \isa{A ≡ B} and \isa{A} one may infer
-\isa{B}, so an equality can introduce an assertion that occurs nowhere in its
-premises.  Within Pure, equalities arise only from $\alpha\beta\eta$-conversion,
-from congruence, from unfolding a \isa{definition}, or from mutual implication,
-none of which adds content.  They can also arise from an axiom, and two axioms
-of \texttt{GD.thy} are of that kind: \isa{eq\_reflection} (\isa{x = y ⟹ x ≡ y})
-and \isa{iff\_reflection} (\isa{p ⟷ q ⟹ p ≡ q}), which exist so that Isabelle's
-simplifier can act as a derived rule.  These two are the whole of the surface
-through which the framework can contribute strength, and each mirrors a \QGA{}
-rule together with congruence (\isa{eq\_reflection} mirrors \isa{eqSubst},
-whose context \isa{Q :: num ⇒ o} is already arbitrary) so they are expected
-to be conservative.
+proofs, from empty hypotheses, of $a = b$ and of $a \neq b$ respectively.
 
 \QGA{} is stronger than \BGA, so this is a consistency proof of a weaker system
-inside a stronger one, in the ordinary G\"odelian arrangement.  Its interest
-lies elsewhere: it shows that grounded arithmetic is expressive enough to carry
-a full metamathematical argument about a formal system, with no classical
-ambient logic available at any point.  The step that would turn it into a
-self-consistency result, a reduction of \QGA{} back to \BGA, is
-\S\ref{sec:reduction} and is left for later work.
+inside a stronger one, in the ordinary G\"odelian arrangement.  Its interest lies
+elsewhere.  It shows that grounded arithmetic can carry a full metamathematical
+argument about a formal system with no classical ambient logic available at any
+point.  Turning it into a self-consistency result requires a reduction of \QGA{}
+back to \BGA, which is the subject of \S\ref{sec:reduction} and is left for later
+work.
 
-\subsection{Reading the rules}
+\subsection{The two levels}
 \label{sec:levels}
 
-Isabelle/Pure is the framework in which \QGA{} is stated, and three of its
-symbols appear throughout.  \isa{A ⟹ B} is framework implication, and it is how
-a \QGA{} rule ``from $A$ infer $B$'' is written, with hypothesis contexts left
-implicit because Pure manages them.  \isa{⋀x. A} binds a variable in a rule
-schema, and is how an eigenvariable side condition is expressed.  \isa{a ≡ b}
-is the definitional equality of the framework, used when a \QGA{} notion is
-abbreviated rather than axiomatized.  None of the three is a connective of
-\QGA.
+Two logics are in play throughout, and separating them is worth doing before any
+rules appear.
 
-\QGA{} has its own logical vocabulary, introduced in \S\ref{sec:qga}: the
-primitives \isa{∨} and \isa{¬}, the connectives \isa{∧}, \isa{⟶} and \isa{⟷}
-defined from them, the quantifiers \isa{∀} and \isa{∃}, and an entailment
-constant \isa{⊢} which is a shorthand for framework implication written as a
-formula.
+\QGA{} is the logic under study and that we will use for proof writing.  Its formulas are the terms of type \isa{o}.
+Its vocabulary, given in full in \S\ref{sec:qga}, consists of the primitives
+\isa{∨} and \isa{¬}, the connectives \isa{∧}, \isa{⟶} and \isa{⟷} defined from
+them, the equality \isa{=}, and the quantifiers \isa{∀} and \isa{∃}.
+
+Isabelle/Pure is the framework in which \QGA{} is written down.  Pure is a small
+calculus whose purpose is to state the rules of other logics, and it has three
+symbols.  \isa{A ⟹ B} says that from a derivation of $A$ one obtains a derivation
+of $B$, so a rule ``from $A$ infer $B$'' is written this way.  \isa{⋀x. A} says
+that $A$ was derived for an arbitrary $x$, which is how the eigenvariable
+condition of a rule is expressed: the premise \isa{⋀x. x N ⟹ Q x} of
+\isa{forallI} records that \isa{Q} holds of a variable about which nothing was
+assumed.  \isa{a ≡ b} is the definitional equality of the framework, used where a
+\QGA{} notion is abbreviated rather than axiomatized.\footnote{%
+  Definitional equality identifies terms that differ only in ways the logic
+  cannot see: renaming a bound variable ($\alpha$), applying a lambda to its
+  argument ($\beta$), and replacing \isa{λx. f x} by \isa{f} ($\eta$).  Unfolding
+  a \isa{definition} is also an \isa{≡} step.}
+
+The type system keeps the two levels apart.  \isa{o} is the type of \QGA{}
+formulas and \isa{prop} the type of Pure judgments, connected by
+\isa{Trueprop :: o ⇒ prop}, which is declared with the \isa{judgment} command and
+printed invisibly.  Nothing maps \isa{prop} back to \isa{o}.  A \QGA{} formula can
+therefore be asserted as a judgment, while \isa{⟹} and \isa{⋀} can never appear
+inside a \QGA{} formula.
+
+Pure holds hypothetical judgments freely, because \isa{⟹} may always be
+introduced.  Converting one into a \QGA{} formula requires \isa{implI}, whose
+premise \isa{a B} demands that the antecedent be decided.  \emph{Habeas quid} is
+a gate between the two levels, and every implication occurring in a
+\QGA{} formula has passed through it.
+
+This arrangement is what supports the claim that the development is carried out
+in \QGA{} rather than in Isabelle.  Pure's kernel offers assumption, introduction
+and elimination for \isa{⟹} and \isa{⋀}, the rules for \isa{≡}, instantiation of
+schematic variables, and citation of an axiom.  Only the last of these introduces
+an assertion.  The others move an assertion between hypothesis and antecedent
+position, replace a rule schema by one of its instances, or work on equalities.
+Remove the axioms of \texttt{GD.thy} and Pure proves no assertion at all except
+from an assumption of that same assertion, since to Pure the \QGA{} connectives
+are constants about which it knows nothing.  Every \QGA{} formula established in
+the development therefore comes from a \QGA{} rule. \omar{This is my hand wave for the claim. I want to do rigorous analysis + a consistency proof of QGA in HOL soon.}
+
+One kernel rule needs care.  From \isa{A ≡ B} and \isa{A} one may infer \isa{B},
+so an equality can introduce an assertion that appears nowhere in its premises.
+Inside Pure, equalities come only from the conversions described in the footnote
+above, none of which changes meaning.  They can also come from an axiom, and two
+axioms of \texttt{GD.thy} are of that kind: \isa{eq\_reflection}
+(\isa{x = y ⟹ x ≡ y}) and \isa{iff\_reflection} (\isa{p ⟷ q ⟹ p ≡ q}), which
+exist so that Isabelle's simplifier can act as a derived rule.  These two are the
+entire surface through which the framework could contribute strength.  Each
+mirrors a \QGA{} rule together with congruence, \isa{eq\_reflection} mirroring
+\isa{eqSubst}, whose context \isa{Q :: num ⇒ o} is already arbitrary, so both are
+expected to be pretty tame. \omar{I want to do a rigorous analysis on this too.}
+
+A last reliance on the framework concerns the quantifier syntax.  \QGA{}
+formulas are the terms of type \isa{o}, and \isa{forall} has type
+\isa{(num ⇒ o) ⇒ o}, so a quantified formula is \isa{forall} applied to a Pure
+function.  Binding is therefore the framework's, and renaming, capture-avoiding
+substitution and freshness come for free rather than being axiomatized.  This is
+the usual higher-order abstract syntax treatment of a binder and is what keeps
+\S\ref{sec:qga} free of a substitution calculus. \omar{ I think the minor concern here would be that the bodies one
+may quantify over are the Pure terms of type \isa{num ⇒ o} over the \QGA{}
+signature, so the formulas of \QGA{} are not given by an inductive definition.
+So an arithmetization of \QGA{} must
+represent quantifier bodies by a first-order syntax with explicit variables.}
 
 In the natural-deduction presentations below, \QGA{} rules are written with
-premises above the line and the conclusion below it and with no explicit
-context.  A premise discharged by a rule is written in brackets above the
-derivation that uses it.  For \BGA, whose judgments carry an explicit list of
-hypotheses, rules are written as sequents $\Gamma \seq \varphi$.
-
-All Isabelle snippets are extracted verbatim from the theories by
-\texttt{extract.sh}, which replaces Isabelle's ASCII escapes by the
-corresponding Unicode glyphs and changes nothing else.
+premises above the line and the conclusion below, with no explicit context.  A
+premise discharged by a rule is written in brackets above the derivation that
+uses it.  \BGA{} judgments carry an explicit list of hypotheses, so \BGA{} rules
+are written as sequents $\Gamma \seq \varphi$.  All Isabelle snippets are
+extracted verbatim from the theories by \texttt{extract.sh}, which replaces
+Isabelle's ASCII escapes by the corresponding Unicode glyphs and changes nothing
+else.
 
 \input{sections/01-qga}
 \input{sections/02-bga}
