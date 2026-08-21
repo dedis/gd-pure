@@ -169,15 +169,25 @@ else.
 \input{sections/04-encode}
 \input{sections/05-reduction}
 \input{sections/06-semantics}
+\input{sections/07-self}
 
 \section{Status}
 
-The three theories are complete in the sense that \texttt{encode.thy}
+The three \BGA{} theories are complete in the sense that \texttt{encode.thy}
 discharges every assumption of \isa{bga\_fuller} by \isa{unfold\_locales} and
 derives \isa{BGA\_syntactically\_consistent} from
 \isa{conc2.syntactically\_consistent}.  What remains for this document is the
 detail of the soundness proofs summarized in \S\ref{sec:proof}, and the content
 of \S\ref{sec:reduction}.
+
+Two further theories, \texttt{QGA\_on\_GA.thy} and \texttt{qga\_encode.thy},
+carry the \QGA{}-on-\QGA{} development of \S\ref{sec:self}.  They are in the
+same session and check, but they are a skeleton: the locale tower, every
+definition, the abstract consistency skeleton with its theorem proved in full,
+and the statement of every remaining lemma, of which forty-six stand as
+\isa{sorry}.  \texttt{qga\_encode.thy} is generated in part from the locale
+interface by \texttt{pure/gen/gen\_qga\_encode.py}, so that the recursive
+equations of the two files cannot drift apart.
 
 Three points about the development itself are worth recording.
 
