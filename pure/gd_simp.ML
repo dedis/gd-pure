@@ -20,9 +20,9 @@ let
   val gd_solver =
     Raw_Simplifier.mk_solver "GD_solver" GDAuto.gd_auto_tac
   fun set_solver ctxt =
-    Raw_Simplifier.setSolver (ctxt, gd_solver)
+    Raw_Simplifier.set_unsafe_solver gd_solver ctxt
   fun set_ssolver ctxt =
-    Raw_Simplifier.setSSolver (ctxt, gd_solver)
+    Raw_Simplifier.set_safe_solver gd_solver ctxt
   fun configure ctxt =
     ctxt
     |> Simplifier.set_mksimps GD_Simp.th_to_meta_eq_th

@@ -22,8 +22,7 @@ judgment
 
 axiomatization
   disj :: \<open>o \<Rightarrow> o \<Rightarrow> o\<close>  (infixr \<open>\<or>\<close> 30) and
-  not :: \<open>o \<Rightarrow> o\<close> (\<open>\<not> _\<close> [40] 40)
-where
+  not :: \<open>o \<Rightarrow> o\<close> (\<open>\<not> _\<close> [40] 40)where
   disjI1: \<open>P \<Longrightarrow> P \<or> Q\<close> and
   disjI2: \<open>Q \<Longrightarrow> P \<or> Q\<close> and
   disjI3: \<open>\<lbrakk>\<not>P; \<not>Q\<rbrakk> \<Longrightarrow> \<not>(P \<or> Q)\<close> and
@@ -40,7 +39,7 @@ typedecl num
 
 
 axiomatization
-  eq :: \<open>'a \<Rightarrow> 'a \<Rightarrow> o\<close>  (infixl \<open>=\<close> 45)
+  eq :: \<open>num \<Rightarrow> num \<Rightarrow> o\<close>  (infixl \<open>=\<close> 45)
 where
   eqSubst: \<open>\<lbrakk>a = b; Q a\<rbrakk> \<Longrightarrow> Q b\<close> and
   eqSym: \<open>a = b \<Longrightarrow> b = a\<close> and
@@ -106,10 +105,12 @@ where
   sucCong: \<open>a = b \<Longrightarrow> S a = S b\<close> and
   predCong: \<open>a = b \<Longrightarrow> P a = P b\<close> and
   eqBool: \<open>\<lbrakk>a N; b N\<rbrakk> \<Longrightarrow> (a = b) B\<close> and
-  eqBoolB: \<open>\<lbrakk>x B; y B\<rbrakk> \<Longrightarrow> (x = y) B\<close> and
+(*eqBoolB: \<open>\<lbrakk>x B; y B\<rbrakk> \<Longrightarrow> (x = y) B\<close> and*)
   sucNonZero: \<open>a N \<Longrightarrow> S a \<noteq> zero\<close> and
   predSucInv: \<open>a N \<Longrightarrow> P(S(a)) = a\<close> and
   pred0: \<open>P(zero) = zero\<close> and
+  eqE: \<open>((a = b) B) \<Longrightarrow> ((a N) \<and> (b N))\<close> and
+  predTIE: \<open>(P a N) \<Longrightarrow> (a N)\<close> and
   ind [case_names HQ Base Step]:
            "\<lbrakk>a N; Q zero; \<And>x. x N \<Longrightarrow> Q x \<Longrightarrow> Q S(x)\<rbrakk> \<Longrightarrow> Q a"
 
@@ -256,21 +257,24 @@ proof -
     done
 qed
 
-(* Entailment reduces to almost the same as object-level implication \<longrightarrow>.
- * The difference is that the \<longrightarrow> introduction rule requires 'a' to be
- * proven boolean first ('a B'), while entailment does not. It is a
- * direct object-level mirroring of the meta-level a \<Longrightarrow> b.
- * Meta-level just means that it is of type prop \<Rightarrow> prop \<Rightarrow> prop,
- * while entailment mirrors this at the object level, that is, it's
- * of type o \<Rightarrow> o \<Rightarrow> o.
- * With entailment, GD can reason about deducability at the object level,
- * which adds a lot of expressive power.
+(* Entailment (entails / \<turnstile> :: o \<Rightarrow> o \<Rightarrow> o, with entailsI / entailsE) was REMOVED
+   It internalised the meta-level a \<Longrightarrow> b as an object formula
+  WITHOUT the habeas quid guard that implI carries (implI needs a B;
+ entailsI needed nothing).  this admits Curry's paradox:
+ 
+    axiomatization C :: o where C_def: "C := (C \<turnstile> False)"
+    note unfoldC = defI[where Q="\<lambda>z. z", OF C_def]
+    note foldC   = defE[where Q="\<lambda>z. z", OF C_def]
+    have contract: "C \<turnstile> False" \<dots>          (* C used twice *)
+    show "False" by (rule entailsE[OF contract foldC[OF contract]])
+
+ Its only uses were in BGA_on_GA.thy, to carry a hypothetical through an
+ induction motive (GD's induction motives must be of type o, and implI
+ needs the antecedent decided).  All of them are now \<longrightarrow>: ten checker
+ eliminators used an existing _bool lemma, and the soundness induction
+ check_list_induct_N uses the fuel-explicit sat_at / sat_hyp_at, which
+ ARE decided because eval_fuel is total (eval_fuel_N).
  *)
-axiomatization
-  entails :: "o \<Rightarrow> o \<Rightarrow> o"    (infixr "\<turnstile>" 10)
-where
-  entailsI: "\<lbrakk>a \<Longrightarrow> b\<rbrakk> \<Longrightarrow> (a \<turnstile> b)" and
-  entailsE: "\<lbrakk>a \<turnstile> b; a\<rbrakk> \<Longrightarrow> b"
 
 axiomatization
   forall :: "(num \<Rightarrow> o) \<Rightarrow> o"  (binder "\<forall>" [8] 9) and
@@ -285,6 +289,71 @@ where
   existsNeg: "\<lbrakk>\<not>(\<exists>x. Q x); (Q x) B\<rbrakk> \<Longrightarrow> \<forall>x. \<not>(Q x)" and
    *)
 
+section \<open>Negation of quantified statements\<close>
+                             
+axiomatization where
+  notForallI: "\<lbrakk>a N; \<not>(F a)\<rbrakk> \<Longrightarrow> \<not>(\<forall>x. F x)" and
+  notForallE: "\<lbrakk>\<not>(\<forall>x. F x); \<And>a. a N \<Longrightarrow> \<not>(F a) \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
+
+(* De Morgan \<not>\<forall> \<longleftrightarrow> \<exists>\<not> follows. *)
+
+lemma forAllNeg:
+  assumes not_all: "\<not>(\<forall>x. F x)"
+  shows "\<exists>x. \<not>(F x)"
+proof (rule notForallE[OF not_all])
+  fix a
+  assume a_nat: "a N"
+  assume not_Fa: "\<not>(F a)"
+  show "\<exists>x. \<not>(F x)" using a_nat not_Fa by (rule existsI)
+qed
+
+lemma exNotForall:
+  assumes ex_not: "\<exists>x. \<not>(F x)"
+  shows "\<not>(\<forall>x. F x)"
+proof (rule existsE[OF ex_not])
+  fix a
+  assume a_nat: "a N"
+  assume not_Fa: "\<not>(F a)"
+  show "\<not>(\<forall>x. F x)" using a_nat not_Fa by (rule notForallI)
+qed
+
+lemma disjComm:
+  assumes disj: "a \<or> b"
+  shows "b \<or> a"
+
+proof -
+
+  have c1: "a \<Longrightarrow> b \<or> a"
+    apply (rule disjI2)
+    apply simp
+    done
+  have c2: "b \<Longrightarrow> b \<or> a"
+    apply (rule disjI1)
+    apply simp
+    done
+  show ?thesis
+    using disj c1 c2 apply (rule disjE1)
+     apply simp+
+    done
+qed
+
+lemma notB:
+  assumes cB: "c B"
+  shows "(\<not>c) B"
+proof -
+  have disj1: "c \<or> \<not>c"
+    using cB by (simp add: bJudg_def)
+  have disj2: "\<not>c \<or> c"
+    using disj1 by (rule disjComm)
+  show ?thesis
+    apply (unfold bJudg_def)
+    apply (rule disjE1[OF disj2])
+     apply (rule disjI1, assumption)
+    apply (rule disjI2, rule dNegI, assumption)
+    done
+qed
+
+
 section \<open>Axiomatization of conditional evaluation in GD\<close>
 
 consts
@@ -293,39 +362,51 @@ consts
 axiomatization where
   condI1: \<open>\<lbrakk>c; a N\<rbrakk> \<Longrightarrow> (if c then a else b) = a\<close> and
   condI2: \<open>\<lbrakk>\<not>c; b N\<rbrakk> \<Longrightarrow> (if c then a else b) = b\<close> and
-  condT: \<open>\<lbrakk>c B; a N; b N\<rbrakk> \<Longrightarrow> if c then a else b N\<close> and
-  condI1B: \<open>\<lbrakk>c; d B\<rbrakk> \<Longrightarrow> (if c then d else e) = d\<close> and
-  condI2B: \<open>\<lbrakk>\<not>c; e B\<rbrakk> \<Longrightarrow> (if c then d else e) = e\<close> and
-  condTB: \<open>\<lbrakk>c B; d B; e B\<rbrakk> \<Longrightarrow> if c then d else e B\<close>
+  (*condT: \<open>\<lbrakk>c B; a N; b N\<rbrakk> \<Longrightarrow> if c then a else b N\<close> and*)
+  condI1B: \<open>\<lbrakk>c; d B\<rbrakk> \<Longrightarrow> (if c then d else e) \<longleftrightarrow> d\<close> and
+  condI2B: \<open>\<lbrakk>\<not>c; e B\<rbrakk> \<Longrightarrow> (if c then d else e) \<longleftrightarrow> e\<close> and
+  (*condTB: \<open>\<lbrakk>c B; d B; e B\<rbrakk> \<Longrightarrow> if c then d else e B\<close>*)
+  (*New additions*)
+  condE1: \<open>\<lbrakk>c;  (if c then a else b) N\<rbrakk> \<Longrightarrow> (a N)\<close> and
+  condE2: \<open>\<lbrakk>\<not>c;  (if c then a else b) N\<rbrakk> \<Longrightarrow> (b N)\<close> and
+  condE3: \<open>\<lbrakk>(if c then a else b) N\<rbrakk> \<Longrightarrow> (c B)\<close> and
+  condE1B: \<open>\<lbrakk>c;  (if c then d else e) B\<rbrakk> \<Longrightarrow> (d B)\<close> and
+  condE2B: \<open>\<lbrakk>\<not>c;  (if c then d else e) B\<rbrakk> \<Longrightarrow> (e B)\<close> and
+  condE3B: \<open>\<lbrakk>(if c then d else e) B\<rbrakk> \<Longrightarrow> (c B)\<close> and
+  (* lazy conditional rules *) 
+  cond_thenQ_E: "c \<Longrightarrow> Q (if c then a else b) \<Longrightarrow> Q a" and
+  cond_thenQ_I: "c \<Longrightarrow> Q a \<Longrightarrow> Q (if c then a else b)" and
+  cond_elseQ_E: "\<not> c \<Longrightarrow> Q (if c then a else b) \<Longrightarrow> Q b" and
+  cond_elseQ_I: "\<not> c \<Longrightarrow> Q b \<Longrightarrow> Q (if c then a else b)"
 
 lemma condI1BEq:
   assumes c_holds: "c"
   assumes d_bool: "d B"
-  assumes a_eq_d: "a = d"
-  shows "(if c then a else b) = d"
-apply (rule eqSubst[where a="d" and b="a"])
-apply (rule eqSym)
-apply (rule a_eq_d)
-apply (rule condI1B)
-apply (rule c_holds)
-apply (rule d_bool)
-done
+  assumes a_eq_d: "a \<longleftrightarrow> d"
+  shows "(if c then a else b) \<longleftrightarrow> d"
+proof -
+  have "a \<equiv> d" 
+    using iff_reflection[OF a_eq_d] .
+  show ?thesis
+    unfolding \<open>a \<equiv> d\<close>
+    using c_holds d_bool by (rule condI1B)
+qed
 
 lemma condI2BEq:
   assumes not_c: "\<not>c"
   assumes d_bool: "d B"
-  assumes a_eq_d: "b = d"
-  shows "(if c then a else b) = d"
-apply (rule eqSubst[where a="d" and b="b"])
-apply (rule eqSym)
-apply (rule a_eq_d)
-apply (rule condI2B)
-apply (rule not_c)
-apply (rule d_bool)
-done
+  assumes a_eq_d: "b \<longleftrightarrow> d"
+  shows "(if c then a else b) \<longleftrightarrow> d"
+proof -
+  have " b  \<equiv> d"
+    using iff_reflection[OF a_eq_d] .
+  show ?thesis
+      unfolding  \<open>b \<equiv> d\<close>
+      using not_c d_bool by (rule condI2B)
+  qed
 
 lemma condI3B:
-  shows "a B \<Longrightarrow> c B \<Longrightarrow> (if c then a else a) = a"
+  shows "a B \<Longrightarrow> c B \<Longrightarrow> (if c then a else a) \<longleftrightarrow> a"
 apply (rule disjE1[where P="c" and Q="\<not>c"])
 apply (fold GD.bJudg_def, simp)
 apply (rule condI1B, simp+)
@@ -335,25 +416,21 @@ done
 lemma condI3BEq:
   assumes a_bool: "a B"
   assumes c_bool: "c B"
-  assumes d_eq_a: "d = a"
-  assumes e_eq_a: "e = a"
-  shows "(if c then d else e) = a"
+  assumes d_eq_a: "d \<longleftrightarrow> a"
+  assumes e_eq_a: "e \<longleftrightarrow> a"
+  shows "(if c then d else e) \<longleftrightarrow> a"
 apply (rule disjE1[where P="c" and Q="\<not>c"])
 apply (fold GD.bJudg_def)
 apply (rule c_bool)
-apply (rule eqSubst[where a="a" and b="d"])
-apply (rule eqSym)
-apply (rule d_eq_a)
-apply (rule condI1B)
-apply (assumption)
-apply (rule a_bool)
-apply (rule eqSubst[where a="a" and b="e"])
-apply (rule eqSym)
-apply (rule e_eq_a)
-apply (rule condI2B)
-apply (assumption)
-apply (rule a_bool)
-done
+   apply (rule condI1BEq)
+     apply simp
+    apply (rule a_bool)
+   apply (rule d_eq_a)
+  apply (rule condI2BEq)
+    apply simp
+   apply (rule a_bool)
+  apply (rule e_eq_a)
+  done
 
 lemma condI1Eq:
   assumes c_holds: "c"
@@ -419,6 +496,35 @@ ML_file "gd_subst.ML"
 
 section \<open>Definitional Mechanism in GD\<close>
 
+(* SIDE CONDITION ON := (2026-08-16).
+ * def is polymorphic, so := may introduce recursive definitions at type o
+ * as well as num (fresh_H_def, find_struct_def, check_template_def etc. in
+ * BGA_on_GA.thy all do this).  That is intended, BUT it is only sound under
+ * a positivity restriction:
+ *
+ *   in an o-valued definition  C := body,  the recursive occurrence of C
+ *   must NOT appear in the antecedent of an entailment (\<turnstile>).
+ *
+ * Without the restriction, Curry's paradox is derivable:
+ *
+ *   axiomatization C :: o where C_def: "C := (C \<turnstile> False)"
+ *   note unfoldC = defI[where Q="\<lambda>z. z", OF C_def]   (* C \<Longrightarrow> C \<turnstile> False *)
+ *   note foldC   = defE[where Q="\<lambda>z. z", OF C_def]   (* C \<turnstile> False \<Longrightarrow> C *)
+ *   have contract: "C \<turnstile> False"
+ *     by (rule entailsI, rule entailsE[OF unfoldC[OF _] _])   (* uses C twice *)
+ *   show "False" by (rule entailsE[OF contract foldC[OF contract]])
+ *
+ * The same definition with \<longrightarrow> in place of \<turnstile> is BLOCKED, because implI
+ * requires the antecedent to be decided (C B), which is unavailable.  That
+ * B premise is GD's guard against contraction on an ungrounded hypothesis;
+ * entailsI has no such guard, which is why the restriction attaches to
+ * \<turnstile> specifically.
+ *
+ * Every := definition currently in the development satisfies the
+ * restriction (recursive occurrences sit in then/else branches or under
+ * \<and>, never in a \<turnstile> antecedent).  Nothing checks it automatically.
+ *)
+
 axiomatization
   def :: \<open>'a \<Rightarrow> 'a \<Rightarrow> o\<close> (infix \<open>:=\<close> 10)
 where
@@ -428,7 +534,7 @@ where
 ML_file "gd_simp.ML"
 
 lemmas [simp] = predSucInv neq_def pred0 condI1 condI1B condI2 condI2B condI3B condI3 
-lemmas [auto] = nat0 sucNonZero predSucInv pred0 eqBool eqBoolB disjI3 dNegI
+lemmas [auto] = nat0 sucNonZero predSucInv pred0 eqBool disjI3 dNegI
 
 lemma [simp]: "(a = a) \<equiv> (a N)"
   unfolding isNat_def by (rule Pure.reflexive)
@@ -443,24 +549,24 @@ lemma true [auto]: "True"
 lemma true_bool [auto]: "True B"
   unfolding bJudg_def by (rule disjI1, rule true)
 
-lemma bool_refl: "a B \<Longrightarrow> a = a"
-apply (rule eqSubst[where a="(if True then a else a)" and b="a"])
-apply (rule condI1B, simp)
-apply (rule condI1BEq, simp)
-apply (rule condTB, simp)
-apply (rule eqSym)
-apply (rule condI1B, simp)
-done
+lemma bool_refl: "a B \<Longrightarrow> a \<longleftrightarrow> a"
+apply (rule iffI[where a="a" and b="a"])
+     apply simp
+  done
 
-lemma eq_impl_term: "a = b \<Longrightarrow> a N"
-apply (rule entailsE[where a="a=b"])
-apply (unfold isNat_def)
-apply (subst "a=b", assumption)
-apply (rule entailsI, simp)
-done
 
-lemma [simp]: "a B \<Longrightarrow> (a = a) \<longleftrightarrow> True"
-by (rule iffI, simp, rule bool_refl)
+lemma eq_impl_term:
+  assumes h: "a = b"
+  shows "a N"
+  unfolding isNat_def
+  by (rule eq_trans[OF h eqSym[OF h]])
+
+lemma eq_impl_term2:
+  assumes h: "a = b"
+  shows "b N"
+  unfolding isNat_def
+  by (rule eq_trans[OF eqSym[OF h] h])
+
 
 lemma [simp]: "\<not>c \<Longrightarrow> b N \<Longrightarrow> d N \<Longrightarrow> (if c then a else b) = d \<longleftrightarrow> b = d"
 by (rule iffI, simp+)
@@ -468,17 +574,6 @@ by (rule iffI, simp+)
 lemma [simp]: "c \<Longrightarrow> a N \<Longrightarrow> d N \<Longrightarrow> (if c then a else b) = d \<longleftrightarrow> a = d"
 by (rule iffI, simp+)
 
-lemma [simp]: "\<not>c \<Longrightarrow> b B \<Longrightarrow> d B \<Longrightarrow> (if c then a else b) = d \<longleftrightarrow> b = d"
-by (rule iffI, simp+)
-
-lemma [simp]: "c \<Longrightarrow> a B \<Longrightarrow> d B \<Longrightarrow> (if c then a else b) = d \<longleftrightarrow> a = d"
-by (rule iffI, simp+)
-
-lemma [simp]: "c \<Longrightarrow> (if c then True else b) = True"
-by simp
-
-lemma [simp]: "\<not>c \<Longrightarrow> (if c then a else True) = True"
-by simp
 
 lemma [cond]: "a \<Longrightarrow> a B"
   unfolding bJudg_def by (rule disjI1, simp)
@@ -487,9 +582,6 @@ lemma [cond]: "\<not>a \<Longrightarrow> a B"
   unfolding bJudg_def by (rule disjI2, simp)
 
 lemma if_trueI [auto]: "c \<Longrightarrow> if c then True else False"
-  by simp
-
-lemma [auto]: "True = True"
   by simp
 
 lemma not_false [auto]: "\<not>False"
@@ -623,6 +715,7 @@ axiomatization
   less  :: "num \<Rightarrow> num \<Rightarrow> num"  (infix "<" 50)  and
   leq   :: "num \<Rightarrow> num \<Rightarrow> num"  (infix "\<le>" 50) and
   omega :: "'a"
+
 where
   add_def:   "add x y  := if y = 0 then x else S(add x (P y))"       and
   sub_def:   "sub x y  := if y = 0 then x else P(sub x (P y))"       and
@@ -635,6 +728,9 @@ where
                           else (less (P x) (P y))"                   and
   div_def:   "div x y  := if x < y = 1 then 0 else S(div (x - y) y)" and
   omega_def: "omega    := omega"
+
+definition modulo :: "num \<Rightarrow> num \<Rightarrow> num" (infix "mod" 80) where
+ " modulo x y \<equiv> x - (div x y)"
 
 definition greater :: "num \<Rightarrow> num \<Rightarrow> num" (infix ">" 50) where
   "greater x y \<equiv> 1 - (x \<le> y)"
@@ -649,6 +745,70 @@ apply (rule condI1)
 apply (rule zeroRefl)
 apply (rule nat0)
 done
+
+lemma cases_bool:
+  assumes q_bool: "q B"
+  assumes H: "q \<Longrightarrow> p"
+  assumes H1: "\<not>q \<Longrightarrow> p"
+  shows "p"
+apply (rule disjE1[where P="q" and Q="\<not>q"])
+apply (fold bJudg_def)
+apply (rule q_bool)
+apply (rule H)
+apply (assumption)
+apply (rule H1)
+apply (assumption)
+  done
+
+lemma condT:
+  assumes c_bool: "c B"
+  assumes a_nat: "a N"
+  assumes b_nat: "b N"
+  shows " (if c then a else b) N"
+  apply (rule cases_bool[where q = "c"])
+    apply (rule c_bool)
+proof -
+  have case1: "c \<Longrightarrow> ((if c then a else b) = a)"
+    apply (rule condI1)
+    using c_bool a_nat apply simp+
+    done
+  show "c \<Longrightarrow> (if c then a else b) N"
+    using a_nat case1 apply simp
+    done
+
+  have case2:  "\<not>c \<Longrightarrow> ((if c then a else b) = b)"
+    apply (rule condI2)
+    using c_bool b_nat apply simp+
+    done
+  show " \<not> c \<Longrightarrow> if c then a else b N "
+    using b_nat case2 apply simp+
+    done
+qed
+
+lemma condTB:
+  assumes c_bool: "c B"
+  assumes a_nat: "a B"
+  assumes b_nat: "b B"
+  shows " (if c then a else b) B"
+  apply (rule cases_bool[where q = "c"])
+    apply (rule c_bool)
+proof -
+  have case1: "c \<Longrightarrow> ((if c then a else b) \<longleftrightarrow> a)"
+    apply (rule condI1B)
+    using c_bool a_nat apply simp+
+    done
+  show "c \<Longrightarrow> (if c then a else b) B"
+    using a_nat case1 apply simp
+    done
+
+  have case2:  "\<not>c \<Longrightarrow> ((if c then a else b) \<longleftrightarrow> b)"
+    apply (rule condI2B)
+    using c_bool b_nat apply simp+
+    done
+  show " \<not> c \<Longrightarrow> if c then a else b B "
+    using b_nat case2 apply simp+
+    done
+qed
 
 lemma add_terminates [auto]:
   assumes x_nat: \<open>x N\<close>
@@ -695,19 +855,7 @@ proof (rule ind[where a=y])
     qed
 qed
 
-lemma cases_bool:
-  assumes q_bool: "q B"
-  assumes H: "q \<Longrightarrow> p"
-  assumes H1: "\<not>q \<Longrightarrow> p"
-  shows "p"
-apply (rule disjE1[where P="q" and Q="\<not>q"])
-apply (fold bJudg_def)
-apply (rule q_bool)
-apply (rule H)
-apply (assumption)
-apply (rule H1)
-apply (assumption)
-done
+
 
 (*
 declare [[simp_trace = true, simp_trace_depth_limit = 8]]
@@ -1769,8 +1917,7 @@ lemma [simp]: "x N \<Longrightarrow> \<langle>x, 0\<rangle> = div (x * S(x)) 2"
 lemma cpair_terminates [auto]: "x N \<Longrightarrow> y N \<Longrightarrow> \<langle>x, y\<rangle> N"
 apply (induct y, simp)
 apply (unfold_def cpair_def, simp)+
-done
-
+  done
 
 lemma cpair_suc [auto]: "x N \<Longrightarrow> y N \<Longrightarrow> \<langle>x, S(y)\<rangle> = \<langle>x, y\<rangle> + x + S(y) + 1"
 apply (rule eqSym)
@@ -4167,6 +4314,40 @@ proof (simp add: cpy_suc)+
       by (cases bool: "cpx xa = 0", simp+)
 qed
 
+
+lemma cpx_mono [simp]: "x N \<Longrightarrow> cpx x \<le> x = 1"
+apply (induct x)
+proof (simp add: cpx_suc)+
+  case (Step xa)
+  show "x N \<Longrightarrow> xa N \<Longrightarrow> cpx xa \<le> xa = 1 \<Longrightarrow>
+        (if cpx xa = 0 then S(cpy xa) else P(cpx xa)) \<le> (S xa) = 1"
+  proof -
+    assume xN: "x N" and xaN: "xa N" and IH: "cpx xa \<le> xa = 1"
+    have cxN: "cpx xa N" using xaN by (rule cpx_terminates)
+    have bB: "(cpx xa = 0) B" by (rule eqBool[OF cxN nat0])
+    show "(if cpx xa = 0 then S(cpy xa) else P(cpx xa)) \<le> (S xa) = 1"
+    proof (rule disjE1[OF bB[unfolded bJudg_def]])
+      assume z: "cpx xa = 0"
+      have r: "(if cpx xa = 0 then S(cpy xa) else P(cpx xa)) = S(cpy xa)"
+        by (rule condI1[OF z natS[OF cpy_terminates[OF xaN]]])
+      have m: "S(cpy xa) \<le> S xa = 1"
+        by (rule leq_monotone_suc[OF cpy_terminates[OF xaN] xaN cpy_mono[OF xaN]])
+      show "(if cpx xa = 0 then S(cpy xa) else P(cpx xa)) \<le> (S xa) = 1"
+        using r m by simp
+    next
+      assume nz: "\<not> (cpx xa = 0)"
+      have r: "(if cpx xa = 0 then S(cpy xa) else P(cpx xa)) = P(cpx xa)"
+        by (rule condI2[OF nz natP[OF cxN]])
+      have s1: "cpx xa \<le> S xa = 1"
+        by (rule leq_trans[OF cxN xaN natS[OF xaN] IH leq_suc[OF xaN]])
+      have s2: "P(cpx xa) \<le> S xa = 1"
+        by (rule leq_trans[OF natP[OF cxN] cxN natS[OF xaN] pred_leq[OF cxN] s1])
+      show "(if cpx xa = 0 then S(cpy xa) else P(cpx xa)) \<le> (S xa) = 1"
+        using r s2 by simp
+    qed
+  qed
+qed
+
 lemma cpy_strict_mono [simp]: "x N \<Longrightarrow> cpy (S x) < (S x) = 1"
 proof (induct strong x)
   case Base
@@ -4286,7 +4467,7 @@ proof -
     done
 
   have lhs4:  "\<langle>x, y\<rangle> + 1 =  div ((P x + S y) * S (P x + S y)) 2 + S y"
-    using y_nat lhs3 x_nat apply simp (* Omar: why did simp need x_nat here*)
+    using y_nat lhs3 x_nat apply simp
     done
 
   have rhs1: " \<langle>P x, S y\<rangle> =  div ((P x + S y) * S (P x + S y)) 2 + S y"
@@ -4431,21 +4612,20 @@ text "A manual construction of an inductive datatype.
 
 type_synonym List = num
 
-definition list_type_tag where
-  "list_type_tag \<equiv> 1"
-
-definition list_nil_tag where
-  "list_nil_tag \<equiv> 1"
-
-definition list_cons_tag where
-  "list_cons_tag \<equiv> 2"
-
 definition Nil :: "List" where
-  "Nil \<equiv> \<langle>list_type_tag,list_nil_tag\<rangle>"
+  "Nil \<equiv> 0"
 
 definition Cons :: "num \<Rightarrow> List \<Rightarrow> List" where
-  "Cons n xs \<equiv> \<langle>list_type_tag,list_cons_tag,n,xs\<rangle>"
+  "Cons n xs \<equiv> \<langle>n, xs\<rangle> + 1"
 
+definition list_hd :: "List \<Rightarrow> num" where
+  "list_hd x \<equiv> cpx (P x)"
+
+definition list_tl :: "List \<Rightarrow> List" where
+  "list_tl x \<equiv> cpy (P x)"
+
+(* I have made the List encoding bijective.
+So, there is no need for is_list
 axiomatization
   is_list :: "num \<Rightarrow> o" and
   is_cons :: "num \<Rightarrow> o"
@@ -4461,58 +4641,14 @@ where
                              else if is_cons x
                                then True
                              else False"
+*)
 
-lemma [simp]: "list_type_tag = 1"
-unfolding list_type_tag_def by simp
-
-lemma [simp]: "list_nil_tag = 1"
-unfolding list_nil_tag_def by simp
-
-lemma [simp]: "list_cons_tag = 2"
-unfolding list_cons_tag_def by simp
 
 lemma nil_nat [auto]: "Nil N"
-unfolding Nil_def list_type_tag_def by simp
+unfolding Nil_def  by simp
 
 lemma cons_nat [auto]: "n N \<Longrightarrow> xs N \<Longrightarrow> Cons n xs N"
-unfolding Cons_def list_type_tag_def by simp
-
-lemma list_cons_term [auto]: "x N \<Longrightarrow> (is_list x B) \<and> (is_cons x B)"
-proof (induct strong x)
-  case Base
-    show "x N \<Longrightarrow> (is_list 0 B) \<and> (is_cons 0 B)"
-      apply (unfold_def is_list_def)
-      apply (unfold_def is_cons_def)
-      apply (unfold_def is_list_def)
-      apply (simp)
-      done
-next
-  case (Step xa)
-    fix y
-    assume hyp: "(\<And>y. y N \<Longrightarrow> y \<le> xa = 1 \<Longrightarrow> (is_list y B) \<and> (is_cons y B))"
-    from Step show ?case
-      apply (unfold_def is_list_def)
-      apply (unfold_def is_cons_def)
-      apply (simp)
-      apply (rule condTB, simp)+
-      apply (rule conjE1, rule hyp, simp, rule le_suc_implies_leq, simp)+
-      done
-qed
-
-lemma is_list_terminates [auto]: "x N \<Longrightarrow> is_list x B"
-by (rule conjE1, rule list_cons_term, simp)
-
-lemma is_cons_terminates [auto]: "x N \<Longrightarrow> is_cons x B"
-by (rule conjE2, rule list_cons_term, simp)
-
-lemma [auto]: "\<not> Nil = 0"
-unfolding Nil_def by simp
-
-lemma [auto]: "\<not> is_list 0"
-by (unfold_def is_list_def, simp)
-
-lemma [auto]: "is_list Nil"
-by (unfold_def is_list_def, simp)
+unfolding Cons_def by simp
 
 lemma [auto]: "n N \<Longrightarrow> xs N \<Longrightarrow> \<not> Nil = Cons n xs"
 unfolding Nil_def Cons_def by simp
@@ -4520,115 +4656,116 @@ unfolding Nil_def Cons_def by simp
 lemma [auto]: "n N \<Longrightarrow> xs N \<Longrightarrow> \<not> Cons n xs = Nil"
 unfolding Nil_def Cons_def by simp
 
-lemma cons_1_tag: "is_cons x \<Longrightarrow> list_type_tag = cpi 1 x"
-apply (rule eqSym)
-apply (rule conjE1, rule conjE1, rule conjE1)
-apply (fold_def is_cons_def, simp)
-done
-
-lemma cons_2_2: "is_cons x \<Longrightarrow> list_cons_tag = cpi 2 x"
-apply (rule eqSym)
-apply (rule conjE2, rule conjE1, rule conjE1)
-apply (fold_def is_cons_def, simp)
-done
-
-lemma "is_cons x \<Longrightarrow> (cpi 3 x) N"
-apply (rule conjE2, rule conjE2)
-apply (rule and_assoc, rule conjE1)
-apply (fold_def is_cons_def, simp)
-done
-
-lemma [cond]: "is_cons x \<Longrightarrow> is_list (cpi' 4 x)"
-apply (rule conjE2)
-apply (fold_def is_cons_def, simp+)
-done
-
-lemma cons_decode [auto]:
-  "is_cons x \<Longrightarrow> x N \<Longrightarrow> \<exists>n xs. ((n N) \<and> is_list xs \<and> x = Cons n xs)"
-apply (rule existsI[where a="cpi 3 x"], simp+)
-apply (rule existsI[where a="cpi' 4 x"], simp+)
-apply (unfold Cons_def)
-apply (subst rule: cons_1_tag)
-apply (subst rule: cons_2_2)
-apply (rule cp4_reconstr, simp+)
-done
-
 lemma [auto]: "n N \<Longrightarrow> xs N \<Longrightarrow> \<not> 0 = Cons n xs"
 unfolding Nil_def Cons_def by simp
 
-lemma [auto]: "n N \<Longrightarrow> xs N \<Longrightarrow> is_list xs \<Longrightarrow> is_cons (Cons n xs)"
-unfolding Cons_def by (unfold_def is_cons_def, simp)
+lemma list_hd_nat [auto]: "x N \<Longrightarrow> list_hd x N"  unfolding list_hd_def by simp
+lemma list_tl_nat [auto]: "x N \<Longrightarrow> list_tl x N"  unfolding list_tl_def by simp
+lemma list_hd_cons [simp]: "n N \<Longrightarrow> xs N \<Longrightarrow> list_hd (Cons n xs) = n"
+  unfolding list_hd_def Cons_def by simp
+lemma list_tl_cons [simp]: "n N \<Longrightarrow> xs N \<Longrightarrow> list_tl (Cons n xs) = xs"
+  unfolding list_tl_def Cons_def by simp
 
-lemma cons_is_list [auto]:
-  "n N \<Longrightarrow> xs N \<Longrightarrow> is_list xs \<Longrightarrow> is_list (Cons n xs)"
-apply (unfold_def is_list_def)
-apply (unfold_def is_cons_def)
-apply (unfold Cons_def)
-apply (simp)
-done
 
-lemma
-  "n N \<Longrightarrow> m N \<Longrightarrow> xs N \<Longrightarrow> ys N \<Longrightarrow> Cons n xs = Cons m ys \<Longrightarrow> n = m \<and> xs = ys"
-unfolding Cons_def
-apply (rule cpair_inj)
-apply (rule cpair_inj_r, rule cpair_inj_r, simp)
-done
-
-lemma list_cases: "x N \<Longrightarrow> is_list x \<Longrightarrow> (x = Nil) \<or> (\<exists>n xs. (n N) \<and> is_list xs \<and> (x = Cons n xs))"
-apply (rule implE[where a="is_list x"])
-apply (unfold_def is_list_def)
-apply (cases bool: "x=Nil", simp+)
-apply (rule implI, simp)
-apply (rule disjI1, simp)
-apply (cases bool: "is_cons x", simp+)
-apply (rule implI)
-apply (rule condTB, simp)+
-apply (simp+)
-apply (rule implI, simp)
-apply (rule exF[where P="False"], simp)
-done
-
-lemma cases_list [case_names _ HQ Nil Cons, cases]: "is_list x \<Longrightarrow>
-       (x N) \<Longrightarrow>
-       (x = Nil \<Longrightarrow> Q) \<Longrightarrow>
-       (\<And>n xs. n N \<Longrightarrow> xs N \<Longrightarrow> is_list xs \<Longrightarrow> x = Cons n xs \<Longrightarrow> Q)
-       \<Longrightarrow> Q"
-apply (rule disjE1[OF list_cases], simp, assumption)
-apply (rule existsE[where Q="\<lambda>n. \<exists>xs. (n N) \<and> is_list xs \<and> x = Cons n xs"])
-apply (assumption)
+(* every number is the Cantor pair of its projections *)
+lemma cpair_reconstr [simp]: "a N \<Longrightarrow> \<langle>cpx a, cpy a\<rangle> = a"
 proof -
-  fix a
-  show "is_list x \<Longrightarrow>
-     (x = Nil \<Longrightarrow> Q) \<Longrightarrow>
-     (\<And>n xs. n N \<Longrightarrow> xs N \<Longrightarrow> is_list xs \<Longrightarrow> x = Cons n xs \<Longrightarrow> Q) \<Longrightarrow>
-     \<exists>n xs. (n N) \<and> is_list xs \<and> x = Cons n xs \<Longrightarrow>
-     a N \<Longrightarrow> \<exists>xs. (a N) \<and> is_list xs \<and> x = Cons a xs \<Longrightarrow> Q"
-    apply (rule existsE[where Q="\<lambda>xs. (a N) \<and> is_list xs \<and> x = Cons a xs"])
-    apply (assumption)
-    proof -
-      fix aa
-      show "
-      (\<And>n xs. n N \<Longrightarrow> xs N \<Longrightarrow> is_list xs \<Longrightarrow> x = Cons n xs \<Longrightarrow> Q) \<Longrightarrow>
-        aa N \<Longrightarrow> (a N) \<and> is_list aa \<and> x = Cons a aa \<Longrightarrow> Q"
-        apply (rule Pure.meta_mp[where P="a N"])
-        apply (rule Pure.meta_mp[where P="is_list aa"])
-        apply (rule Pure.meta_mp[where P="x = Cons a aa"])
-        apply (assumption)
-        apply (rule conjE2, simp)
-        apply (rule conjE2, rule conjE1, simp)
-        apply (rule conjE1, rule conjE1, simp)
-        done
+  assume a_nat: "a N"
+  from a_nat have "\<exists>b c. a = \<langle>b,c\<rangle>" by (rule cpair_surjective)
+  then show "\<langle>cpx a, cpy a\<rangle> = a"
+  proof (rule existsE)
+    fix b assume b_nat: "b N" assume "\<exists>c. a = \<langle>b,c\<rangle>"
+    then show "\<langle>cpx a, cpy a\<rangle> = a"
+    proof (rule existsE)
+      fix c assume c_nat: "c N" assume eq: "a = \<langle>b,c\<rangle>"
+      show "\<langle>cpx a, cpy a\<rangle> = a" using eq b_nat c_nat by simp
     qed
+  qed
 qed
 
-lemma [simp]: "x N \<Longrightarrow> is_list x \<Longrightarrow> x = 0 \<longleftrightarrow> False"
-apply (rule iffI, simp+)
-apply (rule exF[where P="is_list 0"], simp)
-apply (rule exF[where P="False"], simp)
-done
+(* a non-empty list rebuilds from head and tail *)
+lemma cons_reconstr [simp]:
+  "x N \<Longrightarrow> \<not> (x = Nil) \<Longrightarrow> Cons (list_hd x) (list_tl x) = x"
+proof -
+  assume x_nat: "x N" and x_nz: "\<not> (x = Nil)"
+  have x_nz0: "\<not> (x = 0)" using x_nz unfolding Nil_def by simp
+  have Px: "P x N" using x_nat by simp
+  have step1: "Cons (list_hd x) (list_tl x) = \<langle>cpx (P x), cpy (P x)\<rangle> + 1"
+    apply (unfold Cons_def list_hd_def list_tl_def)
+    using x_nat apply simp
+    done
+  have step2:  "\<langle>cpx (P x), cpy (P x)\<rangle> + 1 = x"           using x_nat x_nz0 Px by simp
+  show ?thesis
+    using step1 step2 x_nat apply simp
+    done
+qed
 
-lemma [simp]: "xs N \<Longrightarrow> is_list xs \<Longrightarrow> n N \<Longrightarrow> xs < Cons n xs = 1"
-unfolding Cons_def by simp
+lemma cons_inj:
+  "n N \<Longrightarrow> m N \<Longrightarrow> xs N \<Longrightarrow> ys N \<Longrightarrow> Cons n xs = Cons m ys \<Longrightarrow> n = m \<and> xs = ys"
+  unfolding Cons_def
+  apply (rule cpair_inj)
+  apply (rule sucInj)
+  apply simp+
+  done
+
+lemma list_cases:
+  "x N  \<Longrightarrow> (x = Nil) \<or> (\<exists>n xs. (x = Cons n xs))"
+  apply (cases bool: "x = Nil")
+  apply simp
+  apply (rule disjI1, assumption)
+  apply (rule disjI2)
+  apply (rule existsI[where a="list_hd x"], simp+)
+  apply (rule existsI[where a="list_tl x"], simp+)
+  done
+
+lemma cases_list [case_names _ HQ Nil Cons]:
+  "(x N) \<Longrightarrow>
+   (x = Nil \<Longrightarrow> Q) \<Longrightarrow>
+   (\<And>n xs. n N \<Longrightarrow> xs N \<Longrightarrow> x = Cons n xs \<Longrightarrow> Q)
+   \<Longrightarrow> Q"
+proof -
+  assume x_nat: "x N"
+  assume nil:  "x = Nil \<Longrightarrow> Q"
+  assume cons: "\<And>n xs. n N \<Longrightarrow> xs N \<Longrightarrow> x = Cons n xs \<Longrightarrow> Q"
+  have "(x = Nil) \<or> (\<exists>n xs. x = Cons n xs)" using x_nat by (rule list_cases)
+  thus Q
+  proof (rule disjE1)
+    assume "x = Nil"
+    thus Q by (rule nil)
+  next
+    assume "\<exists>n xs. x = Cons n xs"
+    thus Q
+    proof (rule existsE)
+      fix n
+      assume n_nat: "n N"
+      assume exn: "\<exists>xs. x = Cons n xs"
+      from exn show Q
+      proof (rule existsE)
+        fix xs
+        assume xs_nat: "xs N"
+        assume eqx: "x = Cons n xs"
+        show Q by (rule cons[OF n_nat xs_nat eqx])
+      qed
+    qed
+  qed
+qed
+
+lemma cons_decrease [simp]: "xs N \<Longrightarrow> n N \<Longrightarrow> xs < Cons n xs = 1"
+proof -
+  assume xs_nat: "xs N" and n_nat: "n N"
+  have p_nat:  "\<langle>n, xs\<rangle> N"    using n_nat xs_nat by simp
+  have sp_nat: "S \<langle>n, xs\<rangle> N"  using p_nat by simp
+  have le: "xs \<le> \<langle>n, xs\<rangle> = 1"
+  proof -
+    have "cpy \<langle>n, xs\<rangle> \<le> \<langle>n, xs\<rangle> = 1" using p_nat by (rule cpy_mono)
+    thus ?thesis using n_nat xs_nat by (simp)
+  qed
+  have lt: "\<langle>n, xs\<rangle> < S \<langle>n, xs\<rangle> = 1" using p_nat by (rule less_suc)
+  have "xs < S \<langle>n, xs\<rangle> = 1"
+    using xs_nat p_nat sp_nat le lt by (rule le_less_trans)
+  thus "xs < Cons n xs = 1"
+    unfolding Cons_def using n_nat xs_nat by simp   (* one_plus_suc turns +1 into S *)
+qed
 
 lemma obj_impl: "Q a \<longrightarrow> R a \<Longrightarrow> Q a \<Longrightarrow> R a"
 by (rule implE[where a="Q a"], simp)
@@ -4638,87 +4775,169 @@ apply (rule implE[where a="Q x"])
 apply (rule forallE, simp)
 done
 
-lemma [case_names _ HQ Nil Cons, induct]:
-  "is_list a \<Longrightarrow> a N \<Longrightarrow> Q Nil \<Longrightarrow> (\<And>x xs. x N \<Longrightarrow> xs N \<Longrightarrow> is_list xs \<Longrightarrow> Q xs \<Longrightarrow> Q (Cons x xs))
-   \<Longrightarrow> Q a"
-apply (rule implE[where a="is_list a"])
-apply (induct strong a)
-apply (rule implI, simp)
-apply (rule exF[where P="is_list 0"], simp)
-apply (rule implI, simp)
+lemma list_induct [case_names HQ Nil Cons]:
+  "a N \<Longrightarrow> Q Nil \<Longrightarrow> (\<And>x xs. x N \<Longrightarrow> xs N \<Longrightarrow> Q xs \<Longrightarrow> Q (Cons x xs)) \<Longrightarrow> Q a"
 proof -
-  fix xa
-  assume hyp: "(\<And>y. y N \<Longrightarrow> y \<le> xa = 1 \<Longrightarrow> is_list y \<longrightarrow> Q y)"
-  assume cons: "(\<And>x xs. x N \<Longrightarrow> xs N \<Longrightarrow> is_list xs \<Longrightarrow> Q xs \<Longrightarrow> Q (Cons x xs))"
-  show "a N \<Longrightarrow> xa N \<Longrightarrow> is_list S xa \<Longrightarrow> Q Nil \<Longrightarrow>
-        Q S xa"
-    proof (cases "S xa", simp)
-      case Nil
-        from Nil show ?case
-          by (simp+)
-    next
-      case (Cons n xs)
-        from Cons and cons show ?case
-          apply (simp)
-          apply (rule cons, simp)
-          apply (rule obj_impl)
-          apply (rule hyp, simp)
-          apply (rule le_suc_implies_leq, simp+)
-          done
+  assume a_nat: "a N"
+  assume base:  "Q Nil"
+  assume step:  "\<And>x xs. x N \<Longrightarrow> xs N \<Longrightarrow> Q xs \<Longrightarrow> Q (Cons x xs)"
+  show "Q a"
+  proof (rule strong_induction[OF a_nat])
+    show "Q 0" using base unfolding Nil_def .
+  next
+    fix w
+    assume w_nat: "w N"
+    assume IH: "\<And>y. y N \<Longrightarrow> y \<le> w = 1 \<Longrightarrow> Q y"
+    show "Q (S w)"
+    proof -
+      have sw_nat: "S w N"            using w_nat by simp
+      have sw_nz:  "\<not> (S w = Nil)"    unfolding Nil_def using w_nat by simp     (* S w \<noteq> 0 *)
+      have hd_nat: "list_hd (S w) N"  using sw_nat by simp
+      have tl_nat: "list_tl (S w) N"  using sw_nat by simp
+      have decomp: "Cons (list_hd (S w)) (list_tl (S w)) = S w"
+        using sw_nat sw_nz by (rule cons_reconstr)
+      have "list_tl (S w) < Cons (list_hd (S w)) (list_tl (S w)) = 1"
+        using tl_nat hd_nat by (rule cons_decrease)
+      hence tl_less: "list_tl (S w) < S w = 1" using decomp by simp
+      have tl_leq: "list_tl (S w) \<le> w = 1"
+        using tl_less tl_nat w_nat by (rule le_suc_implies_leq)
+      have Qtl: "Q (list_tl (S w))" using tl_nat tl_leq by (rule IH)
+      have "Q (Cons (list_hd (S w)) (list_tl (S w)))"
+        using hd_nat tl_nat Qtl by (rule step)          (* order: x N, xs N, Q xs *)
+      thus "Q (S w)" using decomp by simp
     qed
+  qed
 qed
 
+section \<open>Encoded List Recursion\<close>
+(*
+axiomatization list_rec :: "num \<Rightarrow> (num \<Rightarrow> num \<Rightarrow> num) \<Rightarrow> List \<Rightarrow> num"
+  where list_rec_nil [simp]: "list_rec z F Nil := z"
+  and list_rec_cons [simp]:  "\<lbrakk>h N; t N\<rbrakk> \<Longrightarrow> list_rec z F (Cons h t) = F h (list_rec z F t)"
+*)
+(*
+lemma list_rec_N:
+  fixes F :: "num \<Rightarrow> num \<Rightarrow> num"
+  assumes xs: "xs N"
+      and z: "z N"
+      and F: "\<And>h r. h N \<Longrightarrow> r N \<Longrightarrow> F h r N"
+  shows "list_rec z F xs N"
+proof (rule list_induct[OF xs])
+  have rec: "list_rec z F Nil = z"
+    by (rule list_rec_nil)
+  have rec': "z = list_rec z F Nil"
+    using rec by (rule eqSym)
+  show "list_rec z F Nil N"
+    using rec' z
+    by (rule eqSubst[where Q="\<lambda>r. r N"])
+next
+  fix h t
+  assume h: "h N"
+     and t: "t N"
+     and IH: "list_rec z F t N"
+  have Fr: "F h (list_rec z F t) N"
+    using h IH by (rule F)
+  have rec: "list_rec z F (Cons h t) = F h (list_rec z F t)"
+    using h t by (rule list_rec_cons)
+  have rec': "F h (list_rec z F t) = list_rec z F (Cons h t)"
+    using rec by (rule eqSym)
+  show "list_rec z F (Cons h t) N"
+    using rec' Fr
+    by (rule eqSubst[where Q="\<lambda>r. r N"])
+qed
+
+lemma list_rec_unique:
+  fixes g :: "List \<Rightarrow> num"
+    and F :: "num \<Rightarrow> num \<Rightarrow> num"
+  assumes xs: "xs N"
+      and g_nil: "g Nil = z"
+      and g_cons: "\<And>h t. h N \<Longrightarrow> t N \<Longrightarrow>
+                     g (Cons h t) = F h (g t)"
+  shows "g xs = list_rec z F xs"
+proof (rule list_induct[OF xs])
+  have rec: "list_rec z F Nil = z"
+    by (rule list_rec_nil)
+  have rec': "z = list_rec z F Nil"
+    using rec by (rule eqSym)
+  show "g Nil = list_rec z F Nil"
+    using g_nil rec' by (rule eq_trans)
+next
+  fix h t
+  assume h: "h N"
+     and t: "t N"
+     and IH: "g t = list_rec z F t"
+  have gh0: "g (Cons h t) = F h (g t)"
+    using h t by (rule g_cons)
+  have FgN: "F h (g t) N"
+    using gh0 by (rule eq_impl_term2)
+  have Fcong: "F h (g t) = F h (list_rec z F t)"
+  proof (rule eqSubst[
+      where a="g t"
+        and b="list_rec z F t"
+        and Q="\<lambda>r. F h (g t) = F h r"])
+    show "g t = list_rec z F t"
+      by (rule IH)
+  next
+    show "F h (g t) = F h (g t)"
+      using FgN by simp
+  qed
+  have gh: "g (Cons h t) = F h (list_rec z F t)"
+    using gh0 Fcong by (rule eq_trans)
+  have rec: "list_rec z F (Cons h t) = F h (list_rec z F t)"
+    using h t by (rule list_rec_cons)
+  have rec':
+    "F h (list_rec z F t) = list_rec z F (Cons h t)"
+    using rec by (rule eqSym)
+  show "g (Cons h t) = list_rec z F (Cons h t)"
+    using gh rec' by (rule eq_trans)
+qed
+*)
 (*
  fun sum :: "List \<Rightarrow> num" where
    sum_nil: "sum Nil = 0" and
    sum_cons: "sum (Cons n xs) = n + sum xs"
  *)
 
-axiomatization
-  sum :: "List \<Rightarrow> num"
-where
-  sum_def: "sum x := if x = Nil then 0
-                     else if (is_cons x) then (cpi 3 x) + (sum (cpi' 4 x))
-                     else omega"
-
-lemma [simp]: "is_list 0 \<Longrightarrow> False"
-by (rule exF[where P="is_list 0"], simp)
-
-lemma [auto]: "x N \<Longrightarrow> is_list x \<Longrightarrow> sum x N"
-proof (induct x, simp)
-  case Nil
-  show ?case
-    by (unfold_def sum_def, simp add: sum_def)
-next
-  case (Cons n xs)
-  from Cons show ?case
-    apply (unfold_def sum_def)
-    apply (subst rule: condI2)
-    apply (subst rule: condI1)
-    apply (unfold Cons_def, simp+)
-    apply (unfold_def is_cons_def, simp)
-    done
-qed
+axiomatization sum :: "List \<Rightarrow> num" where
+  sum_def: "sum x := if x = Nil then 0 else (list_hd x) + (sum (list_tl x))"
 
 lemma [simp]: "sum Nil = 0"
-by (unfold_def sum_def, simp)
+  by (unfold_def sum_def, simp)
 
-lemma [simp]: "n N \<Longrightarrow> xs N \<Longrightarrow> is_list xs \<Longrightarrow> sum (Cons n xs) = n + sum xs"
-apply (rule eqSym)
-apply (unfold_def sum_def)
-apply (unfold_def is_cons_def)
-apply (unfold Cons_def Nil_def, simp)
-done
+lemma sum_nat [auto]: "x N \<Longrightarrow> sum x N"
+proof -
+  assume x_nat: "x N"
+  show "sum x N"
+  proof (rule list_induct[OF x_nat])
+    show "sum Nil N" by (simp add: nat0)          (* sum_nil : sum Nil = 0, then 0 N *)
+  next
+    fix n xs
+    assume n_nat: "n N" and xs_nat: "xs N" and IH: "sum xs N"
+    have ne: "\<not> (Cons n xs = Nil)"
+      apply (unfold Cons_def)
+    proof -
+      have step1: "\<langle>n, xs\<rangle> + 1 = S(\<langle>n, xs\<rangle>)"
+        using n_nat xs_nat apply simp
+        done
+      show "\<not> \<langle>n,xs\<rangle> + 1 = Nil"
+        using step1 n_nat xs_nat apply simp
+        unfolding Nil_def apply simp
+        done
+    qed
+    have bN: "list_hd (Cons n xs) + sum (list_tl (Cons n xs)) N"
+      using n_nat xs_nat IH by (simp)
+    show "sum (Cons n xs) N"
+      apply (rule defE[OF sum_def[where x = "Cons n xs"]])
+      apply (subst rule: condI2[OF ne bN])
+      apply (rule bN)
+      done
+  qed
+qed
 
-lemma "sum (Cons 4 (Cons 3 (Nil))) = 7"
-apply (simp)
-apply (unfold_def add_def)
-apply (unfold_def add_def)
-apply (simp)
-done
-
-lemma "is_list (Cons 4 (Cons 3 (Nil)))"
-by simp
+lemma sum_cons [simp]: "n N \<Longrightarrow> xs N \<Longrightarrow> sum (Cons n xs) = n + sum xs"
+apply (rule defE[OF sum_def[where x = "Cons n xs"]])
+apply (simp add: sum_nat)
+  done
 
 (*
 declaretype num =
@@ -4777,6 +4996,475 @@ lemma "a = b \<Longrightarrow> Q b \<Longrightarrow> Q a"
 apply (rule eqSubst[where a="b" and b="a"])
 apply (rule eqSym)
 apply (assumption+)
-done
+  done
+
+axiomatization mem :: "num \<Rightarrow> List \<Rightarrow> o" (infixr "\<in>" 75) where
+  mem_def: "mem x G := if G = Nil then False
+                       else if list_hd G = x then True
+                       else mem x (list_tl G)"
+
+lemma mem_nil [simp]: "\<not> mem x Nil"
+  by (rule defE[OF mem_def[where G = "Nil"]], simp)
+
+lemma mem_bool [auto]: "x N \<Longrightarrow> G N \<Longrightarrow> mem x G B"
+proof -
+  assume x_nat: "x N" and G_nat: "G N"
+  show "mem x G B"
+  proof (rule list_induct[OF G_nat])
+    show "mem x Nil B" by (rule defE[OF mem_def[where G = "Nil"]], simp)
+  next
+    fix h t
+    assume h_nat: "h N" and t_nat: "t N" and IH: "mem x t B"
+    
+    show "mem x (Cons h t) B"
+      apply (rule defE[OF mem_def[where G = "Cons h t"]])
+      using h_nat t_nat apply (simp)
+      using x_nat h_nat t_nat IH by simp
+  qed
+qed
+
+axiomatization nth :: "num \<Rightarrow> List \<Rightarrow> num" where
+  nth_def: "nth i xs := if xs = Nil then 0
+                        else if i = 0 then list_hd xs
+                        else nth (i - 1) (list_tl xs)"
+
+axiomatization len :: "List \<Rightarrow> num" where
+  len_def: "len xs := if xs = Nil then 0 else S (len (list_tl xs))"
+
+  (* every formula of G' occurs in G *)
+axiomatization subset :: "List \<Rightarrow> List \<Rightarrow> o" where
+  subset_def: "subset G' G :=
+    if G' = Nil then True
+    else mem (list_hd G') G \<and> subset (list_tl G') G"
+
+(*Few theorems to help with if-then-else cases*)
+lemma cond_thenE:
+  assumes c: "c"
+  assumes cond: "if c then a else b"
+  shows "a"
+proof -
+  have condB: "(if c then a else b) B"
+    using cond apply simp
+    done
+  have aB: "a B"
+    using c condB apply (rule condE1B)
+    done
+  have step: "(if c then a else b) \<longleftrightarrow> a"
+    using c aB apply (rule condI1B)
+    done
+  show ?thesis
+    using cond step apply simp
+    done
+qed
+
+
+lemma notcond_thenE:
+  assumes c: "\<not>c"
+  assumes cond: "if c then a else b"
+  shows "b"
+proof -
+  have condB: "(if c then a else b) B"
+    using cond apply simp
+    done
+  have aB: "b B"
+    using c condB apply (rule condE2B)
+    done
+  have step: "(if c then a else b) \<longleftrightarrow> b"
+    using c aB apply (rule condI2B)
+    done
+  show ?thesis
+    using cond step apply simp
+    done
+qed
+
+lemma cond_thenEq:
+  assumes c: "c"
+  assumes cond: "(if c then a else b) N"
+  shows "(if c then a else b) = a"
+proof -
+  have aN: "a N"
+    using c cond by (rule condE1)
+  show ?thesis
+    using c aN by (rule condI1)
+qed
+
+lemma notcond_thenEq:
+  assumes c: "\<not>c"
+  assumes cond: "(if c then a else b) N"
+  shows "(if c then a else b) = b"
+proof -
+  have bN: "b N"
+    using c cond by (rule condE2)
+  show ?thesis
+    using c bN by (rule condI2)
+qed
+
+lemma len_nil [simp]: "len Nil = 0"
+  by (unfold_def len_def, simp)
+
+lemma len_nat [auto]: "x N \<Longrightarrow> len x N"
+proof -
+  assume x_nat: "x N"
+  show "len x N"
+  proof (rule list_induct[OF x_nat])
+    show "len Nil N"
+      by (rule defE[OF len_def[where xs = "Nil"]], simp)
+  next
+    fix n xs
+    assume n_nat: "n N" and xs_nat: "xs N" and IH: "len xs N"
+    have ne: "\<not> (Cons n xs = Nil)" using n_nat xs_nat by simp
+
+    have bN: "S (len (list_tl (Cons n xs))) N"
+      apply (rule natS)
+      using n_nat xs_nat IH apply simp
+      done
+    show "len (Cons n xs) N"
+      apply (rule defE[OF len_def[where xs = "Cons n xs"]])
+      apply (subst rule: condI2[OF ne bN])
+      apply (rule bN)
+      done
+  qed
+qed
+
+
+lemma len_cons [simp]: 
+  assumes n_nat: "n N"
+  assumes xs_nat: "xs N"
+  shows " len (Cons n xs) = S (len xs)"
+  apply (rule defE[OF len_def[where xs = "Cons n xs"]])
+  using n_nat xs_nat apply simp
+  done
+
+lemma nth_zero_cons [simp]: "n N \<Longrightarrow> xs N \<Longrightarrow> nth 0 (Cons n xs) = n"
+  by (rule defE[OF nth_def[where i = "0" and xs = "Cons n xs"]], simp)
+
+lemma nth_in_range_all:
+  assumes xs_nat: "xs N"
+  shows "\<forall>i. (i N) \<longrightarrow> (i < len xs = 1) \<longrightarrow> (nth i xs N)"
+proof (rule list_induct[OF xs_nat])
+  (* ---------------- Nil ---------------- *)
+  show "\<forall>i. (i N) \<longrightarrow> (i < len Nil = 1) \<longrightarrow> (nth i Nil N)"
+  proof (rule forallI)
+    fix i assume i_nat: "i N"
+    show "(i N) \<longrightarrow> (i < len Nil = 1) \<longrightarrow> (nth i Nil N)"
+    proof (rule implI)
+      show "(i N) B" unfolding bJudg_def by (rule disjI1[OF i_nat])
+    next
+      assume "i N"
+      show "(i < len Nil = 1) \<longrightarrow> (nth i Nil N)"
+      proof (rule implI)
+        show "(i < len Nil = 1) B" using i_nat by auto
+      next
+        assume prem: "i < len Nil = 1"
+        (* len Nil = 0 and  i < 0 = 0, so the premise says 1 = 0 *)
+        have c1: "i < 0 = 1" using prem by simp
+        have c0: "i < 0 = 0" by simp
+        have p:  "S zero = zero" using eq_trans[OF eqSym[OF c1] c0] .
+        have np: "\<not> (S zero = zero)" using sucNonZero[OF nat0] by (simp)
+        show "nth i Nil N" by (rule exF[OF p np])
+      qed
+    qed
+  qed
+next
+  (* ---------------- Cons ---------------- *)
+  fix h t
+  assume h_nat: "h N" and t_nat: "t N"
+  assume IH: "\<forall>i. (i N) \<longrightarrow> (i < len t = 1) \<longrightarrow> (nth i t N)"
+  show "\<forall>i. (i N) \<longrightarrow> (i < len (Cons h t) = 1) \<longrightarrow> (nth i (Cons h t) N)"
+  proof (rule forallI)
+    fix i assume i_nat: "i N"
+    show "(i N) \<longrightarrow> (i < len (Cons h t) = 1) \<longrightarrow> (nth i (Cons h t) N)"
+    proof (rule implI)
+      show "(i N) B" unfolding bJudg_def by (rule disjI1[OF i_nat])
+    next
+      assume "i N"
+      show "(i < len (Cons h t) = 1) \<longrightarrow> (nth i (Cons h t) N)"
+      proof (rule implI)
+        show "(i < len (Cons h t) = 1) B" using i_nat h_nat t_nat by auto
+      next
+        assume prem: "i < len (Cons h t) = 1"
+        have ne: "\<not> (Cons h t = Nil)" using h_nat t_nat by simp
+        show "nth i (Cons h t) N"
+        proof (rule cases_nat_2[where x = "i"])
+          show "i N" by (rule i_nat)
+        next
+          assume "i = 0"
+          show "nth 0 (Cons h t) N" using h_nat t_nat by (simp)
+        next
+          fix k assume k_nat: "k N" and i_eq: "i = S k"
+          (* rewrite the premise:  i < len(Cons h t) = 1  becomes  S k < S(len t) = 1 *)
+          have prem'': "S k < S (len t) = 1" using prem i_eq h_nat t_nat by simp
+          (* strip the successors:  k < len t = 1 *)
+          have kt: "k < len t = 1"
+          proof -
+            have "P (S k) < P (S (len t)) = 1"
+              apply (rule le_monotone_pred)
+              using k_nat t_nat apply simp+
+                  apply  (rule prem'')
+              using k_nat t_nat apply simp+
+              apply  (rule prem'')
+              done
+            thus "k < len t = 1" using k_nat len_nat[OF t_nat] by simp
+          qed
+
+          have h1: "(k N) \<longrightarrow> (k < len t = 1) \<longrightarrow>( nth k t N)"
+            apply (rule forallE[OF IH k_nat])
+            done
+          have h2: "(k < len t = 1) \<longrightarrow> (nth k t N)" 
+            using h1 k_nat apply (rule implE)
+            done
+          have tail: "nth k t N" using h2 kt by (rule implE)
+
+          have sk_nz: "\<not> (S k = 0)" using sucNonZero[OF k_nat] by (simp)
+          have e1: "S k - 1 = k"
+            apply (unfold_def sub_def, simp add: k_nat)
+          proof -
+            have notcond: "\<not> (1=0)"
+              apply simp
+              done
+            show "(if S zero = zero then S k else P(S k - zero)) = k "
+              using k_nat notcond apply simp
+              done
+          qed
+          have e2: "list_tl (Cons h t) = t" using h_nat t_nat by simp
+          have deep: "nth (S k - 1) (list_tl (Cons h t)) = nth k t"
+            using e1 e2 tail apply simp
+            done
+
+          have inner:
+            "(if S k = 0 then list_hd (Cons h t)
+                else nth (S k - 1) (list_tl (Cons h t))) = nth k t"
+            by (rule condI2Eq[OF sk_nz tail deep])
+          have goal_eq: "nth (S k) (Cons h t) = nth k t"
+            by (rule defE[OF nth_def[where i = "S k" and xs = "Cons h t"]],
+                rule condI2Eq[OF ne tail inner])
+          show "nth (S k) (Cons h t) N" using goal_eq tail by simp
+        qed
+      qed
+    qed
+  qed
+qed
+
+lemma nth_in_range_N:
+  assumes xs_nat: "xs N" and lt: "i < len xs = 1"
+  shows "nth i xs N"
+proof -
+
+  have u: "(if len xs = 0 then 0
+              else if i = 0 then 1 else less (P i) (P (len xs))) N"
+    by (rule defI[OF less_def[where x = "i" and y = "len xs"]],
+        rule eq_impl_term[OF lt])
+  have g1: "(len xs = 0) B" using u by (rule condE3)
+  have i_nat: "i N"
+  proof (rule disjE1[OF g1[unfolded bJudg_def]])
+    assume z: "len xs = 0"
+    have z0: "i < len xs = 0" using z by simp
+    have p:  "S zero = zero" using eq_trans[OF eqSym[OF lt] z0] .
+    have np: "\<not> (S zero = zero)" using sucNonZero[OF nat0] by (simp)
+    show "i N" by (rule exF[OF p np])
+  next
+    assume nz: "\<not> (len xs = 0)"
+    have innerN: "(if i = 0 then 1 else less (P i) (P (len xs))) N"
+      using nz u by (rule condE2)
+    have g2: "(i = 0) B" using innerN by (rule condE3)
+    have step: " (i N) \<and> (0 N)" using g2 apply (rule eqE) done
+    show "i N" 
+      using step apply (rule conjE1) done
+  qed
+
+  have all: "\<forall>i. (i N) \<longrightarrow> (i < len xs = 1) \<longrightarrow> (nth i xs N)"
+    by (rule nth_in_range_all[OF xs_nat])
+  have "(i N) \<longrightarrow> (i < len xs = 1) \<longrightarrow> (nth i xs N)"
+    by (rule forallE[OF all i_nat])
+  hence "(i < len xs = 1) \<longrightarrow> (nth i xs N)" using i_nat by (rule implE)
+  thus "nth i xs N" using lt by (rule implE)
+qed
+
+lemma iff_refl:
+  assumes aB: "a B"
+  shows "a \<longleftrightarrow> a"
+  apply (rule iffI)
+  using aB apply simp+
+  done
+
+lemma mem_cons [simp]:
+  assumes h: "h N" and t: "t N" and x: "x N"
+  shows "mem x (Cons h t) \<longleftrightarrow> (if h = x then True else mem x t)"
+proof -
+  have ne: "\<not> (Cons h t = Nil)" using h t by auto
+  have hd: "list_hd (Cons h t) = h" using h t by simp
+  have tl: "list_tl (Cons h t) = t" using h t by simp
+  have htN: "Cons h t N" using h t by simp
+  have eB: "(if list_hd (Cons h t) = x then True else mem x (list_tl (Cons h t))) B"
+    by (rule condTB[OF eqBool[OF list_hd_nat[OF htN] x] true_bool
+                       mem_bool[OF x list_tl_nat[OF htN]]])
+  have step: "mem x (Cons h t) \<longleftrightarrow>
+              (if list_hd (Cons h t) = x then True else mem x (list_tl (Cons h t)))"
+    apply (rule defE[OF mem_def[where G = "Cons h t"]])
+    apply (rule condI2B[OF ne eB])
+    done
+  show ?thesis 
+    using hd tl eB apply (simp add: step)
+    apply (rule iff_refl)
+    apply simp
+    done
+qed
+
+lemma subset_bool [auto]:
+  assumes A: "A N" and G: "G N"
+  shows "subset A G B"
+proof (rule list_induct[OF A])
+  show "subset Nil G B"
+  proof -
+    have nn: "Nil = Nil" using nil_nat by simp
+    have step: "subset Nil G \<longleftrightarrow> True"
+      apply (rule defE[OF subset_def[where G' = Nil]])
+      apply (rule condI1B[OF nn true_bool])
+      done
+    show "subset Nil G B" using step true_bool by simp
+  qed
+next
+  fix h t assume h: "h N" and t: "t N" and IH: "subset t G B"
+  show "subset (Cons h t) G B"
+  proof -
+    have htN: "Cons h t N" using h t by simp
+    have cnB: "(Cons h t = Nil) B" by (rule eqBool[OF htN nil_nat])
+    have conjB: "(mem h G \<and> subset t G) B" using mem_bool[OF h G] IH by auto
+    show "subset (Cons h t) G B"
+      apply (rule defE[OF subset_def[where G' = "Cons h t"]])
+      apply (simp only: list_hd_cons[OF h t] list_tl_cons[OF h t])
+      apply (rule condTB[OF cnB true_bool conjB])
+      done
+  qed
+qed
+
+lemma subset_cons [simp]:
+  assumes h: "h N" and t: "t N" and G: "G N"
+  shows "subset (Cons h t) G \<longleftrightarrow> (mem h G \<and> subset t G)"
+proof -
+  have ne: "\<not> (Cons h t = Nil)" using h t by auto
+  have hd: "list_hd (Cons h t) = h" using h t by simp
+  have tl: "list_tl (Cons h t) = t" using h t by simp
+  have htN: "Cons h t N" using h t by simp
+  have eB: "(mem (list_hd (Cons h t)) G \<and> subset (list_tl (Cons h t)) G) B"
+    using mem_bool[OF list_hd_nat[OF htN] G] subset_bool[OF list_tl_nat[OF htN] G] by auto
+  have step: "subset (Cons h t) G \<longleftrightarrow>
+              (mem (list_hd (Cons h t)) G \<and> subset (list_tl (Cons h t)) G)"
+    apply (rule defE[OF subset_def[where G' = "Cons h t"]])
+    apply (rule condI2B[OF ne eB])
+    done
+  show ?thesis
+    using hd tl eB apply (simp add: step)
+    apply (rule iff_refl)
+    apply simp
+    done
+qed
+
+(* Note: G' N added; structural induction on G' requires habeas quid. *)
+lemma subset_mem:
+  assumes f: "f N" and G': "G' N" and G: "G N"
+  shows "subset G' G \<Longrightarrow> mem f G' \<Longrightarrow> mem f G"
+proof -
+  have main: "subset G' G \<longrightarrow> mem f G' \<longrightarrow> mem f G"
+  proof (rule list_induct[OF G', where Q = "\<lambda>z. subset z G \<longrightarrow> mem f z \<longrightarrow> mem f G"])
+    show "subset Nil G \<longrightarrow> mem f Nil \<longrightarrow> mem f G"
+    proof (rule implI)
+      show "subset Nil G B" by (rule subset_bool[OF nil_nat G])
+    next
+      assume "subset Nil G"
+      show "mem f Nil \<longrightarrow> mem f G"
+      proof (rule implI)
+        show "mem f Nil B" by (rule mem_bool[OF f nil_nat])
+      next
+        assume mn: "mem f Nil"
+        show "mem f G" by (rule exF[OF mn mem_nil])
+      qed
+    qed
+  next
+    fix h t assume h: "h N" and t: "t N"
+      and IH: "subset t G \<longrightarrow> mem f t \<longrightarrow> mem f G"
+    show "subset (Cons h t) G \<longrightarrow> mem f (Cons h t) \<longrightarrow> mem f G"
+    proof -
+      have htN: "Cons h t N" using h t by simp
+      show ?thesis
+      proof (rule implI)
+        show "subset (Cons h t) G B" by (rule subset_bool[OF htN G])
+      next
+        assume s: "subset (Cons h t) G"
+        show "mem f (Cons h t) \<longrightarrow> mem f G"
+        proof (rule implI)
+          show "mem f (Cons h t) B" by (rule mem_bool[OF f htN])
+        next
+          assume m: "mem f (Cons h t)"
+          have s': "mem h G \<and> subset t G" using s h t G by simp
+          have hmG: "mem h G" 
+            using s' apply (rule conjE1)
+            done
+          have subt: "subset t G" 
+            using s' apply (rule conjE2)
+            done
+          have m2: "if h = f then True else mem f t" using m h t f by simp
+          show "mem f G"
+          proof (rule cases_bool[where q = "h = f"])
+            show "(h = f) B" by (rule eqBool[OF h f])
+          next
+            assume hf: "h = f"
+            from hmG hf show "mem f G" by simp
+          next
+            assume nhf: "\<not> (h = f)"
+            have mft: "mem f t"
+            proof -
+              have "(if h = f then True else mem f t) \<longleftrightarrow> mem f t"
+                by (rule condI2B[OF nhf mem_bool[OF f t]])
+              thus "mem f t" using m2 by simp
+            qed
+            have "mem f t \<longrightarrow> mem f G" by (rule implE[OF IH subt])
+            from implE[OF this mft] show "mem f G" .
+          qed
+        qed
+      qed
+    qed
+  qed
+  show "subset G' G \<Longrightarrow> mem f G' \<Longrightarrow> mem f G"
+  proof -
+    assume s: "subset G' G" and m: "mem f G'"
+    from implE[OF implE[OF main s] m] show "mem f G" .
+  qed
+qed
+
+
+(* Lazy conditional booleanness *)
+lemma condTB':
+  assumes c_bool: "c B" and a_bool: "c \<Longrightarrow> a B" and b_bool: "\<not>c \<Longrightarrow> b B"
+  shows "(if c then a else b) B"
+  apply (rule cases_bool[where q = "c"])
+    apply (rule c_bool)
+proof -
+  show "c \<Longrightarrow> (if c then a else b) B"
+  proof -
+    assume cc: "c"
+    have e: "(if c then a else b) \<longleftrightarrow> a" 
+      by (rule condI1B[OF cc a_bool[OF cc]])
+    show "(if c then a else b) B" 
+      using a_bool[OF cc] e by simp
+  qed
+next
+  show "\<not>c \<Longrightarrow> (if c then a else b) B"
+  proof -
+    assume nc: "\<not>c"
+    have e: "(if c then a else b) \<longleftrightarrow> b" 
+      by (rule condI2B[OF nc b_bool[OF nc]])
+    show "(if c then a else b) B" 
+      using b_bool[OF nc] e by simp
+  qed
+qed
+
+(*
+axiomatization C :: "o" where
+  C_def: "C := (C \<Longrightarrow> False)"
+
+lemma Curry: "False"
+  oops
+*)
 
 end (* End of theory *)

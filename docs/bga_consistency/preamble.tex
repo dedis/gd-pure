@@ -1,0 +1,116 @@
+\usepackage{geometry}
+\geometry{a4paper, margin=2.6cm}
+
+\usepackage{fontspec}
+\usepackage{unicode-math}
+\setmainfont{TeX Gyre Pagella}
+\setmathfont{TeX Gyre Pagella Math}
+\newfontfamily\isafont{DejaVu Sans Mono}[Scale=MatchLowercase]
+\newfontfamily\isafallbackA{DejaVu Sans}[Scale=MatchLowercase]
+\newfontfamily\isafallbackB{TeX Gyre Pagella Math}[Scale=MatchLowercase]
+\usepackage{newunicodechar}
+\newcommand{\gl}[1]{\iffontchar\font#1\relax\char#1\relax\else
+  {\isafallbackA\iffontchar\font#1\relax\char#1\relax\else
+   {\isafallbackB\char#1\relax}\fi}\fi}
+\newunicodechar{⟹}{\gl{"27F9}}
+\newunicodechar{⟸}{\gl{"27F8}}
+\newunicodechar{⟶}{\gl{"27F6}}
+\newunicodechar{⟷}{\gl{"27F7}}
+\newunicodechar{⇒}{\gl{"21D2}}
+\newunicodechar{⟦}{\gl{"27E6}}
+\newunicodechar{⟧}{\gl{"27E7}}
+\newunicodechar{⟨}{\gl{"27E8}}
+\newunicodechar{⟩}{\gl{"27E9}}
+\newunicodechar{‹}{\gl{"2039}}
+\newunicodechar{›}{\gl{"203A}}
+\newunicodechar{⋀}{\gl{"22C0}}
+\newunicodechar{⊩}{\gl{"22A9}}
+\newunicodechar{⊢}{\gl{"22A2}}
+\newunicodechar{▹}{\gl{"25B9}}
+\newunicodechar{↦}{\gl{"21A6}}
+\newunicodechar{⇓}{\gl{"21D3}}
+\newunicodechar{∅}{\gl{"2205}}
+\newunicodechar{∈}{\gl{"2208}}
+\newunicodechar{≡}{\gl{"2261}}
+\newunicodechar{≠}{\gl{"2260}}
+\newunicodechar{≤}{\gl{"2264}}
+\newunicodechar{≥}{\gl{"2265}}
+\newunicodechar{∧}{\gl{"2227}}
+\newunicodechar{∨}{\gl{"2228}}
+\newunicodechar{¬}{\gl{"00AC}}
+\newunicodechar{∀}{\gl{"2200}}
+\newunicodechar{∃}{\gl{"2203}}
+\newunicodechar{λ}{\gl{"03BB}}
+
+\usepackage{amsmath, amsthm}
+\usepackage{xcolor}
+\usepackage{fvextra}
+\usepackage[breakable,skins]{tcolorbox}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+
+\definecolor{isabg}{gray}{0.955}
+\definecolor{isarule}{gray}{0.80}
+\definecolor{thmrule}{RGB}{20,50,110}
+
+\fvset{formatcom=\isafont, fontsize=\footnotesize,
+       breaklines=true, breakanywhere=true,
+       breaksymbolleft=\textcolor{isarule}{\tiny\ensuremath{\hookrightarrow}}}
+
+\newtcolorbox{isabox}{
+  breakable, enhanced, sharp corners,
+  colback=isabg, colframe=isarule,
+  boxrule=0pt, leftrule=1.2pt,
+  left=6pt, right=2pt, top=3pt, bottom=3pt,
+  before skip=1.0em, after skip=1.0em,
+}
+
+\tolerance=1500
+\emergencystretch=2.5em
+
+\DeclareRobustCommand{\isa}[1]{\begingroup\isafont\small
+  \renewcommand{\_}{\textunderscore\allowbreak}#1\endgroup}
+\newcommand{\thy}[1]{%
+  \begin{isabox}\VerbatimInput{snippets/#1.thy}\end{isabox}}
+
+\theoremstyle{definition}
+\newtheorem{definitionx}{Definition}[section]
+\newtheorem{remarkx}[definitionx]{Remark}
+\theoremstyle{plain}
+\newtheorem{theoremx}[definitionx]{Theorem}
+\newtheorem{lemmax}[definitionx]{Lemma}
+
+\newcommand{\irule}[3]{%
+  \ensuremath{\dfrac{\rule{0pt}{2.1ex}#1}{\rule{0pt}{2.4ex}#2}}%
+  \;\text{\scriptsize(\textsc{#3})}}
+\newcommand{\iaxiom}[2]{%
+  \ensuremath{\dfrac{\rule{0pt}{2.1ex}\strut}{\rule{0pt}{2.4ex}#1}}%
+  \;\text{\scriptsize(\textsc{#2})}}
+\newcommand{\dis}[2]{%
+  \ensuremath{\begin{array}{c}[#1]\\[-1pt]\vdots\\[-1pt]#2\end{array}}}
+\newcommand{\sep}{\quad}
+\newenvironment{rules}%
+  {\begin{center}\begin{tabular}{@{}c@{\hspace{2.2em}}c@{}}}%
+  {\end{tabular}\end{center}}
+\newenvironment{rulesiii}%
+  {\begin{center}\begin{tabular}{@{}c@{\hspace{1.6em}}c@{\hspace{1.6em}}c@{}}}%
+  {\end{tabular}\end{center}}
+
+\newcommand{\N}{\ensuremath{\,\mathsf{N}}}
+\newcommand{\B}{\ensuremath{\,\mathsf{B}}}
+\newcommand{\Suc}[1]{\ensuremath{\mathsf{S}(#1)}}
+\newcommand{\Pre}[1]{\ensuremath{\mathsf{P}(#1)}}
+\newcommand{\seq}{\ensuremath{\vdash}}
+\newcommand{\ent}{\ensuremath{\Rightarrow}}
+\newcommand{\enc}[1]{\ensuremath{\ulcorner #1 \urcorner}}
+\newcommand{\ite}[3]{\ensuremath{\mathsf{if}\;#1\;\mathsf{then}\;#2\;\mathsf{else}\;#3}}
+\newcommand{\fn}[1]{\ensuremath{\mathsf{#1}}}
+\newcommand{\dfeq}{\ensuremath{\;\triangleq\;}}
+\newcommand{\rec}{\ensuremath{\;:=\;}}
+\newcommand{\GA}{\textsf{GA}}
+\newcommand{\QGA}{\textsf{QGA}}
+\newcommand{\BGA}{\textsf{BGA}}
+\newcommand{\PGA}{\textsf{PGA}}
+\newcommand{\GD}{\textsf{GD}}
