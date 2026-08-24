@@ -295,6 +295,10 @@ axiomatization where
   notForallI: "\<lbrakk>a N; \<not>(F a)\<rbrakk> \<Longrightarrow> \<not>(\<forall>x. F x)" and
   notForallE: "\<lbrakk>\<not>(\<forall>x. F x); \<And>a. a N \<Longrightarrow> \<not>(F a) \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
 
+axiomatization where
+  notExistsI: "\<lbrakk>\<And>a. a N \<Longrightarrow> \<not>(F a)\<rbrakk> \<Longrightarrow> \<not>(\<exists>x. F x)" and
+  notExistsE: "\<lbrakk>\<not>(\<exists>x. F x); a N\<rbrakk> \<Longrightarrow> \<not>(F a)"
+
 (* De Morgan \<not>\<forall> \<longleftrightarrow> \<exists>\<not> follows. *)
 
 lemma forAllNeg:

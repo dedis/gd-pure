@@ -6,3 +6,12 @@ session GD in "pure" = Pure +
     encode
     QGA_on_GA
     qga_encode
+
+session QGA_HOL in "hol" = HOL +
+  options [document = false, timeout = 180]
+  sessions
+    "HOL-Library"
+  theories
+    QGA_Model
+    QGA_Syntax
+    QGA_Proof
