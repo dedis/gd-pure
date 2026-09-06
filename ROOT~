@@ -1,5 +1,7 @@
 (* The encoding theories (BGA_on_GA, encode, QGA_on_GA, qga_encode) are not
-   listed.  To check them, add:
+   listed: Isabelle caches per session, so including them makes every GD.thy
+   edit recheck them (~14s vs ~3s).  They are therefore checked by nothing at
+   present.  To check them, add:
 
      theories
        BGA_on_GA

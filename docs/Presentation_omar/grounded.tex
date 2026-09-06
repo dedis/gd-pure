@@ -1,0 +1,993 @@
+% =====================================================================
+%  Grounded Arithmetic: motivation, history, and the state of the art
+%  Beamer source.  Compile with:  pdflatex grounded.tex  (twice)
+% =====================================================================
+\documentclass[aspectratio=169,11pt]{beamer}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\IfFileExists{lmodern.sty}{\usepackage{lmodern}}{}   % optional: nicer fonts if available
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{xcolor}
+
+% ---------------------------------------------------------------- look
+\usetheme{default}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{itemize items}[circle]
+\setbeamertemplate{itemize subitem}[triangle]
+
+\definecolor{ink}{HTML}{16202B}
+\definecolor{accent}{HTML}{1F4E7A}
+\definecolor{warn}{HTML}{8C2F39}
+\definecolor{gap}{HTML}{8A6023}
+\definecolor{soft}{HTML}{5B6A78}
+
+\setbeamercolor{structure}{fg=accent}
+\setbeamercolor{normal text}{fg=ink}
+\setbeamercolor{frametitle}{fg=ink}
+\setbeamerfont{frametitle}{series=\bfseries,size=\large}
+\setbeamerfont{title}{series=\bfseries}
+\setbeamercolor{alerted text}{fg=warn}
+
+\setbeamertemplate{frametitle}{%
+  \vspace{0.6em}\insertframetitle\par
+  \vspace{-0.35em}{\color{accent}\rule{\textwidth}{0.6pt}}}
+
+\setbeamertemplate{footline}{%
+  \hfill{\tiny\color{soft}\insertframenumber\ /\ \inserttotalframenumber}%
+  \hspace{1em}\vspace{0.6em}}
+
+\newcommand{\hq}{\textit{habeas quid}}
+\newcommand{\key}[1]{{\color{accent}\textbf{#1}}}
+\newcommand{\bad}[1]{{\color{warn}\textbf{#1}}}
+\newcommand{\amber}[1]{{\color{gap}\textbf{#1}}}
+
+% ---------------------------------------------------------------- meta
+\title{Reasoning Around Recursion}
+\subtitle{Grounded arithmetic: where it came from, and where it is}
+\author{Omar}
+\institute{\small Indian Institute of Science \\[0.2em]
+           \footnotesize joint work with the Grounded Deduction group, EPFL DEDIS}
+\date{\today}
+
+\begin{document}
+
+\begin{frame}[plain]
+  \titlepage
+\end{frame}
+
+% =====================================================================
+\section{Motivation}
+% =====================================================================
+
+\begin{frame}{Two programs}
+  \vfill
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \underline{C}\\[1em]
+      \texttt{main() \{ printf("Hi!"); \}}\\[0.6em]
+      \texttt{main() \{ main(); \}}\\[1.5em]
+      {\color{accent}\Large Both compile.}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \underline{Coq / Lean / Agda / Isabelle}\\[1em]
+      \texttt{Fixpoint loop (n:nat) := loop n.}\\[1.5em]
+      {\color{warn}\Large Rejected.}
+    \end{column}
+  \end{columns}
+  \vfill
+  \begin{center}\large Why?\end{center}
+  \vfill
+\end{frame}
+
+\begin{frame}{And again, with datatypes}
+  \vfill
+  \begin{columns}[T]
+    \begin{column}{0.44\textwidth}
+      \underline{Haskell}\\[0.7em]
+      {\small\texttt{data Expr}\\
+      \texttt{~~= Base}\\
+      \texttt{~~| App Expr Expr}\\
+      \texttt{~~| Abs (Expr -> Expr)}}\\[1.2em]
+      {\color{accent}\Large Compiles.}
+    \end{column}
+    \begin{column}{0.52\textwidth}
+      \underline{Coq}\\[0.7em]
+      {\small\texttt{Inductive Expr :=}\\
+      \texttt{~~| Base : Expr}\\
+      \texttt{~~| App : Expr -> Expr -> Expr}\\
+      \texttt{~~| Abs : (Expr -> Expr) -> Expr.}}\\[1.2em]
+      {\color{warn}\Large Rejected.}
+    \end{column}
+  \end{columns}
+  \vfill
+  \pause
+  \begin{center}\small
+    \bad{Non strictly positive occurrence of ``Expr'' in ``(Expr -> Expr) -> Expr''.}
+  \end{center}
+  \vfill
+  \begin{center}
+    A \emph{different} refusal --- not termination, \key{positivity}.\\
+    {\small Not one narrow check: a family of restrictions on what you may define.}
+  \end{center}
+\end{frame}
+
+\begin{frame}{The usual answer is wrong}
+  \vfill
+  ``Termination checking is a conservative engineering choice.''
+  \vfill
+  \pause
+  \begin{center}
+    \Large It is not a choice.\\[0.8em]
+    \large It is the \key{consistency} of your proof assistant.
+  \end{center}
+  \vfill
+  \pause
+  \begin{center}
+    Working out exactly why took fifteen years,\\
+    and ended two research programmes.
+  \end{center}
+  \vfill
+\end{frame}
+
+% =====================================================================
+\section{History}
+% =====================================================================
+
+\begin{frame}{Background: why anyone wanted a way out}
+  \begin{itemize}\itemsep1.1em
+    \item \textbf{Frege} (1893): mathematics from logic, via extensions of concepts.
+    \item \textbf{Russell} (1902): naive comprehension is inconsistent.\\
+          {\small $R = \{x : x \notin x\}$. Is $R \in R$?}
+    \item Two repairs, both in wide use by 1930:
+      \begin{itemize}\itemsep0.4em
+        \item \key{Russell} --- \emph{type theory}
+        \item \key{Zermelo} --- \emph{axiomatic set theory}
+      \end{itemize}
+  \end{itemize}
+  \vfill
+  \pause
+  \begin{center}
+    Type theory works by \key{stratification}: every object gets a level,
+    and\\ a collection may only contain objects of strictly lower level.
+  \end{center}
+\end{frame}
+
+\begin{frame}{What stratification costs}
+  \vfill
+  Under stratification, \key{$x\,x$ is not false --- it is ungrammatical.}\\
+  {\small A thing may never be applied to itself. That is the whole mechanism.}
+  \vfill
+  \pause
+  But self-application is exactly how you get \key{recursion}:\\
+  {\small from $x\,x$ you can build a fixed-point combinator, and a fixed point
+   solves \emph{any} recursive equation.}
+  \vfill
+  \pause
+  \begin{center}\large
+    Ban it, and you lose general recursion.
+  \end{center}
+  \vfill
+  \pause
+  \begin{quote}\small
+    ``Rather than adopt the method of Russell \dots\ or that of Zermelo,
+    \textbf{both of which appear somewhat artificial}, we introduce \dots\
+    a certain restriction on the law of excluded middle.''
+  \end{quote}
+  \hfill{\footnotesize --- Church 1932}
+\end{frame}
+
+\begin{frame}{Church and Curry: functions, not sets}
+  \begin{center}\small
+    ``Both of them set out to base logic and mathematics on \textbf{functions}
+    instead of on set theory.'' \hfill{\footnotesize --- Seldin}
+  \end{center}
+  \vfill
+  \begin{columns}[T]
+    \begin{column}{0.47\textwidth}
+      \underline{\key{Extensional}} --- set theory\\[0.6em]
+      {\small A function \emph{is} its graph: the set of its
+       input--output pairs. Two functions are the same iff they agree
+       on every input.}\\[0.8em]
+      {\small So $\lambda n.\,2n$ and $\lambda n.\,n+n$ are the
+       \emph{same} function.}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \underline{\key{Intensional}} --- Church, Curry\\[0.6em]
+      {\small A function is a \emph{rule}: a finite description of how to get
+       the output. Two functions are the same iff the descriptions are.}\\[0.8em]
+      {\small So $\lambda n.\,2n$ and $\lambda n.\,n+n$ are
+       \emph{different} functions.}
+    \end{column}
+  \end{columns}
+  \vfill
+  \pause
+  \begin{center}
+    A rule can be applied to a rule. Compilers compile compilers.\\
+    \key{No stratification required.}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Church, 1932}
+  \textit{A Set of Postulates for the Foundation of Logic}
+  \vfill
+  \begin{itemize}\itemsep0.8em
+    \item $\lambda$ as a \emph{logical} primitive, alongside $\Pi, \Sigma, \&, \sim, \iota, A$
+    \item No free variables
+    \item \key{Restricted excluded middle}: for some arguments $\mathbf{X}$,
+          $\mathbf{F(X)}$ ``is undefined and represents nothing''
+    \item Keeps double negation; \key{abandons \emph{reductio}} in certain cases
+    \item Guarded quantifier: $\Pi(F,G)$ licenses $G(M)$ only once $F(M)$ is \emph{known true}
+  \end{itemize}
+  \vfill
+  \pause
+  \begin{center}\small
+    Reject LEM $\cdot$ weaken \emph{reductio} $\cdot$ let well-formed terms denote nothing\\
+    \key{---\ a recognisable sketch of GA, ninety-four years early.}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Church did not claim consistency}
+  \vfill
+  \begin{quote}
+    ``Whether the system of logic which results from our postulates is adequate
+    for the development of mathematics, and \textbf{whether it is wholly free from
+    contradiction}, are questions which we cannot now answer except by
+    \textbf{conjecture}.''
+  \end{quote}
+  \hfill{\footnotesize --- Church 1932, p.\,348}
+  \vfill
+  \pause
+  \begin{center}\large He proposed to find out \emph{empirically}.\end{center}
+  \vfill
+\end{frame}
+
+\begin{frame}{Curry, 1930}
+  \textit{Grundlagen der kombinatorischen Logik}
+  \vfill
+  \begin{itemize}\itemsep0.8em
+    \item Started (1922) from a different question: \key{substitution} in \emph{Principia}
+          is far more complicated than modus ponens --- break it into simpler rules
+    \item Combinators $\mathsf{I},\mathsf{B},\mathsf{C},\mathsf{W},\mathsf{K},\mathsf{S}$; no bound variables at all
+    \item Consistency proof for the \emph{combinator} part --- but no logical
+          axioms given; that half was left for future work
+  \end{itemize}
+  \vfill
+  \pause
+  \begin{center}\small
+    On the Russell term $[x](\neg(xx))$: Curry proposed to find postulates
+    from which \key{it could not be proved that its self-application is a proposition}
+    --- while insisting the term \emph{exist} in the system.
+  \end{center}
+\end{frame}
+
+\begin{frame}{Kleene \& Rosser, 1935}
+  \vfill
+  Both systems are strong enough to enumerate their own provably-total functions.\\
+  That is enough to formalise \key{Richard's paradox}.
+  \vfill
+  \begin{quote}\small
+    ``We are sorry to say that we have a proof of the inconsistency of your
+    system of formal logic.''
+  \end{quote}
+  \pause
+  \begin{quote}\small
+    ``I am afraid that I can not share your grief \dots\ you are not sorry but you
+    are full of that profound satisfaction which comes from doing something worth
+    while \dots\ \textbf{I hasten to congratulate you both.}''
+  \end{quote}
+  \hfill{\footnotesize --- Curry to Kleene and Rosser, 19 November 1934}
+\end{frame}
+
+\begin{frame}{\emph{That} --- but not \emph{why}}
+  \vfill
+  Kleene and Rosser showed the systems were inconsistent.\\
+  They did not isolate \key{which principle} was responsible.
+  \vfill
+  \begin{itemize}\itemsep0.6em
+    \item The proof was long, and specific to those systems
+    \item Curry's response: a 60-page paper (1941) studying the paradox
+          ``so as to lay bare its central nerve''
+    \item Church's response (1933): delete four postulates, the ones carrying
+          \emph{reductio} --- \bad{it did not save the system}
+  \end{itemize}
+  \vfill
+  \pause
+  \begin{center}\Large The answer came in 1942, in three pages.\end{center}
+  \vfill
+\end{frame}
+
+% =====================================================================
+\section{Curry's paradox}
+% =====================================================================
+
+\begin{frame}{Curry, 1942 --- three pages}
+  \textit{The Inconsistency of Certain Formal Logics}, JSL 7(3):115--117
+  \vfill
+  Suppose a system has:
+  \begin{enumerate}\itemsep0.5em
+    \item $\lambda$-abstraction that computes \hfill {\small(combinatory completeness)}
+    \item $\vdash M \supset M$
+    \item \key{contraction}: \; from $\vdash M \supset (M \supset N)$ \; infer \; $\vdash M \supset N$
+    \item modus ponens
+  \end{enumerate}
+  \vfill
+  \pause
+  \begin{center}\Large Then \bad{every term is provable.}\end{center}
+\end{frame}
+
+\begin{frame}{The derivation}
+  Let $\mathfrak{A}$ be a term with $\mathfrak{A} \equiv (\mathfrak{A} \supset \mathfrak{B})$,
+  \; obtained from a fixed point of $\lambda X.\,X \supset \mathfrak{B}$.
+  \vfill
+  \[
+  \begin{array}{r@{\qquad}l@{\qquad}l}
+    (1) & \vdash \mathfrak{A} \supset \mathfrak{A}
+        & \text{\small identity}\\[0.5em]
+    (2) & \vdash \mathfrak{A} \supset .\,\mathfrak{A} \supset \mathfrak{B}
+        & \text{\small unfold the definition}\\[0.5em]
+    (3) & \vdash \mathfrak{A} \supset \mathfrak{B}
+        & \text{\small {\color{gap}contraction}}\\[0.5em]
+    (4) & \vdash \mathfrak{A}
+        & \text{\small fold: $(3)$ \emph{is} $\mathfrak{A}$}\\[0.5em]
+    (5) & \vdash \mathfrak{B}
+        & \text{\small modus ponens}
+  \end{array}
+  \]
+  \vfill
+  \begin{center}$\mathfrak{B}$ was arbitrary.\end{center}
+\end{frame}
+
+\begin{frame}{What is \emph{not} in that proof}
+  \vfill
+  \begin{center}\Large No negation.\end{center}
+  \vfill
+  \pause
+  Identity, modus ponens, contraction, unfolding a definition.\\[0.6em]
+  Every one is valid \key{intuitionistically}. Every one is valid in \key{minimal logic}.
+  \vfill
+  \pause
+  \begin{center}\large
+    Church had restricted excluded middle.\\
+    Church had abandoned \emph{reductio}.\\[0.8em]
+    \bad{Neither was ever going to be enough.}
+  \end{center}
+  \vfill
+\end{frame}
+
+\begin{frame}{Curry's own diagnosis}
+  \vfill
+  \begin{quote}\large
+    ``Before he discovered this paradox, Curry had assumed that the contradiction
+    was caused by his postulates for the universal quantifier, but this paradox
+    made it clear that \textbf{the problem was the postulates for implication
+    alone}.''
+  \end{quote}
+  \hfill{\footnotesize --- Seldin, \emph{The Logic of Curry and Church}}
+  \vfill
+  \pause
+  \begin{center}
+    Church guarded the \emph{quantifier}. Curry blamed the \emph{quantifier}.\\[0.6em]
+    \key{It was implication.}
+  \end{center}
+  \vfill
+\end{frame}
+
+\begin{frame}{What the proof actually needs}
+  \vfill
+  Curry states hypothesis 1 as \key{combinatory completeness}: for any term $X$
+  in variables $x_1,\dots,x_n$, there is a closed term $A$ with
+  \[ A\,x_1 \cdots x_n \;=\; X \]
+  {\small That is: \emph{abstraction is definable}. $A$ is what we would write
+   $\lambda x_1 \dots x_n.\,X$.\\
+   He assumes it because that is what his systems offered.}
+  \vfill
+  \pause
+  But the proof consumes only \emph{one} term:
+  \[ \mathfrak{A} \qquad\text{with}\qquad
+     \mathfrak{A} \;\equiv\; \mathfrak{A} \supset \mathfrak{B} \]
+  {\small Abstraction supplies it, via a fixed-point combinator.
+   So does a plain definitional mechanism: write $d \equiv d \to \mathfrak{B}$.}
+  \vfill
+  \pause
+  \begin{center}\Large
+    The real hypothesis is:\\
+    \key{the system admits self-referential definitions.}
+  \end{center}
+  \vfill
+  \begin{center}\small
+    Combinatory completeness is one route to that --- not the only one,
+    and not equivalent to it.
+  \end{center}
+\end{frame}
+
+\begin{frame}{The shape of the result}
+  \vfill
+  \begin{center}\Large
+    \key{Unrestricted recursion + ordinary implication\\[0.3em] = proves everything.}
+  \end{center}
+  \vfill
+  \pause
+  \begin{center}
+    And that is why \texttt{Fixpoint loop (n:nat) := loop n.} is rejected.
+  \end{center}
+  \vfill
+  \pause
+  \begin{center}\small
+    Not conservatism. If your system admitted it, you could derive $\bot$.
+  \end{center}
+  \vfill
+\end{frame}
+
+\begin{frame}{After 1935}
+  \vfill
+  \key{Church, Kleene and Rosser} extracted the \emph{pure} $\lambda$-calculus ---
+  terms and conversion, no logic --- and Church retreated to simple type theory
+  in 1940.
+  \vfill
+  \key{Curry did not retreat.} He kept the untyped terms and added a predicate
+  $\mathsf{H}$ for ``is a proposition,'' using it to guard the logical rules.
+  \vfill
+  \pause
+  \begin{center}
+    Everything you use descends from Church 1940.\\[0.4em]
+    \key{GA is closer to Curry's road.}
+  \end{center}
+  \vfill
+\end{frame}
+
+\begin{frame}{Where everyone landed}
+  \small
+  \begin{center}
+  \begin{tabular}{@{}lccc@{}}
+    \toprule
+    & \textbf{unrestricted} & \textbf{ordinary} & \textbf{non-} \\
+    & \textbf{recursion} & \textbf{rules} & \textbf{triviality} \\
+    \midrule
+    Church 1932 $\cdot$ Curry 1930    & kept    & weakened neg.\ & \bad{lost} \\
+    STLC $\cdot$ Coq $\cdot$ Agda $\cdot$ Lean $\cdot$ HOL & \bad{dropped} & kept & kept \\
+    Contraction-free \small(Fitch, Gri\v{s}in, Cantini) & kept & \amber{structural} & kept \\
+    Paraconsistent \small(Priest)     & kept    & \amber{no explosion} & \amber{contained} \\
+    Kripke 1975 \small(truth gaps)    & kept    & \amber{partial}  & kept \\
+    \midrule
+    \key{Grounded arithmetic}         & \key{kept} & \key{preconditions} & \key{kept} \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+  \vfill
+  \begin{center}\small
+    Everyone since 1942 kept implication and gave up recursion.\\
+
+  \end{center}
+\end{frame}
+
+% =====================================================================
+\section{Grounded deduction}
+% =====================================================================
+
+\begin{frame}{Kripke, 1975 --- there is no sieve}
+  {\small \textit{Outline of a Theory of Truth}, J.\ Phil.\ 72(19):690--716}
+  \vfill
+  Whether a sentence is paradoxical can depend on \emph{empirical facts},
+  not on its shape.
+  \vfill
+  \pause
+  \begin{quote}\small
+    ``The moral: an adequate theory must allow our statements involving the notion
+    of truth to be \textbf{risky} \dots\ There can be \textbf{no syntactic or
+    semantic ``sieve''} that will winnow out the ``bad'' cases while preserving the
+    ``good'' ones.''
+  \end{quote}
+  \hfill{\footnotesize --- p.\,692}
+  \vfill
+  \pause
+  \begin{center}
+    So you cannot fix this by restricting \emph{what may be written}.\\
+    \key{Exactly the argument against the type-theoretic route.}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Grounded}
+  \vfill
+  \begin{quote}\small
+    ``If ultimately this process terminates in sentences not mentioning the concept
+    of truth, so that the truth value of the original statement can be ascertained,
+    we call the original sentence \textbf{grounded}; otherwise, \textbf{ungrounded}.''
+  \end{quote}
+  \hfill{\footnotesize --- p.\,694}
+  \vfill
+  \pause
+  The detail people miss --- the \key{truth-teller}:
+  \begin{center}\small (3) \quad ``(3) is true.''\end{center}
+  {\small ``which, though not paradoxical, yield no determinate truth conditions'' (p.\,693);
+   ``Sentences such as (3), though not paradoxical, are ungrounded'' (p.\,694).}
+  \vfill
+  \pause
+  \begin{center}\Large
+    Groundedness is not about \emph{paradox}.\\
+    \key{It is about having a basis.}
+  \end{center}
+\end{frame}
+
+\begin{frame}{The least fixed point}
+  \vfill
+  \begin{itemize}\itemsep0.55em
+    \item $T(x)$ is interpreted by a \key{partial set} $(S_1, S_2)$ ---
+          extension, antiextension, undefined outside $S_1 \cup S_2$
+    \item Connectives evaluate by \key{Kleene's strong three-valued scheme}
+          {\small (p.\,700; fn.\,18 cites Kleene 1952, \S64)}
+    \item The jump $\phi$ is \key{monotone}: extending $T$ never changes a value
+          already established. \\
+          {\small ``This property --- technically, the monotonicity of $\phi$ ---
+           is crucial for all our constructions.'' (p.\,703)}
+    \item Iterate transfinitely $\Rightarrow$ a \key{minimal} fixed point:
+          ``any fixed point extends'' it (p.\,705)
+  \end{itemize}
+  \vfill
+  \pause
+  \begin{center}
+    ``(Being a fixed point, $\mathcal{L}_\sigma$ is a language that
+    \key{contains its own truth predicate}.)'' \hfill{\footnotesize --- p.\,705}
+  \end{center}
+  \vfill
+  \begin{center}\small
+    Kripke's caution: ``\emph{Undefined} is not an extra truth value'' (fn.\,18) ---
+    this is not three-valued logic.
+  \end{center}
+\end{frame}
+
+\begin{frame}{What GA takes, and what it adds}
+  \vfill
+  \begin{columns}[T]
+    \begin{column}{0.46\textwidth}
+      \underline{From Kripke}\\[0.7em]
+      {\small The word \emph{grounded}.\\[0.4em]
+       Ungrounded expressions denote nothing, so paradoxes are inert.\\[0.4em]
+       A language containing its own truth predicate.}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \underline{GA adds}\\[0.7em]
+      {\small Grounding in \emph{computation}, not a semantic construction.\\[0.4em]
+       The condition as \emph{preconditions on inference rules}.\\[0.4em]
+       Arithmetic, Turing-complete computation, machine-checked metatheory.}
+    \end{column}
+  \end{columns}
+  \vfill
+  \pause
+  \begin{center}\small
+    BGA proves its own truth predicate for grounded sentences (Thm.\ 4.20) ---
+    Kripke's \emph{raison d'\^etre}, in a system that also computes.
+  \end{center}
+  \vfill
+\end{frame}
+
+\begin{frame}{\emph{Habeas quid} --- ``have a thing''}
+  \vfill
+  You may not reason with a term until you have shown it \emph{has a value}.
+  \vfill
+  \[
+    \frac{\Gamma \vdash p\ \mathsf{B} \qquad \Gamma \cup \{p\} \vdash q}
+         {\Gamma \vdash p \to q}\ (\to I)
+    \qquad\quad
+    \frac{\Gamma \vdash p\ \mathsf{B} \quad \Gamma\cup\{\neg p\} \vdash q
+          \quad \Gamma\cup\{\neg p\} \vdash \neg q}
+         {\Gamma \vdash p}
+  \]
+  \vfill
+  \begin{center}\small
+    $p\ \mathsf{B} \;\equiv\; p \vee \neg p$ --- classically a tautology, so the
+    preconditions are free and the rules collapse to the familiar ones.\\[0.4em]
+    In GA it is a \key{dynamic type check}: a demand that $p$ terminate with a boolean.
+  \end{center}
+  \vfill
+  \begin{center}
+    In Curry's terms: GA satisfies hypotheses \key{1, 2 and 4}.\\
+    It breaks \key{3}.
+  \end{center}
+\end{frame}
+
+\begin{frame}{Both paradoxes die of malnutrition}
+  \begin{columns}[T]
+    \begin{column}{0.47\textwidth}
+      \underline{Liar} \quad $L \equiv \neg L$\\[0.8em]
+      Admitted as a definition.\\[0.6em]
+      Refutation by contradiction needs $L\ \mathsf{B}$,\\
+      which needs the refutation.\\[0.8em]
+      \key{No value. Nothing to explode from.}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \underline{Curry} \quad $C \equiv C \to P$\\[0.8em]
+      Admitted as a definition.\\[0.6em]
+      Step (3) now needs $C\ \mathsf{B}$ first,\\
+      obtainable only via the implication\\
+      we are trying to introduce.\\[0.8em]
+      \key{Circular obligation. No proof.}
+    \end{column}
+  \end{columns}
+  \vfill
+  \begin{center}\small
+    The paradoxes are \key{expressible} and simply not \key{provable}.
+  \end{center}
+\end{frame}
+
+\begin{frame}{Does GA forbid self-application?}
+  \vfill
+  \begin{center}\Large No.\end{center}
+  \vfill
+  \pause
+  \key{PGA} has higher-order application $t[t]$ as a \emph{primitive}.
+  So $f[f]$ is a well-formed term.
+  \begin{center}\small
+    Everything is a natural number: $f[a]$ reads $f$ as a G\"odel code of a
+    primitive-recursive step function, applied to $a$, with an unbounded search.\\
+    $\mathcal{S},\mathcal{K},\mathcal{I}$ are just particular numerals.
+    No $\lambda$ binder --- but $\lambda$ is derivable by combinator conversion.
+  \end{center}
+  \vfill
+  \pause
+  \key{BGA} is the interesting contrast: no term is ever applied to a term.
+  Recursion comes only from $d(t,\dots,t)$ --- definition symbols applied to
+  argument terms, freely mutually recursive, no ordering, no obligation at
+  definition time.
+  \begin{center}\small And it is Turing-complete anyway.\end{center}
+  \vfill
+\end{frame}
+
+\begin{frame}{The restriction is not on what you may write}
+  \vfill
+  Type theory's mechanism is \key{grammatical}: make $x\,x$ ill-formed,
+  and the paradox cannot be stated.
+  \vfill
+  \pause
+  GA does the opposite. All of these are \key{well-formed}:
+  \begin{center}\small
+    $f[f]$ \qquad $L \equiv \neg L$ \qquad $C \equiv C \to P$
+    \qquad \texttt{collatz}$(n)$
+  \end{center}
+  \vfill
+  \pause
+  \begin{center}\Large
+    The restriction is on what you may \key{infer}.
+  \end{center}
+  \vfill
+  \begin{center}\small
+    Which is why the paradoxes are \emph{expressible} and merely not \emph{provable}
+    ---\\ and why a definition never needs a termination proof to be admitted.
+  \end{center}
+  \vfill
+\end{frame}
+
+% =====================================================================
+\section{The development so far}
+% =====================================================================
+
+\begin{frame}{Six papers, two years}
+  \small
+  \begin{center}
+  \begin{tabular}{@{}llp{6.4cm}@{}}
+    \toprule
+    \textbf{2024} & GD            & the idea, and the propositional core \\
+    \textbf{2025} & BGA / PGA     & machine-checked metatheory \\
+    \textbf{2026} & RGA           & quantifiers, grounded reflectively \\
+    \textbf{2026} & Internalized truth & its own truth predicate, full language \\
+    \textbf{2026} & OGA           & one more rule --- incompleteness becomes \emph{priced} \\
+    \textbf{2026} & Grounded set theory & a graded ZF \\
+    \midrule
+    \textbf{now}  & \key{Isabelle/Pure} & \key{can anyone actually use it?} \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+  \vfill
+  \begin{center}\small
+    Roughly: \emph{idea} $\to$ \emph{proof it works} $\to$ \emph{make it a logic}
+    $\to$ \emph{make it reflective} $\to$ \emph{price the gap} $\to$
+    \emph{make it a foundation} $\to$ \emph{make it usable}.\\[0.4em]
+    \key{Four of the six are from 2026.}
+  \end{center}
+\end{frame}
+
+\begin{frame}{1 $\cdot$ \emph{Reasoning Around Paradox with Grounded Deduction}}
+  {\small Ford, arXiv:2409.08243 (2024)}
+  \vfill
+  \begin{itemize}\itemsep0.7em
+    \item Kripke-inspired: let ungrounded expressions denote nothing
+    \item \hq\ as \emph{preconditions on inference rules} --- the central move
+    \item An impossibility triangle:\\
+          \small consistency $\cdot$ unrestricted LEM $\cdot$ unrestricted recursive definitions
+    \item Propositional GD, predicate logic, arithmetic; a computational
+          interpretation and a denotational semantics
+    \item Speculative closing: reflective idealization, ``Cantor's paradise regained\ldots?''
+  \end{itemize}
+  \vfill
+  \begin{center}\small \amber{Preliminary --- no machine-checked metatheory.}\end{center}
+\end{frame}
+
+\begin{frame}{2 $\cdot$ \emph{Have a thing?} \; --- BGA and PGA}
+  {\small arXiv:2510.25369}
+  \vfill
+  Two concrete systems, everything checked in Isabelle/HOL.
+  \vfill
+  \begin{columns}[T]
+    \begin{column}{0.46\textwidth}
+      \underline{BGA} --- minimal kernel\\[0.6em]
+      \small
+      syntactic consistency\\
+      semantic soundness\\
+      \key{semantic completeness}\\
+      represents every general-recursive function\\
+      G\"odel arithmetization + reflection\\
+      \key{its own truth predicate} (grounded sentences)
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \underline{PGA} --- expressive layer\\[0.6em]
+      \small
+      primitive propositional operators\\
+      higher-order functions via SKI\\
+      consistency, completeness\\
+      reduces to BGA\\[0.8em]
+      16 of Copi's 19 classical rules survive \emph{unmodified}
+    \end{column}
+  \end{columns}
+  \vfill
+  \begin{center}\small
+    Proof-theoretic strength: somewhere in
+    $[\,\omega^{\omega},\ \omega_1^{\mathrm{CK}}\,]$ --- \amber{open}.
+  \end{center}
+\end{frame}
+
+\begin{frame}{Consistent \emph{and} complete \emph{and} arithmetic?}
+  \vfill
+  \begin{itemize}\itemsep0.8em
+    \item G\"odel~I concerns \key{syntactic} completeness --- for every $f$,
+          $\vdash f$ or $\vdash \neg f$.\\
+          {\small BGA is emphatically not that, and cannot be: LEM is built into the definition.}
+    \item What is proved is \key{semantic} completeness, \emph{with respect to
+          the operational-semantic model}.\\
+          {\small Every formula that reduces to 1 under all assignments is provable.
+          Not: ``GA proves every truth of arithmetic.''}
+    \item G\"odel's argument assumes a classical \emph{object} logic.
+          That assumption fails; the metalogic assumption still holds.
+  \end{itemize}
+  \vfill
+  \begin{center}\small
+    The consistency and completeness proofs are simulation arguments in
+    opposite directions ---\\ \key{the Church--Turing thesis continuing to hold.}
+  \end{center}
+\end{frame}
+
+\begin{frame}{3 $\cdot$ \emph{Computable Quantification in RGA}}
+  {\small Ford, arXiv:2607.25533 (2026)}
+  \vfill
+  Quantifiers --- grounded \key{reflectively}:
+  \begin{center}\small
+    a universal is \emph{true} when the system's own proof search certifies its
+    schematic instance,\\ \emph{false} when it refutes a particular numeral instance.
+  \end{center}
+  \vfill
+  \begin{itemize}\itemsep0.5em
+    \item Proves totality of $+$ and $\times$ as internally quantified theorems
+    \item Represents \key{exactly the recursively enumerable sets}
+    \item Machine-checked: soundness, consistency, open completeness,
+          $\mathbb{N}$-soundness, a Church--Turing characterisation
+    \item \key{$\omega$-incompleteness} --- grounded truth is r.e., so some family has
+          every numeric instance provable while its closure is
+          \emph{semantically ungrounded}
+  \end{itemize}
+  \vfill
+  \begin{center}\small
+    DNE holds $\cdot$ quantified excluded middle fails $\cdot$
+    refuted universals yield explicit witnesses\\
+    \amber{the deduction theorem's abstraction direction fails at ungrounded hypotheses}
+  \end{center}
+\end{frame}
+
+\begin{frame}{4 $\cdot$ \emph{Internalized Truth in RGA}}
+  {\small Ford, arXiv:2608.16140 (Aug 2026)}
+  \vfill
+  Tarski: no consistent \emph{classical} system with arithmetic defines its own truth.
+  \vfill
+  \begin{itemize}\itemsep0.6em
+    \item A truth predicate for RGA's \key{full language, quantifiers included},
+          as an \emph{internal RGA term}
+    \item Compiled from a primitive-recursive decider; adequate in both directions
+    \item A square of metatheorems --- provable $\Rightarrow$ internally true;
+          grounded-true $\Rightarrow$ internally provable; internal truth
+          $\Rightarrow$ internal provability; consistency follows
+    \item Two \emph{disjoint} internal machines: a certified decider and a
+          certified proof-checker, both RGA terms
+  \end{itemize}
+  \vfill
+  \begin{center}\small
+    Along the way: coded syntax and substitution, symbolic unfolding, internal
+    strong induction ---\\
+    \key{evidence that RGA supports nontrivial mathematical reasoning.}
+  \end{center}
+\end{frame}
+
+\begin{frame}{5 $\cdot$ \emph{Idealizing Useful Fictions in OGA}}
+  {\small Ford, arXiv:2608.17862 (Aug 2026)}
+  \vfill
+  RGA can quantify over its own computations --- but \key{cannot certify that its own
+  unbounded searches have definite yes-or-no answers}.
+  \vfill
+  OGA closes that openness with \key{exactly one rule}:
+  \begin{center}
+    \key{ATI}, the $\omega$-grounded universal\\[0.3em]
+    \small\emph{if every numeric instance of a universal is certified decided,\\
+    the universal is certified decided.}
+  \end{center}
+  \vfill
+  \small
+  Otherwise identical to RGA, symbol for symbol. Every consequence machine-checked.
+  \vfill
+  \begin{center}
+    Certificates become \key{abundant}: every totality question about a computable
+    function is certified to \emph{have} an answer ---\\
+    whether or not anyone can produce it.
+  \end{center}
+\end{frame}
+
+\begin{frame}{What that one rule costs, and buys}
+  \small
+  \begin{center}
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+                        & \textbf{RGA} & \textbf{OGA} \\
+    \midrule
+    a certificate says  & a computation settles it
+                        & the question \emph{has} an answer \\
+    provability         & r.e. & r.e., primitive-recursive checker \\
+    truth               & \key{r.e.} & \key{deliberately \emph{not} r.e.} \\
+    the residue         & $\omega$-incompleteness & \key{fictions} \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+  \vfill
+  \normalsize
+  In OGA the G\"odel sentence is classified \emph{unconditionally} as a
+  \key{genuine fiction}: neither provable nor refutable, yet \emph{valued} ---
+  and carrying a \key{computable pedigree} recording exactly what adopting it
+  as an axiom commits you to.
+  \vfill
+  \begin{center}\small
+    Adoption is itself a theorem suite: extending OGA by any finite stock of true
+    fictions is consistent,\\ and independently certified adoptions can never collide.
+  \end{center}
+\end{frame}
+
+\begin{frame}{6 $\cdot$ \emph{Fact and Fiction in Grounded Set Theory}}
+  {\small Ford (Aug 2026)}
+  \vfill
+  \begin{center}\small
+    ``Classical set theory buys its power on credit:\\
+    its axioms assert totalities no computation could survey.''
+  \end{center}
+  \vfill
+  Sets are \key{formula codes}; membership is \emph{defined} via provability ---
+  no primitive $\in$, and no set axioms assumed.
+  \vfill
+  \small
+  \begin{center}
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    theorems & empty, pairing, separation, foundation, choice, complement,
+               \key{Tarski universe} \\
+    fail     & \bad{union, replacement, powerset} --- the \emph{collecting} axioms,
+               recursion-theoretically \\
+    graded   & \amber{extensionality} --- pointwise provable, uniformly a G\"odel sentence \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+  \vfill
+  \begin{center}
+    ``ZF fails computably, but holds fictionally,\\
+    \key{and the fiction is measurable}.''
+  \end{center}
+\end{frame}
+
+\begin{frame}{What the programme has, and has not}
+  \vfill
+  \begin{columns}[T]
+    \begin{column}{0.47\textwidth}
+      \underline{Settled}\\[0.8em]
+      \small
+      Unrestricted recursive definitions, admitted with \emph{no} obligation at
+      definition time\\[0.5em]
+      Consistency --- machine-checked\\[0.5em]
+      Semantic completeness\\[0.5em]
+      Quantifiers\\[0.5em]
+      Its own truth predicate\\[0.5em]
+      Incompleteness \emph{priced} --- fictions with pedigrees\\[0.5em]
+      A graded set theory
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \underline{Open}\\[0.8em]
+      \small
+      Proof-theoretic strength\\[0.5em]
+      Whether \hq\ obligations can be discharged \emph{cheaply enough}\\[0.5em]
+      Datatypes beyond $\mathbb{N}$\\[0.5em]
+      Notation, tactics, automation\\[0.5em]
+      \key{Whether anyone can reason in it}
+    \end{column}
+  \end{columns}
+  \vfill
+  \begin{center}
+    \small Church and Curry were defeated by the \emph{consistency} question.\\
+    \key{That one is answered. The usability question is not.}
+  \end{center}
+\end{frame}
+
+% =====================================================================
+\section{This work}
+% =====================================================================
+
+\begin{frame}{The gap}
+  \vfill
+  \begin{center}\Large
+    A logic is not a tool.
+  \end{center}
+  \vfill
+  \begin{itemize}\itemsep0.8em
+    \item The metatheory is done in \key{Isabelle/HOL} --- which adds HOL's axioms
+          to GD's trusted base, and embeds GD's primitives inside a very different logic
+    \item Good for \emph{studying} GA. Wrong for \emph{reasoning in} GA.
+    \item A foundational system should sit atop a \key{minimal} framework
+  \end{itemize}
+  \vfill
+  \begin{center}\small
+    Kehrli (2025): formalize GA atop \key{Isabelle/Pure} instead.
+  \end{center}
+  \vfill
+\end{frame}
+
+\begin{frame}{What makes GA hard to use}
+  \vfill
+  In classical logic, $p\ \mathsf{B}$ is free --- it is the law of excluded middle.
+  \vfill
+  \begin{center}\Large
+    In GA it is \key{work}.
+  \end{center}
+  \vfill
+  Every \hq\ premise is a proof obligation that a human or a tactic must discharge.
+  \vfill
+  \pause
+  \begin{center}
+    \large So the engineering question is sharp and checkable:\\[0.6em]
+    \key{can these obligations be discharged automatically often enough\\
+    that ordinary reasoning stays tolerable?}
+  \end{center}
+  \vfill
+\end{frame}
+
+\begin{frame}{This work}
+  \vfill
+  Building a usable theorem prover for grounded deduction on Isabelle/Pure.
+  \vfill
+  \begin{itemize}\itemsep0.8em
+    \item Proof search and tactics for \hq\ obligations
+    \item Conditional rewriting where equality is not reflexive
+    \item Induction and case analysis under grounding premises
+    \item Encoding inductive datatypes in a system with only $\mathbb{N}$
+  \end{itemize}
+  \vfill
+  \begin{center}\small
+    \emph{[ details follow ]}
+  \end{center}
+  \vfill
+\end{frame}
+
+\begin{frame}[plain]
+  \vfill
+  \begin{center}
+    {\Large Reasoning Around Recursion}\\[2em]
+    \small
+    Curry proved you cannot have both general recursion\\
+    and ordinary implication.\\[1em]
+    Everyone since has given up recursion.\\[1em]
+    \key{Grounded arithmetic gives up something in implication instead.}
+  \end{center}
+  \vfill
+\end{frame}
+
+\end{document}
