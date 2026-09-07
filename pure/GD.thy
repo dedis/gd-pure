@@ -1,5 +1,7 @@
 theory GD
 imports Pure
+  keywords "gd_def" :: thy_decl
+    and "print_gd_defs" :: diag
 begin
 
 \<^marker>\<open>title "Grounded Deduction"\<close>
@@ -295,6 +297,10 @@ axiomatization where
   notForallI: "\<lbrakk>a N; \<not>(F a)\<rbrakk> \<Longrightarrow> \<not>(\<forall>x. F x)" and
   notForallE: "\<lbrakk>\<not>(\<forall>x. F x); \<And>a. a N \<Longrightarrow> \<not>(F a) \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
 
+axiomatization where
+  notExistsI: "\<lbrakk>\<And>a. a N \<Longrightarrow> \<not>(F a)\<rbrakk> \<Longrightarrow> \<not>(\<exists>x. F x)" and
+  notExistsE: "\<lbrakk>\<not>(\<exists>x. F x); a N\<rbrakk> \<Longrightarrow> \<not>(F a)"
+
 (* De Morgan \<not>\<forall> \<longleftrightarrow> \<exists>\<not> follows. *)
 
 lemma forAllNeg:
@@ -540,6 +546,7 @@ lemma [simp]: "(a = a) \<equiv> (a N)"
   unfolding isNat_def by (rule Pure.reflexive)
 
 ML_file \<open>unfold_def.ML\<close>
+ML_file \<open>gd_def.ML\<close>
 
 section \<open>Deductions of non-elementary inference rules.\<close>
 
@@ -707,7 +714,7 @@ recdef add :: "num \<Rightarrow> num \<Rightarrow> num" where
   "add x y := if y = 0 then x else S(add x P(y))"
 *)
 
-axiomatization
+gd_def
   add   :: "num \<Rightarrow> num \<Rightarrow> num"  (infixl "+" 60) and
   sub   :: "num \<Rightarrow> num \<Rightarrow> num"  (infixl "-" 60) and
   mult  :: "num \<Rightarrow> num \<Rightarrow> num"  (infixl "*" 70) and
@@ -1894,7 +1901,7 @@ proof -
 qed
 
 (*CPair definition*)
-axiomatization cpair :: "num \<Rightarrow> num \<Rightarrow> num" where
+gd_def cpair :: "num \<Rightarrow> num \<Rightarrow> num" where
   cpair_def: "cpair x y := if y = 0 then div (x * S(x)) 2
                            else cpair x P(y) + x + y + 1"
 
@@ -1926,7 +1933,7 @@ apply (rule eqSym)
 apply (simp)
 done
 
-axiomatization
+gd_def
   cpx :: "num \<Rightarrow> num" and
   cpy :: "num \<Rightarrow> num"
 where
@@ -4214,7 +4221,7 @@ by (simp, rule eq_impl_term[where b="a"], rule eqSym, assumption)
 lemma [auto]: "a = b \<Longrightarrow> cpy a = cpy b"
 by (simp, rule eq_impl_term[where b="a"], rule eqSym, assumption)
 
-axiomatization
+gd_def
   cpi' :: "num \<Rightarrow> num \<Rightarrow> num"
 where
   cpi'_def: "cpi' n x := if n = 0 then 0
@@ -4898,7 +4905,7 @@ qed
    sum_cons: "sum (Cons n xs) = n + sum xs"
  *)
 
-axiomatization sum :: "List \<Rightarrow> num" where
+gd_def sum :: "List \<Rightarrow> num" where
   sum_def: "sum x := if x = Nil then 0 else (list_hd x) + (sum (list_tl x))"
 
 lemma [simp]: "sum Nil = 0"
@@ -4949,7 +4956,7 @@ declaretype list =
   | cons of "num" "list"
 *)
 
-axiomatization
+gd_def
   ack :: "num \<Rightarrow> num \<Rightarrow> num"
 where
   ack_def: "ack x y := if x = 0 then y + 1
@@ -4998,7 +5005,7 @@ apply (rule eqSym)
 apply (assumption+)
   done
 
-axiomatization mem :: "num \<Rightarrow> List \<Rightarrow> o" (infixr "\<in>" 75) where
+gd_def mem :: "num \<Rightarrow> List \<Rightarrow> o" (infixr "\<in>" 75) where
   mem_def: "mem x G := if G = Nil then False
                        else if list_hd G = x then True
                        else mem x (list_tl G)"
@@ -5023,16 +5030,16 @@ proof -
   qed
 qed
 
-axiomatization nth :: "num \<Rightarrow> List \<Rightarrow> num" where
+gd_def nth :: "num \<Rightarrow> List \<Rightarrow> num" where
   nth_def: "nth i xs := if xs = Nil then 0
                         else if i = 0 then list_hd xs
                         else nth (i - 1) (list_tl xs)"
 
-axiomatization len :: "List \<Rightarrow> num" where
+gd_def len :: "List \<Rightarrow> num" where
   len_def: "len xs := if xs = Nil then 0 else S (len (list_tl xs))"
 
   (* every formula of G' occurs in G *)
-axiomatization subset :: "List \<Rightarrow> List \<Rightarrow> o" where
+gd_def subset :: "List \<Rightarrow> List \<Rightarrow> o" where
   subset_def: "subset G' G :=
     if G' = Nil then True
     else mem (list_hd G') G \<and> subset (list_tl G') G"
