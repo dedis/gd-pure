@@ -168,6 +168,10 @@
   Under stratification, \key{$x\,x$ is not false --- it is ungrammatical.}\\
   {\small A thing may never be applied to itself. That is the whole mechanism.}
   \vfill
+  \begin{center}\large
+    $|D \to D| \;\geq\; |\mathcal{P}(D)| \;>\; |D|$
+  \end{center}
+  \vfill
   \pause
   But self-application is exactly how you get \key{recursion}:\\
   {\small from $x\,x$ you can build a fixed-point combinator, and a fixed point
@@ -233,7 +237,7 @@
   \pause
   \begin{center}\small
     Reject LEM $\cdot$ weaken \emph{reductio} $\cdot$ let well-formed terms denote nothing\\
-    \key{---\ a recognisable sketch of GA, ninety-four years early.}
+    \key{---\ comes up again in GA.}
   \end{center}
 \end{frame}
 
@@ -401,7 +405,7 @@
   \vfill
   \pause
   \begin{center}\Large
-    The real hypothesis is:\\
+    The real killer is:\\
     \key{the system admits self-referential definitions.}
   \end{center}
   \vfill
@@ -456,7 +460,7 @@
     \midrule
     Church 1932 $\cdot$ Curry 1930    & kept    & weakened neg.\ & \bad{lost} \\
     STLC $\cdot$ Coq $\cdot$ Agda $\cdot$ Lean $\cdot$ HOL & \bad{dropped} & kept & kept \\
-    Contraction-free \small(Fitch, Gri\v{s}in, Cantini) & kept & \amber{structural} & kept \\
+    %Contraction-free \small(Fitch, Gri\v{s}in, Cantini) & kept & \amber{structural} & kept \\
     Paraconsistent \small(Priest)     & kept    & \amber{no explosion} & \amber{contained} \\
     \midrule
     \key{Grounded arithmetic}         & \key{kept} & \key{preconditions} & \key{kept} \\
@@ -1640,10 +1644,13 @@
           \emph{semantically ungrounded}
   \end{itemize}
   \vfill
-  \begin{center}\small
-    DNE holds $\cdot$ quantified excluded middle fails $\cdot$
-    refuted universals yield explicit witnesses\\
-    \amber{the deduction theorem's abstraction direction fails at ungrounded hypotheses}
+  \begin{center}\footnotesize
+    ``A \key{Markov-flavored, substructural corner} distinct from both classical and
+    intuitionistic arithmetic'':\\[0.15em]
+    DNE holds $\cdot$ quantified excluded middle fails $\cdot$ refuted universals
+    yield explicit counterexample witnesses\\
+    \amber{the deduction theorem's abstraction direction fails precisely at
+    ungrounded hypotheses}
   \end{center}
 \end{frame}
 
@@ -1655,12 +1662,14 @@
   \begin{itemize}\itemsep0.6em
     \item A truth predicate for RGA's \key{full language, quantifiers included},
           as an \emph{internal RGA term}
-    \item Compiled from a primitive-recursive decider; adequate in both directions
-    \item A square of metatheorems --- provable $\Rightarrow$ internally true;
-          grounded-true $\Rightarrow$ internally provable; internal truth
-          $\Rightarrow$ internal provability; consistency follows
-    \item Two \emph{disjoint} internal machines: a certified decider and a
-          certified proof-checker, both RGA terms
+    \item Compiled from a primitive-recursive decider for RGA's operational
+          semantics, and \key{proven adequate in both directions}
+    \item Four metatheorems close around it: every formula RGA proves, RGA derives
+          the \emph{internal truth} of; every grounded-true formula is internally
+          provable; internal truth implies internal provability; and \key{the
+          consistency of RGA follows}
+    \item The two directions run on \emph{disjoint} internal machines --- a certified
+          decider and a certified proof-checker, both RGA terms
   \end{itemize}
   \vfill
   \begin{center}\small
@@ -1671,38 +1680,39 @@
 \end{frame}
 
 \begin{frame}{5, 6 $\cdot$ OGA, and grounded set theory}
-  \vspace{-0.2em}
-  {\small\underline{\emph{Idealizing Useful Fictions in OGA}}
-   \hfill {\footnotesize arXiv:2608.17862}}
+  \framesubtitle{``ZF fails computably, but holds fictionally, and the fiction is
+                   measurable.''}
+  \vspace{-0.3em}
+  {\footnotesize\color{soft}\textsc{Idealizing Useful Fictions in OGA}
+   \hfill arXiv:2608.17862}
   \footnotesize
-  \begin{itemize}\itemsep0.2em
-    \item RGA cannot certify that its own unbounded searches have definite answers.
-          \key{OGA adds one rule} --- if every numeric instance of a universal is
-          certified decided, the universal is --- and is otherwise RGA symbol for symbol.
-    \item Certificates become \key{abundant}: every totality question is certified to
-          \emph{have} an answer, whether or not anyone can produce it. Provability stays
-          r.e.; $\omega$-truth deliberately does not.
-    \item The G\"odel sentence becomes a \key{genuine fiction} --- neither provable nor
-          refutable, yet valued, carrying a computable pedigree of what adopting it costs.
+  \begin{itemize}\itemsep0.15em
+    \item \key{OGA is RGA plus one rule} --- \emph{ATI}, the $\omega$-grounded
+          universal: if every numeric instance of a universal is certified decided,
+          so is the universal. Otherwise RGA symbol for symbol.
+    \item Decidedness certificates become \key{abundant}: every totality question about
+          a computable function is certified to \emph{have} an answer, whether or not
+          anyone can produce it.
+    \item It costs no completeness; provability stays r.e., $\omega$-truth deliberately
+          does not. There the G\"odel sentence is \key{a genuine fiction}: neither
+          provable nor refutable, yet valued, with a computable pedigree of what
+          adopting it commits one to.
   \end{itemize}
-  \vspace{0.7em}
-  {\small\underline{\emph{Fact and Fiction in Grounded Set Theory}}
-   \hfill {\footnotesize Aug 2026}}
-  \begin{itemize}\itemsep0.2em
-    \item Sets whose membership a computation \emph{decides} form a \key{full Boolean
-          algebra}, complement included. The halting problem factors into it plus
-          exactly one set former.
-    \item Demand it \emph{hereditarily}: foundation comes free and choice becomes a
-          computation, but the classical prohibitions arrive as \key{theorems} --- no
-          universal set, no complement --- and the \bad{collecting axioms leak away}.
-    \item In OGA membership goes \key{three-valued}: affirmed, denied, fictional. The
-          collecting axioms \key{return, totalized}, their leaks now priced fictions;
-          Tarski's universe axiom is a theorem.
+  \vspace{0.6em}
+  {\footnotesize\color{soft}\textsc{Fact and Fiction in Grounded Set Theory}
+   \hfill Aug 2026}
+  \begin{itemize}\itemsep0.15em
+    \item \key{Sets of numbers} whose membership a computation \emph{decides}: a full
+          Boolean algebra, \key{complement included}. The halting problem factors into
+          it plus exactly one new set former.
+    \item \key{Sets of sets}, hereditarily decided: foundation free, choice a
+          computation --- but the classical prohibitions become \key{theorems} (no
+          universal set, no complement), and the \bad{collecting axioms} --- union,
+          replacement, powerset --- \bad{leak away}.
+    \item In OGA membership is \key{three-valued by proof-theoretic status}: affirmed,
+          denied, \key{fictional}. The collecting axioms return totalized, their leaks
+          now \emph{priced}; Tarski's universe axiom is a theorem.
   \end{itemize}
-  \vspace{0.4em}
-  \begin{center}\footnotesize
-    ``ZF fails computably, but holds fictionally, \key{and the fiction is measurable}.''
-  \end{center}
 \end{frame}
 
 \begin{frame}[plain]
