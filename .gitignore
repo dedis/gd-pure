@@ -1,2 +1,45 @@
-*.thy~
-*.ML~
+# ---------------------------------------------------------------- editors
+*~
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ---------------------------------------------------------------- Isabelle
+.isabelle/
+output/
+heaps/
+browser_info/
+*.thy.orig
+
+# ---------------------------------------------------------------- LaTeX build
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.idx
+*.ilg
+*.ind
+*.lof
+*.log
+*.lot
+*.nav
+*.out
+*.run.xml
+*.snm
+*.synctex.gz
+*.synctex(busy)
+*.toc
+*.vrb
+*.xdv
+
+# ---------------------------------------------------------------- Typst build
+*.typ.pdf
+
+# ---------------------------------------------------------------- scratch
+*.tmp
+*.bak
+*.orig
+*.rej
