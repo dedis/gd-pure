@@ -5044,6 +5044,8 @@ gd_def subset :: "List \<Rightarrow> List \<Rightarrow> o" where
     if G' = Nil then True
     else mem (list_hd G') G \<and> subset (list_tl G') G"
 
+
+
 (*Few theorems to help with if-then-else cases*)
 lemma cond_thenE:
   assumes c: "c"
@@ -5474,4 +5476,8 @@ lemma Curry: "False"
   oops
 *)
 
+(*
+gd_def bad :: "num \<Rightarrow> num" where
+  bad_def: "bad 0 := x"
+*)
 end (* End of theory *)

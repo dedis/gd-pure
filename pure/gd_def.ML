@@ -54,15 +54,29 @@ fun add_grounding cname th =
 (* the command *)
 
 (*Recognise  Trueprop (lhs := rhs)  under whatever Pure quantifiers and
-  premises the axiomatization closed over, to find the constant defined.*)
-fun defined_const prop =
+  premises the axiomatization closed over, and return the constant defined
+  together with both sides.*)
+fun def_parts prop =
   (case Logic.strip_assums_concl (Term.strip_all_body prop) of
     Const (@{const_name GD.Trueprop}, _) $
-      (Const (@{const_name GD.def}, _) $ lhs $ _) =>
+      (Const (@{const_name GD.def}, _) $ lhs $ rhs) =>
         (case Term.head_of lhs of
-          Const (cname, _) => SOME cname
+          Const (cname, _) => SOME (cname, lhs, rhs)
         | _ => NONE)
   | _ => NONE);
+
+(*Every variable of the body must be a parameter of the left-hand side.
+  axiomatization generalises over the free variables of the whole equation,
+  so a variable occurring only on the right is quantified across the := and
+  the definition then holds for every value of it:
+
+    gd_def bad :: "num => num" where "bad 0 := x"
+
+  becomes  bad 0 := ?x,  making bad 0 interchangeable with anything at all.
+  bad 0 = 0 and bad 0 = 1 both follow, hence 1 = 0.*)
+fun unbound_vars lhs rhs =
+  subtract (op =) (map #1 (Term.add_vars lhs []))
+    (map #1 (Term.add_vars rhs []));
 
 (*Default the axiom name to <const>_def: the convention used throughout
   GD.thy, and the one unfold_def / fold_def expect, since they look a
@@ -93,16 +107,26 @@ fun gd_def_cmd raw_decls raw_specs thy =
     val declared = map (fn t => dest_Const_name t) consts;
 
     fun check ((b, _), _) th =
-      (case defined_const (Thm.prop_of th) of
+      (case def_parts (Thm.prop_of th) of
         NONE =>
           error (Binding.print b ^ " is not of the form  <constant> := <body>")
-      | SOME cname =>
-          if member (op =) declared cname then cname
-          else
+      | SOME (cname, lhs, rhs) =>
+          if not (member (op =) declared cname) then
             error (Binding.print b ^ " defines " ^
               quote (Long_Name.base_name cname) ^
               ", which this gd_def does not declare.\ngd_def defines the \
-              \constants it introduces; use axiomatization for anything else."));
+              \constants it introduces; use axiomatization for anything else.")
+          else
+            (case unbound_vars lhs rhs of
+              [] => cname
+            | vs =>
+                error (Binding.print b ^ " has " ^
+                  commas (map Term.string_of_vname vs) ^
+                  " in the body but not on the left.\nSuch a variable is \
+                  \generalised over the whole equation, so the definition \
+                  \holds for\nevery value of it, which makes the left-hand \
+                  \side interchangeable with\nanything. Every variable of \
+                  \the body must be a parameter of the left-hand side.")));
 
     val defined = map2 check specs thms;
 
