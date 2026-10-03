@@ -1,0 +1,8 @@
+session GD2 = Pure +
+  options [document = false]
+  theories
+    GD_Core
+    GD_Def_Test
+    GD_Base
+    GD_Arith
+    GD_Auto_Test
