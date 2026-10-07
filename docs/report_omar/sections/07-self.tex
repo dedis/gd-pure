@@ -1,0 +1,317 @@
+\section{\QGA{} on \QGA: feasibility and the development skeleton}
+\label{sec:self}
+
+\providecommand{\tv}[1]{\ensuremath{\mathsf{#1}}}
+
+\S\ref{sec:semantics} proposed a semantics for \QGA{} and listed six obligations
+for a self-consistency proof, flagging item 3, internal completeness, as the
+main risk.  This section reports on that plan.  The verdict is that the result
+is reachable, that the plan as stated does not close, and that a change to one
+clause of the semantics removes the obstruction that made it not close.  The
+theories \texttt{pure/QGA\_on\_GA.thy} and \texttt{pure/qga\_encode.thy}
+implement the revised plan: the locale tower, every definition, the abstract
+consistency skeleton with its theorem proved in full, and the statement of
+every remaining lemma.  They are in the \texttt{GD} session and check.
+
+\subsection{Is it possible?}
+
+Nothing in G\"odel's second theorem forbids it.  Both derivability conditions
+that carry the proof fail here.  \QGA{} is not classical, so the diagonal
+sentence is ungrounded rather than true-and-unprovable, and grounded truth is
+recursively enumerable, which is what lets an effective system be complete for
+its own semantics.  More sharply, the internal necessitation and distribution
+steps that L\"ob's theorem needs are unavailable, because $\longrightarrow$
+introduction carries a \emph{habeas quid} premise: from a derivation of $A$ one
+does not get $\fn{Prov}(A) \longrightarrow \fn{Prov}(B)$ for free, since the
+implication cannot be formed until its antecedent is known to be grounded.  Reflective
+grounded arithmetic proves the corresponding facts --- soundness, completeness,
+consistency --- for a system strictly stronger than \QGA, so the mathematics is
+known to work out.  What is new here is only the metatheory in which it is
+carried out.
+
+Nor is the \emph{internal} carrying-out obviously blocked.  \texttt{BGA\_on\_GA}
+already shows that \QGA{} can host a full metamathematical argument about a
+formal system with no classical ambient logic.  The question is therefore not
+whether grounded arithmetic can do metamathematics at all, but whether the
+particular obligations that quantifiers add can be met inside it.
+
+\subsection{Where the plan of \S\ref{sec:semantics} does not close}
+
+The architecture of \S\ref{sec:proof} imposes one hard constraint, and it is
+worth restating because it drives everything.  The soundness induction runs over
+a proof list, \QGA{} induction instantiates a schematic predicate, so the
+generalizations over the assignment, the judgment and the fuel must live inside
+the object-level formula being inducted on, and the hypothesis-satisfaction
+premise therefore sits in the antecedent of an object-level $\longrightarrow$.
+Introducing that implication requires the antecedent to be grounded.  So:
+
+\begin{center}
+\emph{satisfaction of a hypothesis list, at a fixed index, must be decided.}
+\end{center}
+
+\noindent
+That rules out the instance-wise reading of $\forall$, as \S\ref{sec:semantics:quant}
+says, and forces the reflective one.  So far the report is right.
+
+The difficulty appears one step later.  Under the reflective reading, three
+facts that a classical development proves independently become entangled, and
+they are entangled in a cycle:
+
+\begin{itemize}
+\item Soundness of $\forall$E needs the certificate found by the semantics to be
+      sound, that is, it needs soundness.
+\item Soundness of \textsc{exF} needs that no formula is both true and false,
+      that is, it needs determinism.
+\item Determinism at a universal needs to rule out a truth certificate colliding
+      with a falsity witness, which again needs soundness.
+\end{itemize}
+
+\noindent
+Reflective grounded arithmetic hits the same cycle and breaks it in two steps:
+first internal completeness, proved independently, then a \emph{witnessed}
+variant of the evaluation relation whose quantifier clauses carry, as extra
+positive premises, the semantic facts their certificates promise.  Determinism
+and the $\forall$E case are immediate at the witnessed level, and the two
+semantics are reconciled afterwards.
+
+Transplanting that directly fails.  The witnessed clause for $\forall$ carries
+``every numeral instance is true'', which is not decided at any fixed index, so
+a witnessed satisfaction predicate cannot be the one sitting in the antecedent.
+
+\subsection{The two changes that make it close}
+
+Two changes to the semantics of \S\ref{sec:semantics}, both small, remove the
+cycle.  Neither weakens the encoded system.
+
+\paragraph{Split the semantics in two, and use each where it belongs.}
+Decidedness is needed only for the \emph{hypotheses}; the conclusion of the
+soundness statement may be as undecided as one likes, since $\longrightarrow$
+introduction constrains only the antecedent.  So the development carries two
+layers.
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+& \textbf{official} & \textbf{witnessed}\\
+\midrule
+symbols   & \isa{evtt k f A}, \isa{evff k f A} & \isa{wsat f A}, \isa{wunsat f A}\\
+kind      & total \QGA{} functions & \QGA{} recursive predicates\\
+decided?  & yes, at every fixed \isa{k} & no, and it does not matter\\
+occurs in & antecedents & conclusions\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+The witnessed clauses are the official ones with the certificate's semantic
+content added as a conjunct:
+\begin{center}
+\isa{wsat (∀v\_i. φ) A := (∃k. evtt k (∀v\_i. φ) A = 1) ∧ (∀n. wsat φ (asn\_put A i (S n)))}
+\end{center}
+Exclusivity, \isa{¬(wsat f A ∧ wunsat f A)}, then becomes a
+plain strong induction on the formula code: a universal that is both carries
+truth at every instance and falsity at one, so the collision reappears at a
+strictly smaller code.  No appeal to soundness, so no cycle.  Soundness of
+\textsc{exF} is then available, and soundness of $\forall$E reads its instance
+straight off the clause instead of re-proving the certificate sound.
+
+\paragraph{Keep truth and falsity as two separate searches.}
+The obvious design makes formula evaluation a single three-valued function.
+That forces a priority between the two quantifier searches, and whichever loses
+can be preempted at a larger index, so monotonicity fails; recovering it needs
+exclusivity, which needs soundness.  Two independent monotone searches
+\isa{evtt} and \isa{evff} have no tie to break.  Exclusivity is simply not
+claimed of them --- it is a theorem about the witnessed layer --- and the two
+bridges \isa{wsat f A} $\Rightarrow$ \isa{sat f A} and \isa{wunsat f A}
+$\Rightarrow$ \isa{unsat f A} then hold without either having to rule the other
+out.
+
+\subsection{The clause that removes the completeness obligation}
+
+\S\ref{sec:semantics:quant} takes the certificate for $\forall x.\,\varphi$ to be
+a proof of $x \N \seq \varphi$ with no residual hypotheses, and notes that the
+$\forall$I case must then convert satisfied hypotheses back into derivations and
+discharge them by \textsc{cut}, which is internal completeness, ``the main risk
+in the plan''.  That obligation is an artefact of the clause, not of the design.
+The development uses instead a \emph{context-relative} certificate.  A witness
+$w = \langle j, \langle q, \Gamma\rangle\rangle$ is a tt-witness for
+$\forall v_i.\,\varphi$ under $A$ when
+
+\begin{center}
+$q$ is a valid proof of $\;\Gamma,\, v_i \N \seq \varphi[A]$, \quad
+$\Gamma$ is closed, \quad
+$\Gamma$ is satisfied by $A$ within $j$ steps,
+\end{center}
+
+\noindent
+where $\varphi[A]$ is the closure of $\varphi$ against $A$ sparing $v_i$.  Read
+semantically this is ``the system proves the schematic instance from premises
+that are themselves true here'' --- the original clause composed with the cut
+that internal completeness was there to perform.  Its effect on the proof is
+that $\forall$I no longer has to \emph{construct} a certificate: the certificate
+is the suffix of the proof list the checker is already looking at, instantiated
+by the closing substitution, which is one application of the \textsc{inst} rule.
+
+Requiring $\Gamma$ to be closed is what keeps the clause stable under
+substitution: a closed context's satisfaction does not depend on the assignment,
+so the substitution lemma never has to move it.  Closing $\varphi$ against $A$ is
+what keeps the two sides of the substitution lemma comparable; they differ only
+in that one carries the closed term $a[A]$ where the other carries the numeral of
+its value, and one \textsc{eqSubst} step converts between them once
+$\seq a[A] = \bar{v}$ is available.
+
+The net effect on the obligation list of \S\ref{sec:semantics} is:
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{\S\ref{sec:semantics} obligation} & \textbf{status}\\
+\midrule
+1. arithmetization of \QGA's syntax and checker & unchanged, and the bulk of the work\\
+2. fuelled evaluation, monotone, decided at each index & unchanged\\
+3. internal completeness & \emph{removed}, except at terms (see below)\\
+4. soundness of every rule & unchanged\\
+5. determinism & \emph{now independent of soundness}\\
+6. \fn{False} is false & unchanged, one evaluation\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Item 3 does not vanish entirely.  What survives is \emph{term} value
+completeness, $t \Downarrow v \Rightarrow\; \seq t = \bar{v}$, which is needed
+only to convert a certificate along the substitution lemma.  That is a
+self-contained induction on the fuel inside the \BGA{} fragment, with one proof
+list per term constructor.  It is a fraction of the formula-level completeness
+the original plan required, and it does not interact with soundness.
+
+\subsection{What the development contains}
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Theory} & \textbf{Imports} & \textbf{Contributes}\\
+\midrule
+\texttt{QGA\_on\_GA.thy} & \texttt{GD} & \QGA{} arithmetized in \QGA: syntax,\\
+                         &             & checker, both semantic layers,\\
+                         &             & the soundness statement\\[2pt]
+\texttt{qga\_encode.thy} & \texttt{QGA\_on\_GA} & one concrete encoding, the\\
+                         &             & interpretation, the theorem\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+The locale tower mirrors \texttt{BGA\_on\_GA.thy}:
+\isa{qga\_suff\_syntax} $\subset$ \isa{qga\_suff\_semantics} $\subset$
+\isa{qga\_consistent} for the abstract skeleton, then
+\isa{qga\_encoding} $\subset$ \isa{qga\_subst} $\subset$ \isa{qga\_dfns}, then
+one locale per rule group
+(\isa{qga\_struct\_rule}, \isa{qga\_prop\_rule}, \isa{qga\_eq\_rule},
+\isa{qga\_cond\_rule}, \isa{qga\_quant\_rule}, \isa{qga\_ind\_rule},
+\isa{qga\_app\_rule}), merged into \isa{qga\_proof\_check}, then
+\isa{qga\_fuel\_semantics} $\subset$ \isa{qga\_witnessed} $\subset$
+\isa{qga\_full}, which is declared a sublocale of \isa{qga\_consistent}.
+
+The encoded syntax is exactly the primitive vocabulary of \texttt{GD.thy}.
+Terms are variables, $0$, $\Suc{\cdot}$, $\Pre{\cdot}$, the conditional and
+definition application; the conditional's guard is a \emph{formula}, so term and
+formula codes are mutually recursive, which is the one structural difference
+from \BGA.  Formulas are $=$, $\neg$, $\vee$, $\forall$, $\exists$ and the
+formula-level conditional; $\wedge$, $\longrightarrow$, $\longleftrightarrow$,
+$\neq$, $\N$, $\B$, \fn{True} and \fn{False} are abbreviations here as they are
+in \texttt{GD.thy}.
+
+The Pure operators are translated as \S\ref{sec:levels} reads them.  A rule
+\isa{⟦P; Q⟧ ⟹ R} becomes ``from $\Gamma \seq P$ and $\Gamma \seq Q$ infer
+$\Gamma \seq R$''.  A premise \isa{P ⟹ R}, as in $\vee$E1, becomes
+$P, \Gamma \seq R$: the hypothesis is discharged.  A premise
+\isa{⋀x. x N ⟹ Q x}, as in $\forall$I and \textsc{Ind}, becomes
+$v_i \N, \Gamma \seq Q[v_i]$ \emph{together with the eigenvariable condition}
+that $v_i$ occurs neither in $\Gamma$ nor in the conclusion, discharged by
+\isa{fresh\_H i (hyp\_of J)} and \isa{fresh\_F i (conc\_of J)} with $i$ taken to
+be $J + 1$, since every variable index occurring in a judgment is below the
+judgment's own code.  This is \BGA's device in \isa{check\_ind}, reused.  The
+four operations Pure supplies for free --- \isa{assume}, $\Longrightarrow$
+introduction and elimination, and instantiation of a schematic variable ---
+become the four explicit rules \textsc{hyp}, \textsc{weak}, \textsc{cut} and
+\textsc{inst}, since nothing supplies them to the encoded system.
+
+One point about \textsc{inst} is worth recording, because it fixes the shape of
+assignments.  Pure instantiates a schematic variable with an \emph{arbitrary}
+term and incurs no \emph{habeas quid} obligation.  That is sound only if a free
+variable of the encoded system may denote nothing, so an assignment maps an
+index either to $\Suc{v}$, meaning the value $v$, or to $0$, meaning bottom.
+Quantified variables, by contrast, range over values only, which is exactly what
+the $x \N$ premises of $\forall$I, $\forall$E and $\exists$I enforce.  This is
+the variable-range invariant of reflective grounded arithmetic, and adopting it
+is what makes \textsc{inst} unconditional and the substitution lemma free of
+side conditions.
+
+Every rule is effective without numeric guessing, by one convention: when a
+premise is determined by the conclusion the checker looks it up with \isa{mem},
+and when a premise is larger than the conclusion the checker scans the proof
+list and decomposes what it finds.  Only \textsc{inst} and the two template
+rules --- \textsc{eqSubst} and the lazy conditional pair --- need a bounded
+countdown, each bounded by the code of the judgment being justified, as
+\isa{check\_template} is in \S\ref{sec:bga}.
+
+\subsection{Status and what remains}
+
+\isa{qga\_consistent.syntactically\_consistent} is proved in full: no formula is
+both provable and refutable from no hypotheses.  Because \QGA{} has negation as
+a primitive, this is the ordinary statement of consistency, and not the matched
+pair $a = b$ / $a \neq b$ that \BGA's lack of negation forced in
+\S\ref{sec:consistency}.  \texttt{qga\_encode.thy} discharges every structural
+assumption of the interface by \isa{unfold\_locales} and \isa{fact}, and derives
+\isa{QGA\_syntactically\_consistent}.
+
+What is not yet proved is the arithmetic in between.  Forty-five lemmas in
+\texttt{QGA\_on\_GA.thy} and one in \texttt{qga\_encode.thy} stand as \isa{sorry},
+each with a comment naming the argument that discharges it.  They fall into four
+groups, in increasing order of cost.
+
+\begin{enumerate}
+\item \textbf{Groundedness and totality} (about twenty lemmas).  Every encoded
+      function is total and every checker is boolean.  These are
+      \isa{condTB} chains over decided guards under \isa{strong\_induction} or
+      \isa{list\_induct}, and are the direct analogues of \isa{fresh\_T\_bool},
+      \isa{eval\_fuel\_N} and \isa{proof\_is\_bool}.  Mechanical, and the
+      largest group by line count.
+\item \textbf{Monotonicity and freshness}.  \isa{evT\_mono}, \isa{evtt\_mono},
+      \isa{evff\_mono} and the three \isa{\_fresh} lemmas.  \BGA's
+      \isa{eval\_fuel\_add} argument, plus the observation that a witness
+      carrying its own fuel makes the quantifier clauses monotone by
+      construction.
+\item \textbf{The substitution lemmas} for \isa{wsat} and \isa{wunsat}, and the
+      two internal derivability lemmas \isa{term\_value\_complete} and
+      \isa{closure\_by\_inst}.  These are the ones that needed the design work
+      above, and they are the only place where the development constructs a
+      proof code rather than consuming one.
+\item \textbf{Soundness}, one case per rule.  The propositional and conditional
+      cases read off the clauses, the equality cases go through the template
+      lemma, \textsc{Ind} is a semantic induction, and the three interesting
+      cases are the three discussed above.
+\end{enumerate}
+
+\noindent
+A realistic estimate, calibrated against \texttt{BGA\_on\_GA.thy} at twenty-three
+thousand lines for six term constructors, two formula constructors and thirteen
+rules, is that the finished \texttt{QGA\_on\_GA.thy} is three to five times that.
+The scaling is in the rule count and the connective count, not in the difficulty:
+after the two changes above, no step of the argument is harder than its \BGA{}
+counterpart, and one step, determinism, is easier.
+
+\subsection{What this would and would not settle}
+
+It would settle that \QGA{} proves an arithmetized statement of its own
+consistency.  The scepticism \S\ref{sec:semantics} anticipates remains
+legitimate and is worth stating plainly: the development supplies no adequacy
+statement relating the arithmetized syntax to the Pure-level formulas of
+\S\ref{sec:levels}, so what is proved consistent is the encoded system, and the
+claim that the encoded system \emph{is} \QGA{} rests on inspection of the tag
+tables and the rule list rather than on a theorem.  The first-order encoding of
+binding also makes the encoded system a shade different from the higher-order
+abstract syntax of \texttt{GD.thy}, in the direction \S\ref{sec:levels} already
+flagged.  \S\ref{sec:reduction} avoids both questions by a different route and
+remains worth pursuing independently.

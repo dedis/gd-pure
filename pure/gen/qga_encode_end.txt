@@ -1,0 +1,27 @@
+
+
+section \<open>6.  QGA is consistent\<close>
+
+text \<open>
+  Read out: for every formula code \<open>f\<close> and all proof codes \<open>p1\<close> and \<open>p2\<close>, it is
+  not the case that \<open>p1\<close> codes a QGA proof of \<open>f\<close> from no hypotheses while \<open>p2\<close>
+  codes a QGA proof of the negation of \<open>f\<close> from no hypotheses.  Every symbol in
+  that statement --- the quantifiers, the negation, the conjunction, the proof
+  checker --- belongs to QGA, and the system being talked about is QGA.
+
+  This does not contradict the second incompleteness theorem.  QGA is
+  paracomplete: its grounded truth is recursively enumerable and not closed
+  under classical negation, so the diagonal sentence comes out ungrounded
+  rather than true, and the derivability conditions fail --- \<open>implI\<close> carries a
+  habeas quid premise, so the internal necessitation and distribution steps
+  that Loeb\<^latex>\<open>'\<close>s theorem needs are not available.  RGA establishes the
+  corresponding facts for a stronger system in a classical metatheory; what is
+  new here is that the argument is carried out in the object logic.
+\<close>
+
+theorem QGA_syntactically_consistent:
+  assumes "f N" and "p1 N" and "p2 N"
+  shows "\<not> (is_valid_proof p1 \<langle>Nil, f\<rangle> \<and> is_valid_proof p2 \<langle>Nil, mkNot f\<rangle>)"
+  using assms by (rule qga.syntactically_consistent)
+
+end
