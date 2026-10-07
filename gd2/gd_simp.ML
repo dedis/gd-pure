@@ -41,7 +41,7 @@ end;
 
 val _ =
   let
-    val solver = Raw_Simplifier.mk_solver "GD_solver" GDAuto.gd_auto_tac;
+    val solver = Raw_Simplifier.mk_solver "GD_solver" (fn ctxt => SOLVED' (GDAuto.gd_auto_tac ctxt));
   in
     Theory.setup (Simplifier.map_theory_simpset (fn ctxt =>
       ctxt

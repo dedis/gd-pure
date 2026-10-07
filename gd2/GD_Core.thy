@@ -1,6 +1,6 @@
 theory GD_Core
   imports Pure
-  keywords "gd_def" "gd_decl" "gd_fuel" "gd_approx" :: thy_decl
+  keywords "gd_def" "gd_fuel" "gd_approx" :: thy_decl
     and "print_gd_defs" :: diag
 begin
 
@@ -8,9 +8,13 @@ text \<open>
   GD_Core: the trusted kernel of the second-generation GD development.
 
   Everything outside this file is either a Pure definition (which is conservative) or a
-  lemma proved from the axioms below.  The one exception is the gd_def command,
-   which adds one axiom per recursive definition; 
-  its admissibility conditions are stated in the last section and are part of the kernel.
+  lemma proved from the axioms below.  Recursive definitions (gd_def, gd_fuel) are
+  Pure definitions too: they are built from the fixed-point combinator fix, and
+  their unfolding equations are proved.  
+
+  The one command that adds axioms is
+  gd_approx; its condition A5 is stated in the last section and is part of the
+  kernel.THIS IS CURRENTLY EXPERIMENTAL
 
   Differences from pure/GD.thy
   ----------------------------
@@ -29,8 +33,9 @@ text \<open>
      sucCong, predCong, natP, iff_reflection, the o-typed conditional rules,
      and the existential quantifier (a Pure definition, not a primitive).
   5. Added: truth values are numerals (trueI/trueE/falseI/falseE), needed
-     once formulas are terms; ATI from OGA; prop-level motives in ind,
-     disjE1, notForallE and exF.
+     once formulas are terms; prop-level motives in ind, disjE1, notForallE
+     and exF.  OGA's extra rule ATI is not in the kernel: it is an opt-in
+     axiom in GD_ATI.thy.
 
   Intended model (not yet formalized; for a later HOL development)
   -----------------------------------------------------------------------
@@ -73,7 +78,7 @@ text \<open>
   O3 (evaluation)   If t \<Down> v then t ~ v.  Needed by eq_reflection.
   O4 (head steps)   Beta, taking a branch of a decided conditional, and
                     unfolding a definition are contained in ~.  Needed by beta,
-                    condT, condF and gd_def.
+                    condT and condF (and so by fix and gd_def).
   O5 (unwinding)    For a finitary block (A5 below): if f a evaluates to v,
                     then f_fuel k a evaluates to v for some numeral k.  The
                     part of the derivation contributed by the bodies is
@@ -138,8 +143,8 @@ text \<open>
 \<close>
 
 axiomatization where
-  disjI1: \<open>p \<Longrightarrow> p \<or> q\<close> and                                (* p is 1, so p \<or> q is 1 *)
-  disjI2: \<open>q \<Longrightarrow> p \<or> q\<close> and                                (* symmetric *)
+  disjI1: \<open>p \<Longrightarrow> p \<or> q\<close> and                                (* p is 1, so p \<or> q is 1*)
+  disjI2: \<open>q \<Longrightarrow> p \<or> q\<close> and                                (* symmetric*)
   disjI3: \<open>\<lbrakk>\<not> p; \<not> q\<rbrakk> \<Longrightarrow> \<not> (p \<or> q)\<close> and                  (* both 0, so 0 *)
   disjE1: \<open>\<lbrakk>p \<or> q; p \<Longrightarrow> PROP R; q \<Longrightarrow> PROP R\<rbrakk> \<Longrightarrow> PROP R\<close> and
                                                   (* value 1 needs a disjunct 1 *)
@@ -228,54 +233,116 @@ axiomatization where
   beta: \<open>(\<Lambda> x. F x) \<cdot> a \<equiv> F a\<close>                                    (* O4 *)
 
 
+section \<open>Fixed points\<close>
+
+text \<open>
+  The object language is untyped and beta is unrestricted, so self-application
+  gives a fixed-point combinator as a Pure definition: with W = \<Lambda> x. F (x \<cdot> x),
+  W \<cdot> W unfolds in one beta step to F (W \<cdot> W).  No rule is needed beyond beta.
+  A term like W \<cdot> W for F = \<lambda>y. y has no value, and grounding is what makes
+  that harmless: no rule concludes anything from a term that has no value.
+
+  gd_def builds every recursive definition from fix (last section), so
+  recursive definitions add no axioms.  In HOL and Lean the type system rules
+  out x \<cdot> x, so a recursive definition goes through a package that first
+  proves termination or monotonicity.
+\<close>
+
+definition "fix" :: \<open>(tm \<Rightarrow> tm) \<Rightarrow> tm\<close>
+  where \<open>fix F \<equiv> (\<Lambda> x. F (x \<cdot> x)) \<cdot> (\<Lambda> x. F (x \<cdot> x))\<close>
+
+lemma fix_unfold: \<open>fix F \<equiv> F (fix F)\<close>
+  unfolding fix_def by (rule beta)
+
+
 section \<open>The universal quantifier\<close>
 
 text \<open>
   GD.thy's quantifier rules, which are also RGA's AI/AE/notAI/notAE, checked
-  against the omega clause of M2.  ATI is OGA's one extra rule.  The
-  existential quantifier is defined in the base theory as \<not>(\<forall>x. \<not> Q x).
+  against the omega clause of M2.  OGA's extra rule ATI is sound for the same
+  clause but is opt-in (GD_ATI.thy), so thm_deps shows which results use it.
+  The existential quantifier is defined in the base theory as \<not>(\<forall>x. \<not> Q x).
 \<close>
 
 axiomatization where
   forallI:    \<open>(\<And>x. x N \<Longrightarrow> Q x) \<Longrightarrow> \<forall>x. Q x\<close> and             (* every numeral instance is 1 *)
   forallE:    \<open>\<lbrakk>\<forall>x. Q x; a N\<rbrakk> \<Longrightarrow> Q a\<close> and                    (* a ~ its numeral, O3 *)
   notForallI: \<open>\<lbrakk>a N; \<not> Q a\<rbrakk> \<Longrightarrow> \<not> (\<forall>x. Q x)\<close> and              (* a 0 instance *)
-  notForallE: \<open>\<lbrakk>\<not> (\<forall>x. Q x); \<And>a. a N \<Longrightarrow> \<not> Q a \<Longrightarrow> PROP R\<rbrakk> \<Longrightarrow> PROP R\<close> and
+  notForallE: \<open>\<lbrakk>\<not> (\<forall>x. Q x); \<And>a. a N \<Longrightarrow> \<not> Q a \<Longrightarrow> PROP R\<rbrakk> \<Longrightarrow> PROP R\<close>
                                                   (* value 0 has a witness *)
-  ATI:        \<open>(\<forall>x. (Q x) B) \<Longrightarrow> (\<forall>x. Q x) B\<close>                  (* all instances decided,
-                                                     so all 1 or some 0 *)
 
 
-section \<open>Recursive definitions (axiom schemes, enforced by gd_def)\<close>
+section \<open>Recursive definitions\<close>
 
 text \<open>
-  gd_def is part of the trusted base: it adds axioms.  For a block declaring
-  constants f1 ... fm, gd_def emits the unfolding axioms (1).  The fuel
-  versions and the least-fixed-point axioms (2) are opt-in, per block:
-  gd_fuel f adds the fuel versions of f's block (ordinary definitions), and
-  gd_approx f adds the approx axioms (and the fuel versions if missing).
-  Keeping (2) opt-in means thm_deps shows exactly which results depend on
-  it; where a termination measure is available, approx is derivable from the
-  fuel equations by induction and the axiom is not needed at all.
+  gd_def is a definitional package.  For a block
 
-  (1) Unfolding.  For each constant f of the block, one meta-equality
+      gd_def f1 :: ... and ... and fm :: ...
+        where "f1 x1 ... xn \<equiv> body_1" and ... and "fm ... \<equiv> body_m"
 
-        f x1 ... xn \<equiv> body_f
+  it makes one fixed point of an m-tuple (g a fresh variable):
 
-      so definitions unfold anywhere with unfold/simp.  This says f is a
-      fixed point of its body.
+      \<pi>j      =  \<Lambda> y1 ... ym. yj                     (Church tuple selector)
+      Ci g    =  \<Lambda> x1 ... xn. body_i[fj := \<lambda>z1 ... zk. g \<cdot> \<pi>j \<cdot> z1 \<cdot> ... \<cdot> zk]
+      F       =  \<lambda>g. \<Lambda> s. s \<cdot> C1 g \<cdot> ... \<cdot> Cm g
+      fi      \<equiv>  \<lambda>x1 ... xn. fix F \<cdot> \<pi>i \<cdot> x1 \<cdot> ... \<cdot> xn      (Pure definition, fi_raw_def)
 
-  (2) Least fixed point (gd_approx; only if A5 holds).  First the fuel
-      versions of every constant of the block, by a syntactic rewrite
-      (this part alone is gd_fuel):
+Here's an example with m=1 and f1=fact:
+
+fact n = if n = 0 then 1 else n * fact(P n)
+
+\<pi>1 = \<Lambda> y1. y1
+C1 g = \<Lambda>n. if n=0 then 1 else n* (g \<cdot> \<pi>1 \<cdot> (P n))
+F = \<lambda>g. \<Lambda>s. s\<cdot>(C1 g)
+G = fix F
+
+fact_raw_def:  fact \<equiv> \<lambda>z. fix F \<sqdot> \<pi>1 \<sqdot> z
+
+prove that fact n \<equiv> body
+
+fact n \<equiv> (\<lambda>z. G\<sqdot>\<pi>1\<sqdot>z) n (fact_raw_def)
+\<equiv> G \<sqdot> \<pi>1 \<sqdot> n (pure beta rule)
+\<equiv> (\<Lambda>s. s \<sqdot> C1 G) \<sqdot> \<pi>1 \<sqdot> n (fix unfold)
+\<equiv> \<pi>1 \<sqdot> (C1 G) \<sqdot> n (object beta rule)
+\<equiv> C1 G \<sqdot> n (object beta)
+\<equiv> if n = 0 then 1 else n * ((\<lambda>z. G\<sqdot>\<pi>1\<sqdot>z) (P n))
+\<equiv> if n = 0 then 1 else n * (G \<sqdot> \<pi>1 \<sqdot> (P n))
+
+
+  and proves the unfolding equation  fi x1 ... xn \<equiv> body_i  (fi_def) by one
+  fix_unfold and 1 + m + n beta steps at the head.  Mutual recursion is the
+  same construction with m > 1.
+
+  So unfolding equations are theorems, and their soundness is that of beta
+  (O4).  Pure's definitional mechanism checks that each constant is defined
+  once and that definitions are acyclic.  The consequences:
+
+    - The old condition A6 (no conflicting definitions across merged
+      theories) is enforced by Pure.
+    - There is no forward declaration (the former gd_decl): defining g in
+      terms of a declared f and later f in terms of g is a cyclic definition,
+      which Pure rejects.  Mutually recursive constants go in one block.
+    - The conditions below are what it takes to build the fixed point.  A
+      violation gives a malformed definition, not an inconsistency; gd_def
+      checks them to explain the rejection.
+
+    A1  each constant is declared in this block, with type tm \<Rightarrow> ... \<Rightarrow> tm;
+    A2  the arguments x1 ... xn are pairwise distinct variables;
+    A3  every free variable of a body is among its x1 ... xn;
+    A4  exactly one equation per constant.
+
+  Fuel versions and approximation are opt-in, per block.
+
+  (1) gd_fuel f defines, for each constant of f's block,
 
         f_fuel k x1 ... xn \<equiv> if k = 0 then \<bottom> else body_f'
 
       where body_f' is body_f with every call  g t1 ... tj  to a constant g
       of the block replaced by  g_fuel (P k) t1 ... tj.  All constants of the
-      block share the one fuel argument k.  These are ordinary gd_def
-      equations of kind (1) (they satisfy A1-A4 by construction).  Then, for
-      each f of the block, one axiom
+      block share the one fuel argument k.  This is an ordinary gd_def block.
+
+  (2) gd_approx f adds, for each f of the block (defining the fuel versions
+      first if needed), one axiom
 
         approx_f:  \<lbrakk>f a1 ... an N;
                     \<And>k. k N \<Longrightarrow> f_fuel k a1 ... an = f a1 ... an \<Longrightarrow> PROP R\<rbrakk>
@@ -283,9 +350,13 @@ text \<open>
 
       i.e. if f a has a value, some finite fuel k computes the same value.
       This says f is the least fixed point: the one that actually runs.  It
-      is what makes partial-correctness proofs possible (induction on k), and
-      it is not derivable: reading  loop x \<equiv> loop x  as the constant-0
-      function satisfies every other axiom but refutes  loop 0 N \<Longrightarrow> loop 0 = 5.
+      is what makes partial-correctness proofs possible (induction on k).
+      Where a termination measure is available it is derivable from the fuel
+      equations by induction (see evn in GD_Def_Test), so keeping it opt-in
+      means thm_deps shows exactly which results depend on it.  Whether it is
+      derivable in general is open: the old argument that it is not (read
+      loop x \<equiv> loop x as the constant-0 function) needed loop to be an
+      uninterpreted constant, and loop is now a closed fix term.
 
   Example.  From
         up x y \<equiv> if x = y then 0 else S (up (S x) y)
@@ -294,27 +365,13 @@ text \<open>
                          else (if x = y then 0 else S (up_fuel (P k) (S x) y))
   and approx_up.
 
-  Admissibility conditions (checked by gd_def; all are soundness-critical):
-
-    A1  each constant is declared in this block (or declared earlier with no
-        axioms, to allow forward references), with type tm \<Rightarrow> ... \<Rightarrow> tm;
-    A2  the arguments x1 ... xn are pairwise distinct variables;
-    A3  every free variable of a body is among its x1 ... xn;
-    A4  exactly one equation per constant;
-    A6  one definition per constant across theories: two theories that give
-        the same constant different equations (possible after a shared
-        gd_decl) cannot be imported together;
-    A5  (approx only) every body of the block is finitary: built only from
-        the variables x1 ... xn, the primitives 0 \<bottom> S P = \<not> \<or> if, the
-        definitions N and B, constants of the block (fully applied), and
-        constants of earlier blocks that were themselves finitary.  No \<Lambda>,
-        \<cdot>, \<forall>, \<exists>, other Pure definitions, constants declared by gd_decl but
-        not yet defined, or Pure-level abstraction.
-
-  A1-A4 fail: the block is rejected.  A5 fails: the block is accepted, and
-  gd_fuel works, but gd_approx refuses it.  A6 fails: the merge of the two
-  theories is refused.  (A6 covers gd_def only; a plain axiomatization of a
-  constant that gd_def also defines is outside what the registry can see.)
+    A5  (gd_approx only; soundness-critical) every body of the block is
+        finitary: built only from the variables x1 ... xn, the primitives
+        0 \<bottom> S P = \<not> \<or> if, the definitions N and B, constants of the block
+        (fully applied), and constants of earlier blocks that were themselves
+        finitary.  No \<Lambda>, \<cdot>, \<forall>, \<exists>, other Pure definitions, or Pure-level
+        abstraction.  A5 fails: the block is accepted, and gd_fuel works, but
+        gd_approx refuses it.
 
   Why A5.  Iterating from \<bottom> (f_fuel 0, f_fuel 1, ...) reaches the least fixed
   point after finitely many steps when every evaluation derivation is finite.
@@ -347,16 +404,12 @@ text \<open>
   argument.  Higher-order recursion gets unfolding equations but no approx;
   extending approx to it would need transfinite fuel or a different \<forall>.
 
-  Model: unfolding equations are head steps (O4); approx is the unwinding
-  property (O5).
+  Model: approx is the unwinding property (O5).  A finitary body uses the
+  lam/app plumbing of the fixed point only to pass to the next unfolding, so
+  the finiteness argument is unchanged.
 
-  gd_decl f :: "tm \<Rightarrow> tm" declares f with no axioms, so that an earlier
-  block can call it and a later gd_def can define it (A1).  Such a constant
-  is not finitary while it is undefined, so a block calling it gets no approx
-  axioms (A5), and neither does the block that later defines it in terms of
-  the earlier one.
-
-  A2 is missing from pure/gd_def.ML.  Without it the scheme is inconsistent:
+  A2 is missing from pure/gd_def.ML, where definitions are axioms.  There it
+  is soundness-critical:
       gd_def f :: "num \<Rightarrow> num" where "f (P x) := x"
   passes the current checks, and instantiating x with 0 and with S 0 gives
   f 0 := 0 and f 0 := S 0 (using P 0 = 0 and P (S 0) = 0), hence 0 = S 0.

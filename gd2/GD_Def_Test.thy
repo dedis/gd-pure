@@ -9,6 +9,9 @@ text \<open>Single recursive definition: unfolding, fuel and approx axioms.\<clo
 gd_def up :: "tm \<Rightarrow> tm \<Rightarrow> tm"
   where "up x y \<equiv> if x = y then 0 else S (up (S x) y)"
 
+thm up_def up_raw_def
+  (* up_def is a theorem; up_raw_def is the Pure definition of up as a component of fix *)
+
 gd_approx up
 
 thm up_def up_fuel_def up_approx
@@ -164,10 +167,9 @@ section \<open>What approx adds: loop\<close>
 
 text \<open>
   For evn the fuel bound comes from a termination measure, so approx is
-  derivable.  For loop there is no measure: loop x N is the only information,
-  and without loop_approx the lemma below is not provable (reading loop as the
-  constant-0 function satisfies every other axiom).  With it, loop x N is
-  contradictory for every x.
+  derivable.  For loop there is no measure: loop x N is the only information.
+  With loop_approx, loop x N is contradictory for every x.  Without it we do
+  not know a proof: no rule concludes that a term has no value except botE.
 \<close>
 
 lemma loop_fuel_bot:
@@ -199,17 +201,17 @@ lemma "loop 0 N \<Longrightarrow> loop 0 = S (S (S (S (S 0))))"
   by (rule loop_no_value)
 
 
-text \<open>Forward reference: h calls g before g is defined.\<close>
+text \<open>
+  Mutual recursion goes in one block.  Splitting it (h calling a declared g,
+  g defined later in terms of h) would be a cyclic definition, which Pure
+  rejects; this is why gd_decl is gone.
+\<close>
 
-gd_decl g :: "tm \<Rightarrow> tm"
-
-gd_def h :: "tm \<Rightarrow> tm"
+gd_def h :: "tm \<Rightarrow> tm" and g :: "tm \<Rightarrow> tm"
   where "h x \<equiv> if x = 0 then 0 else g (P x)"
-
-gd_def where "g x \<equiv> h x"
+    and "g x \<equiv> h x"
 
 thm h_def g_def
-  (* no approx: h calls g while g is only declared, so neither block is finitary (A5) *)
 
 text \<open>Recursion under \<forall>: accepted with its unfolding equation, but a warning
   and no approx axiom (condition A5).\<close>
@@ -241,8 +243,12 @@ gd_def bad3 :: "tm \<Rightarrow> tm" where "bad3 x \<equiv> y"
 gd_def bad4 :: "tm \<Rightarrow> tm" where "bad4 x \<equiv> 0" and "bad4 x \<equiv> 1"
 *)
 
-(* A1: redefining an existing constant
-gd_def where "up x y \<equiv> 0"
+(* A1: an equation for a constant not declared in the block
+gd_def bad0 :: "tm \<Rightarrow> tm" where "bad0 x \<equiv> 0" and "up x y \<equiv> 0"
+*)
+
+(* redefining an existing constant (rejected by Pure: duplicate declaration)
+gd_def up :: "tm \<Rightarrow> tm \<Rightarrow> tm" where "up x y \<equiv> 0"
 *)
 
 (* A1: higher-order type

@@ -2,7 +2,16 @@ session GD2 = Pure +
   options [document = false]
   theories
     GD_Core
+    GD_ATI
     GD_Def_Test
     GD_Base
     GD_Arith
     GD_Auto_Test
+    GD_Edge
+    GD_Approx
+    GD_Data
+    GD_List
+    GD_Tree
+    GD_NPair
+    GD_NList
+    GD_Pairs_Compare
