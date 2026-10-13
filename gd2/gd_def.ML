@@ -22,29 +22,10 @@ of GD_Core.thy.
   print_gd_defs
       lists the registry.
 
-Conditions (see GD_Core.thy).  A1-A4 are what it takes to build the fixed
-point; they are checked here only to explain a rejection, since Pure checks
-the resulting definitions anyway.  A5 is soundness-critical.
-
-  A1  every defined constant is declared in the block, with type
-      tm => ... => tm;
-  A2  the left-hand side is the constant fully applied to pairwise distinct
-      variables;
-  A3  every variable of the body occurs on the left;
-  A4  exactly one equation per constant, and every constant declared in the
-      block has one;
-  A5  (for gd_approx only) every block body is finitary: built from
-      variables, the primitives 0 \<bottom> S P = \<not> \<or> if, the definitions N and B,
-      constants of the block (fully applied), and constants of earlier
-      finitary blocks.  No \<Lambda>, \<cdot>, \<forall>, other Pure definitions, or Pure-level
-      abstraction.
-
-A5 used to be "no block constant under a binder".  That was unsound: under
-call-by-name a recursive call can be passed unevaluated to a helper
-definition that wraps it in a \<Lambda>, and another helper can force that \<Lambda> under \<forall>
-at unboundedly many depths (see the audit in GD_Def_Test.thy).  In the
-finitary fragment evaluation derivations are finite, which is what approx
-needs (O5 in GD_Core.thy).
+Conditions A1-A5: see the section "Recursive definitions" of GD_Core.thy,
+and the last section of GD_Def_Test.thy for why A5 has its shape.  A1-A4 are
+checked here only to explain a rejection, since Pure checks the resulting
+definitions anyway.  A5 is soundness-critical.
 *)
 
 signature GD_DEF =
