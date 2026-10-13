@@ -62,7 +62,7 @@ The development consists of three theories, each importing the previous one.
 \texttt{BGA\_on\_GA.thy} does the heavy lifting.  It never commits to a
 particular G\"odel numbering.  It fixes an interface (\isa{tag\_T},
 \isa{load\_T}, \isa{pack\_T} and their formula counterparts) together with the
-smallest set of assumptions under which the soundness argument goes through,
+assumptions used by the soundness argument,
 and proves everything relative to that interface.  \texttt{encode.thy} then
 pays the arithmetic cost once, by exhibiting one encoding that satisfies the
 assumptions, and instantiates the result.
@@ -73,21 +73,27 @@ The final theorem, \isa{BGA\_syntactically\_consistent}, says that for any two
 numbers coding \BGA{} terms $a$ and $b$, no numbers $p_1$ and $p_2$ code \BGA{}
 proofs, from empty hypotheses, of $a = b$ and of $a \neq b$ respectively.
 
-\QGA{} is stronger than \BGA, so this is a consistency proof of a weaker system
-inside a stronger one, in the ordinary G\"odelian arrangement.  Its interest lies
-elsewhere.  It shows that grounded arithmetic can carry a full metamathematical
-argument about a formal system with no classical ambient logic available at any
-point.  Turning it into a self-consistency result requires a reduction of \QGA{}
-back to \BGA, which is the subject of \S\ref{sec:reduction} and is left for later
-work.
+The result establishes the consistency of the encoded \BGA{} proof system in
+\QGA{} as implemented over Pure, with the recursive equations used by the
+encoding.  The development does not import Isabelle/HOL.  It is not a
+self-consistency proof: obtaining one for \BGA{} by this route would require a
+suitable reduction of the \QGA{} reasoning used here to \BGA{}, together with
+an internal justification of the required proof translation.
+Reflective grounded arithmetic (\RGA{}) is a related system introduced by
+Ford~\cite{ford-rga}.  Subsequent work has shown that \RGA{} cannot prove its
+own consistency; that work has not yet been published.  Whether an analogous
+obstruction applies to the present \QGA{} system remains to be established.
 
 \subsection{The two levels}
 \label{sec:levels}
 
-Two logics are in play throughout, and separating them is worth doing before any
-rules appear.
+\QGA{} is implemented as an extension of Isabelle/Pure: \texttt{GD.thy}
+imports \texttt{Pure} and adds the types, constants and axioms of \QGA{}.
+The distinction between two levels is between \QGA{} formulas and the Pure
+judgments used to state and apply its rules.  In this development, we use
+\QGA{} to prove the consistency of the encoded \BGA{} proof system.
 
-\QGA{} is the logic under study and that we will use for proof writing.  Its formulas are the terms of type \isa{o}.
+\QGA{} is the logic in which we write the proof.  Its formulas are the terms of type \isa{o}.
 Its vocabulary, given in full in \S\ref{sec:qga}, consists of the primitives
 \isa{∨} and \isa{¬}, the connectives \isa{∧}, \isa{⟶} and \isa{⟷} defined from
 them, the equality \isa{=}, and the quantifiers \isa{∀} and \isa{∃}.
@@ -98,8 +104,8 @@ symbols.  \isa{A ⟹ B} says that from a derivation of $A$ one obtains a derivat
 of $B$, so a rule ``from $A$ infer $B$'' is written this way.  \isa{⋀x. A} says
 that $A$ was derived for an arbitrary $x$, which is how the eigenvariable
 condition of a rule is expressed: the premise \isa{⋀x. x N ⟹ Q x} of
-\isa{forallI} records that \isa{Q} holds of a variable about which nothing was
-assumed.  \isa{a ≡ b} is the definitional equality of the framework, used where a
+\isa{forallI} asks us to prove \isa{Q x} for arbitrary \isa{x}, assuming
+\isa{x N}.  The other standing assumptions must not mention \isa{x}.  \isa{a ≡ b} is the definitional equality of the framework, used where a
 \QGA{} notion is abbreviated rather than axiomatized.\footnote{%
   Definitional equality identifies terms that differ only in ways the logic
   cannot see: renaming a bound variable ($\alpha$), applying a lambda to its
@@ -120,7 +126,7 @@ a gate between the two levels, and every implication occurring in a
 \QGA{} formula has passed through it.
 
 This arrangement is what supports the claim that the development is carried out
-in \QGA{} rather than in Isabelle.  Pure's kernel offers assumption, introduction
+in \QGA{} using Isabelle/Pure as its framework.  Pure's kernel offers assumption, introduction
 and elimination for \isa{⟹} and \isa{⋀}, the rules for \isa{≡}, instantiation of
 schematic variables, and citation of an axiom.  Only the last of these introduces
 an assertion.  The others move an assertion between hypothesis and antecedent
@@ -128,19 +134,18 @@ position, replace a rule schema by one of its instances, or work on equalities.
 Remove the axioms of \texttt{GD.thy} and Pure proves no assertion at all except
 from an assumption of that same assertion, since to Pure the \QGA{} connectives
 are constants about which it knows nothing.  Every \QGA{} formula established in
-the development therefore comes from a \QGA{} rule. \omar{This is my hand wave for the claim. I want to do rigorous analysis + a consistency proof of QGA in HOL soon.}
+the development therefore comes from a \QGA{} rule. 
 
 One kernel rule needs care.  From \isa{A ≡ B} and \isa{A} one may infer \isa{B},
 so an equality can introduce an assertion that appears nowhere in its premises.
-Inside Pure, equalities come only from the conversions described in the footnote
-above, none of which changes meaning.  They can also come from an axiom, and two
+Inside Pure, equalities come only from the conversions described in the footnote, none of which changes meaning.  They can also come from an axiom, and two
 axioms of \texttt{GD.thy} are of that kind: \isa{eq\_reflection}
 (\isa{x = y ⟹ x ≡ y}) and \isa{iff\_reflection} (\isa{p ⟷ q ⟹ p ≡ q}), which
 exist so that Isabelle's simplifier can act as a derived rule.  These two are the
 entire surface through which the framework could contribute strength.  Each
 mirrors a \QGA{} rule together with congruence, \isa{eq\_reflection} mirroring
 \isa{eqSubst}, whose context \isa{Q :: num ⇒ o} is already arbitrary, so both are
-expected to be pretty tame. \omar{I want to do a rigorous analysis on this too.}
+expected to be pretty tame. 
 
 A last reliance on the framework concerns the quantifier syntax.  \QGA{}
 formulas are the terms of type \isa{o}, and \isa{forall} has type
@@ -148,11 +153,7 @@ formulas are the terms of type \isa{o}, and \isa{forall} has type
 function.  Binding is therefore the framework's, and renaming, capture-avoiding
 substitution and freshness come for free rather than being axiomatized.  This is
 the usual higher-order abstract syntax treatment of a binder and is what keeps
-\S\ref{sec:qga} free of a substitution calculus. \omar{ I think the minor concern here would be that the bodies one
-may quantify over are the Pure terms of type \isa{num ⇒ o} over the \QGA{}
-signature, so the formulas of \QGA{} are not given by an inductive definition.
-So an arithmetization of \QGA{} must
-represent quantifier bodies by a first-order syntax with explicit variables.}
+\S\ref{sec:qga} free of a substitution calculus. 
 
 In the natural-deduction presentations below, \QGA{} rules are written with
 premises above the line and the conclusion below, with no explicit context.  A
@@ -168,47 +169,27 @@ else.
 \input{sections/03-proof}
 \input{sections/04-encode}
 \input{sections/05-reduction}
-\input{sections/06-semantics}
-\input{sections/07-self}
+\input{sections/06-conclusion}
 
-\section{Status}
 
-The three \BGA{} theories are complete in the sense that \texttt{encode.thy}
-discharges every assumption of \isa{bga\_fuller} by \isa{unfold\_locales} and
-derives \isa{BGA\_syntactically\_consistent} from
-\isa{conc2.syntactically\_consistent}.  What remains for this document is the
-detail of the soundness proofs summarized in \S\ref{sec:proof}, and the content
-of \S\ref{sec:reduction}.
 
-Two further theories, \texttt{QGA\_on\_GA.thy} and \texttt{qga\_encode.thy},
-carry the \QGA{}-on-\QGA{} development of \S\ref{sec:self}.  They are in the
-same session and check, but they are a skeleton: the locale tower, every
-definition, the abstract consistency skeleton with its theorem proved in full,
-and the statement of every remaining lemma, of which forty-six stand as
-\isa{sorry}.  \texttt{qga\_encode.thy} is generated in part from the locale
-interface by \texttt{pure/gen/gen\_qga\_encode.py}, so that the recursive
-equations of the two files cannot drift apart.
+\begin{thebibliography}{9}
 
-Three points about the development itself are worth recording.
+\bibitem{kehrli}
+Sascha Kehrli.
+\emph{Formalizing Grounded Arithmetic atop Isabelle/Pure}.
+BSc thesis, Distributed Computing Group, ETH Z\"urich,
+30 September 2025.
 
-\begin{enumerate}
-\item The concrete functions of \texttt{encode.thy}, the evaluator, the
-      substitutions and the checkers, are introduced by an
-      \isa{axiomatization} block whose axioms are their recursive \isa{:=}
-      equations.  This is the native definitional mechanism of \GA{}
-      (\S\ref{sec:defmech}), which is sound because \GA{} places no termination
-      requirement on a recursive definition.  It does mean the functions are
-      postulated to satisfy their equations rather than built by a conservative
-      definitional package.
-\item The exact evaluator \isa{eval} of \isa{bga\_semantics} is retained in the
-      sources but is not on the critical path.  The consistency argument runs
-      through the step-indexed \isa{eval\_fuel} and the relation \isa{evals}
-      derived from it (\S\ref{sec:fuel}), for which the determinism lemma is
-      available.
-\item An earlier version of the development, the locale \isa{bga\_full} and its
-      interpretation, is retained inside a comment block in
-      \texttt{BGA\_on\_GA.thy} and is superseded by \isa{bga\_fuller}.  Nothing
-      described here depends on it.
-\end{enumerate}
+\bibitem{ford-rga}
+Bryan Ford.
+\emph{Computable Quantification in Reflective Grounded Arithmetic}.
+arXiv:2607.25533, 2026.
+\url{https://arxiv.org/abs/2607.25533}.
 
+\end{thebibliography}
+
+\clearpage
+\appendix
+\input{sections/appendix-self}
 \end{document}
