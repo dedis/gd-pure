@@ -1,0 +1,102 @@
+theory qga_encode
+  imports QGA_on_GA
+begin
+
+(*
+  ============================================================================
+  A concrete Goedel numbering for the QGA-on-QGA development, discharging the
+  interface of QGA_on_GA.thy.
+
+  This file is to QGA_on_GA.thy what encode.thy is to BGA_on_GA.thy: it fixes
+  one encoding, pays the arithmetic cost once, and instantiates the abstract
+  result.  Nothing here is specific to QGA beyond the tag arities.
+
+  GENERATED IN PART.  The axiomatization block of section 3 is the list of
+  recursive equations of QGA_on_GA.thy, copied verbatim, so that the two files
+  cannot drift apart.
+  ============================================================================
+*)
+
+section \<open>1.  Concrete encoders\<close>
+
+text \<open>
+  Identical to \<open>encode.thy\<close>.  Formula codes are the Cantor pairing directly,
+  since \<open>F_EQ = 0\<close> and \<open>cpx 0 = 0\<close>, so \<open>tag_F 0 = F_EQ\<close> holds on the nose.
+  Term codes compose the pairing with the involution exchanging 0 and 1,
+  because the interface requires \<open>tag_T 0 = T_ZERO\<close> and \<open>T_ZERO = 1\<close>: without
+  the relabelling the code 0 would denote a variable and the structural
+  decrease \<open>load_T t < t\<close> would have no atomic base to stop at.
+\<close>
+
+definition swap01 :: "num \<Rightarrow> num" where
+  "swap01 t \<equiv> if t = 0 then 1 else if t = 1 then 0 else t"
+
+definition tag_T  :: "tm \<Rightarrow> num"          where "tag_T  n    \<equiv> swap01 (cpx n)"
+definition load_T :: "tm \<Rightarrow> num"          where "load_T n    \<equiv> cpy n"
+definition pack_T :: "num \<Rightarrow> num \<Rightarrow> tm"   where "pack_T tg L \<equiv> \<langle>swap01 tg, L\<rangle>"
+definition tag_F  :: "fm \<Rightarrow> num"          where "tag_F  n    \<equiv> cpx n"
+definition load_F :: "fm \<Rightarrow> num"          where "load_F n    \<equiv> cpy n"
+definition pack_F :: "num \<Rightarrow> num \<Rightarrow> fm"   where "pack_F tg L \<equiv> \<langle>tg, L\<rangle>"
+
+lemma swap01_0 [simp]: "swap01 0 = 1"
+  unfolding swap01_def by (cases bool: "(0::num) = 0", simp+)
+
+lemma swap01_N [simp, auto]: "t N \<Longrightarrow> swap01 t N"
+  unfolding swap01_def by (cases bool: "t = 0", simp+)
+
+lemma swap01_inv [simp]: "t N \<Longrightarrow> swap01 (swap01 t) = t"
+  unfolding swap01_def
+  apply (cases bool: "t = 0", simp+)
+  apply (cases bool: "t = 1", simp+)
+  done
+
+text \<open>The syntax constructors, repeated at theory level so that the recursive
+      equations below can be written the way the locale writes them.\<close>
+
+abbreviation tVar  :: "num \<Rightarrow> tm"            where "tVar i  \<equiv> pack_T T_VAR i"
+abbreviation tZero :: "tm"                    where "tZero    \<equiv> pack_T T_ZERO 0"
+abbreviation tSuc  :: "tm \<Rightarrow> tm"              where "tSuc a  \<equiv> pack_T T_SUC a"
+abbreviation tPred :: "tm \<Rightarrow> tm"              where "tPred a \<equiv> pack_T T_PRED a"
+abbreviation tCond :: "fm \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> tm"  where "tCond c a b \<equiv> pack_T T_COND \<langle>c, \<langle>a, b\<rangle>\<rangle>"
+abbreviation tApp  :: "num \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> tm" where "tApp d a b \<equiv> pack_T T_APP \<langle>d, \<langle>a, b\<rangle>\<rangle>"
+
+abbreviation mkEq  :: "tm \<Rightarrow> tm \<Rightarrow> fm"        where "mkEq a b  \<equiv> pack_F F_EQ \<langle>a, b\<rangle>"
+abbreviation mkNot :: "fm \<Rightarrow> fm"              where "mkNot p   \<equiv> pack_F F_NOT p"
+abbreviation mkOr  :: "fm \<Rightarrow> fm \<Rightarrow> fm"        where "mkOr p q  \<equiv> pack_F F_OR \<langle>p, q\<rangle>"
+abbreviation mkAll :: "num \<Rightarrow> fm \<Rightarrow> fm"       where "mkAll i p \<equiv> pack_F F_ALL \<langle>i, p\<rangle>"
+abbreviation mkEx  :: "num \<Rightarrow> fm \<Rightarrow> fm"       where "mkEx i p  \<equiv> pack_F F_EX \<langle>i, p\<rangle>"
+abbreviation mkFCond :: "fm \<Rightarrow> fm \<Rightarrow> fm \<Rightarrow> fm" where "mkFCond c p q \<equiv> pack_F F_COND \<langle>c, \<langle>p, q\<rangle>\<rangle>"
+abbreviation mkNeq   :: "tm \<Rightarrow> tm \<Rightarrow> fm"      where "mkNeq a b \<equiv> mkNot (mkEq a b)"
+abbreviation mkNat   :: "tm \<Rightarrow> fm"            where "mkNat a   \<equiv> mkEq a a"
+abbreviation mkBool  :: "fm \<Rightarrow> fm"            where "mkBool p  \<equiv> mkOr p (mkNot p)"
+abbreviation mkFalse :: "fm"                   where "mkFalse    \<equiv> mkEq (tSuc tZero) tZero"
+
+
+section \<open>2.  The definition list and the divergent term\<close>
+
+text \<open>
+  \<open>dfns\<close> stays opaque: only its termination is assumed, so the result holds for
+  every terminating definition list, including lists all of whose definitions
+  diverge.  The one thing required of it is a divergent entry at index 0, the
+  object-language image of QGA\<^latex>\<open>'\<close>s own \<open>omega := omega\<close>: the body
+  \<open>d_0(v_0, v_1)\<close> unfolds to itself forever, so \<open>tBot = d_0(0, 0)\<close> converges at
+  no fuel.  \<open>tBot\<close> is what the closing substitution puts in place of a variable
+  that the assignment sends to bottom.
+\<close>
+
+axiomatization dfns :: "dfn" where
+  dfns_N: "dfns N" and
+  dfns_bot: "nth 0 dfns = pack_T T_APP \<langle>0, \<langle>pack_T T_VAR 0, pack_T T_VAR 1\<rangle>\<rangle>"
+
+definition tBot :: "tm" where "tBot \<equiv> tApp 0 tZero tZero"
+
+
+section \<open>3.  Concrete definitions of every derived function\<close>
+
+text \<open>
+  One \<open>axiomatization\<close> block whose axioms are the recursive \<open>:=\<close> equations of
+  the locale, verbatim.  This is the definitional mechanism of grounded
+  arithmetic applied at scale, and it is why an evaluator that runs the
+  system\<^latex>\<open>'\<close>s own proof search can be written down at all: no termination
+  obligation is incurred when the definition is made.
+\<close>

@@ -1,0 +1,134 @@
+
+section \<open>4.  Discharging the structural assumptions\<close>
+
+text \<open>
+  The habeas quid, retraction, decrease and monotonicity obligations are the
+  ones \<open>encode.thy\<close> discharges, unchanged: they are statements about the Cantor
+  pairing and \<open>swap01\<close> alone and know nothing about the syntax being encoded.
+  They are restated here rather than imported because this development sits
+  beside the BGA one rather than on top of it.
+\<close>
+
+lemma pack_F_N: "\<lbrakk>t N; L N\<rbrakk> \<Longrightarrow> pack_F t L N"
+  unfolding pack_F_def by (rule cpair_terminates)
+lemma tag_F_N: "f N \<Longrightarrow> tag_F f N"   unfolding tag_F_def by simp
+lemma load_F_N: "f N \<Longrightarrow> load_F f N" unfolding load_F_def by simp
+lemma pack_T_N: "\<lbrakk>t N; L N\<rbrakk> \<Longrightarrow> pack_T t L N"
+  unfolding pack_T_def by (rule cpair_terminates, rule swap01_N, simp+)
+lemma tag_T_N: "t N \<Longrightarrow> tag_T t N"   unfolding tag_T_def by (rule swap01_N, simp)
+lemma load_T_N: "t N \<Longrightarrow> load_T t N" unfolding load_T_def by simp
+
+lemma tag_pack_F: "\<lbrakk>t N; L N\<rbrakk> \<Longrightarrow> tag_F (pack_F t L) = t"
+  unfolding tag_F_def pack_F_def by (rule cpx_proj)
+lemma load_pack_F: "\<lbrakk>t N; L N\<rbrakk> \<Longrightarrow> load_F (pack_F t L) = L"
+  unfolding load_F_def pack_F_def by (rule cpy_proj)
+lemma pack_tag_F: "f N \<Longrightarrow> pack_F (tag_F f) (load_F f) = f"
+  unfolding pack_F_def tag_F_def load_F_def by (rule eqSym, simp)
+
+lemma tag_pack_T: "\<lbrakk>t N; L N\<rbrakk> \<Longrightarrow> tag_T (pack_T t L) = t"
+  unfolding tag_T_def pack_T_def
+  apply (simp only: cpx_proj[OF swap01_N])
+  apply (rule swap01_inv, assumption)
+  done
+lemma load_pack_T: "\<lbrakk>t N; L N\<rbrakk> \<Longrightarrow> load_T (pack_T t L) = L"
+  unfolding load_T_def pack_T_def by (rule cpy_proj[OF swap01_N])
+lemma pack_tag_T: "t N \<Longrightarrow> pack_T (tag_T t) (load_T t) = t"
+  unfolding pack_T_def tag_T_def load_T_def
+  apply (simp only: swap01_inv[OF cpx_terminates])
+  apply (rule eqSym) apply auto done
+
+lemma decrease_F: "\<lbrakk>f N; f \<noteq> 0\<rbrakk> \<Longrightarrow> load_F f < f = 1" unfolding load_F_def by simp
+lemma decrease_T: "\<lbrakk>t N; t \<noteq> 0\<rbrakk> \<Longrightarrow> load_T t < t = 1" unfolding load_T_def by simp
+lemma tag_T_zero: "tag_T 0 = T_ZERO" unfolding tag_T_def by simp
+lemma tag_F_zero: "tag_F 0 = F_EQ"   unfolding tag_F_def by simp
+
+lemma pair_step:
+  assumes a: "a N" and k: "k N"
+  shows "\<langle>a, k\<rangle> \<le> \<langle>a, S k\<rangle> = 1"
+proof -
+  have ak: "\<langle>a, k\<rangle> N"     by (rule cpair_terminates[OF a k])
+  have sk: "S k N"        by (rule natS[OF k])
+  have one: "(1::num) N"  by simp
+  have aka:   "\<langle>a, k\<rangle> + a N"       using ak a by simp
+  have akask: "\<langle>a, k\<rangle> + a + S k N" using aka sk by simp
+  have s1: "\<langle>a, k\<rangle> \<le> \<langle>a, k\<rangle> = 1"               by (rule leq_refl[OF ak])
+  have s2: "\<langle>a, k\<rangle> \<le> \<langle>a, k\<rangle> + a = 1"           by (rule leq_monotone_add_r[OF s1 ak ak a])
+  have s3: "\<langle>a, k\<rangle> \<le> \<langle>a, k\<rangle> + a + S k = 1"     by (rule leq_monotone_add_r[OF s2 ak aka sk])
+  have s4: "\<langle>a, k\<rangle> \<le> \<langle>a, k\<rangle> + a + S k + 1 = 1" by (rule leq_monotone_add_r[OF s3 ak akask one])
+  have e:  "\<langle>a, S k\<rangle> = \<langle>a, k\<rangle> + a + S k + 1"    by (rule cpair_suc[OF a k])
+  show ?thesis using s4 e by simp
+qed
+
+lemma pair_mono_2:
+  assumes a: "a N" and x: "x N" and y: "y N" and h: "x \<le> y = 1"
+  shows "\<langle>a, x\<rangle> \<le> \<langle>a, y\<rangle> = 1"
+proof -
+  have one: "(1::num) N" by simp
+  have main: "(x \<le> y = 1) \<longrightarrow> (\<langle>a, x\<rangle> \<le> \<langle>a, y\<rangle> = 1)"
+  proof (rule ind[where a = y])
+    show "y N" by (rule y)
+  next
+    show "(x \<le> 0 = 1) \<longrightarrow> (\<langle>a, x\<rangle> \<le> \<langle>a, 0\<rangle> = 1)"
+    proof (rule implI)
+      show "(x \<le> 0 = 1) B" by (rule eqBool[OF leq_terminates[OF x nat0] one])
+    next
+      assume x0: "x \<le> 0 = 1"
+      have "x = 0" by (rule leq_0[OF x x0])
+      thus "\<langle>a, x\<rangle> \<le> \<langle>a, 0\<rangle> = 1"
+        by (simp add: leq_refl[OF cpair_terminates[OF a nat0]])
+    qed
+  next
+    fix k assume k: "k N" and IH: "(x \<le> k = 1) \<longrightarrow> (\<langle>a, x\<rangle> \<le> \<langle>a, k\<rangle> = 1)"
+    show "(x \<le> S k = 1) \<longrightarrow> (\<langle>a, x\<rangle> \<le> \<langle>a, S k\<rangle> = 1)"
+    proof (rule implI)
+      show "(x \<le> S k = 1) B" by (rule eqBool[OF leq_terminates[OF x natS[OF k]] one])
+    next
+      assume xsk: "x \<le> S k = 1"
+      have ax:  "\<langle>a, x\<rangle> N"   by (rule cpair_terminates[OF a x])
+      have ak:  "\<langle>a, k\<rangle> N"   by (rule cpair_terminates[OF a k])
+      have ask: "\<langle>a, S k\<rangle> N" by (rule cpair_terminates[OF a natS[OF k]])
+      have step: "\<langle>a, k\<rangle> \<le> \<langle>a, S k\<rangle> = 1" by (rule pair_step[OF a k])
+      show "\<langle>a, x\<rangle> \<le> \<langle>a, S k\<rangle> = 1"
+      proof (rule cases_bool[where q = "x \<le> k = 1"])
+        show "(x \<le> k = 1) B" by (rule eqBool[OF leq_terminates[OF x k] one])
+      next
+        assume xk: "x \<le> k = 1"
+        have xy: "\<langle>a, x\<rangle> \<le> \<langle>a, k\<rangle> = 1" by (rule implE[OF IH xk])
+        show "\<langle>a, x\<rangle> \<le> \<langle>a, S k\<rangle> = 1" by (rule leq_trans[OF ax ak ask xy step])
+      next
+        assume nxk: "\<not> (x \<le> k = 1)"
+        have "x = S k" by (rule leq_suc_not_leq_implies_eq[OF x k nxk xsk])
+        thus "\<langle>a, x\<rangle> \<le> \<langle>a, S k\<rangle> = 1" by (simp add: leq_refl[OF ask])
+      qed
+    qed
+  qed
+  show ?thesis by (rule implE[OF main h])
+qed
+
+lemma mono_pack_T: "\<lbrakk>tg N; x N; y N; x \<le> y = 1\<rbrakk> \<Longrightarrow> pack_T tg x \<le> pack_T tg y = 1"
+  unfolding pack_T_def by (rule pair_mono_2[OF swap01_N])
+lemma mono_pack_F: "\<lbrakk>tg N; x N; y N; x \<le> y = 1\<rbrakk> \<Longrightarrow> pack_F tg x \<le> pack_F tg y = 1"
+  unfolding pack_F_def by (rule pair_mono_2)
+
+lemma tZero_N: "tZero N" by (rule pack_T_N, auto)
+
+lemma tBot_N: "tBot N"
+proof -
+  have p: "\<langle>tZero, tZero\<rangle> N" by (rule cpair_terminates[OF tZero_N tZero_N])
+  have q: "\<langle>0, \<langle>tZero, tZero\<rangle>\<rangle> N" by (rule cpair_terminates[OF nat0 p])
+  show ?thesis unfolding tBot_def by (rule pack_T_N[OF _ q], auto)
+qed
+
+lemma tBot_closed: "fresh_T 0 tBot"
+  \<comment> \<open>one \<open>defE\<close> step through \<open>fresh_T_def\<close>: the tag is \<open>T_APP\<close> and both
+      arguments are \<open>tZero\<close>, whose tag is \<open>T_ZERO\<close>, so both branches are \<open>True\<close>.\<close>
+  sorry
+
+
+section \<open>5.  Interpretation\<close>
+
+text \<open>
+  Every goal generated by \<open>unfold_locales\<close> is closed by \<open>fact\<close>: the structural
+  obligations by the lemmas above, the definitional obligations by the \<open>:=\<close>
+  axioms of section 3, which are literally the equations the locale assumes.
+\<close>

@@ -5,8 +5,7 @@
 Isabelle/Pure.  The propositional and arithmetic core, and the definitional
 mechanism are from Kehrli's development, who established
 that grounded arithmetic can be axiomatized in Pure and reasoned in
-productively.\footnote{Sascha Kehrli, \emph{Formalizing Grounded Arithmetic atop
-Isabelle/Pure}, BSc thesis, Distributed Computing Group, ETH Z\"urich, 2025.}
+productively~\cite{kehrli}.
 
 \subsection{Formulas and terms}
 
@@ -87,8 +86,9 @@ Reflexivity is absent, and this is the pivot of the whole system.
 Transitivity follows from one substitution, \isa{eq\_trans: a = b ⟹ b = c ⟹ a =
 c}.  The third axiom, \isa{eq\_reflection}, lifts a derivable equation to the
 framework equality \isa{≡}, which is what lets Isabelle's simplifier operate on
-\QGA{} goals; it is a statement about the framework and adds nothing to the
-object logic.
+\QGA{} goals; its relationship to object-level substitution is discussed in
+\S\ref{sec:levels}, where the remaining adequacy obligations are distinguished
+from the implemented axioms.
 
 The two habeas quid judgments and the remaining connectives are definitions.
 
@@ -402,9 +402,8 @@ The two habeas quid results about them that the proof checker relies on are
 \subsection{Summary}
 \label{sec:qga-summary}
 
-Table \ref{tab:qga-defs} collects the definitions of \texttt{GD.thy} and
-Table \ref{tab:qga-rules} its inference rules, both in the notation of \QGA{}
-rather than in Isabelle syntax.  A definition written with $\triangleq$ is an
+Table \ref{tab:qga-defs} collects the definitions of \texttt{GD.thy} in the
+notation of \QGA{} rather than in Isabelle syntax.  A definition written with $\triangleq$ is an
 abbreviation, unfolded by the framework.  A definition written with $:=$ is a
 \QGA{} recursive definition in the sense of \S\ref{sec:defmech}, admitted with
 no termination obligation and used only through \textsc{defE} and
@@ -460,65 +459,4 @@ $\fn{ack}\;x\;y$ & $:= \ite{x = 0}{y + 1}{\ite{y = 0}{\fn{ack}\,\Pre{x}\,1}
 \caption{Definitions of \QGA.  $\langle x, y\rangle$ is the Cantor pairing and
 $\fn{cpx}$, $\fn{cpy}$ its projections.}
 \label{tab:qga-defs}
-\end{table}
-
-\begin{table}[p]
-\centering\small
-\begin{tabular}{@{}c@{\hspace{1.4em}}c@{\hspace{1.4em}}c@{}}
-\multicolumn{3}{@{}l}{\textbf{Structural (supplied by the framework)}}\\[0.9ex]
-\iaxiom{\Gamma, \varphi \seq \varphi}{hyp} &
-\irule{\Gamma \seq \varphi}{\Gamma, \psi \seq \varphi}{weak} &
-\irule{\Gamma \seq \psi \sep \Gamma, \psi \seq \varphi}{\Gamma \seq \varphi}{cut}\\[2.4ex]
-\multicolumn{3}{c}{\irule{\Gamma \seq \varphi}
-  {[x \mapsto t]\Gamma \seq [x \mapsto t]\varphi}{inst}}\\[2.8ex]
-\multicolumn{3}{@{}l}{\textbf{Propositional}}\\[0.9ex]
-\irule{P}{P \vee Q}{$\vee$I1} &
-\irule{Q}{P \vee Q}{$\vee$I2} &
-\irule{\neg P \sep \neg Q}{\neg (P \vee Q)}{$\vee$I3}\\[2.4ex]
-\irule{\neg(P \vee Q)}{\neg P}{$\vee$E2} &
-\irule{\neg(P \vee Q)}{\neg Q}{$\vee$E3} &
-\irule{P \vee Q \sep \dis{P}{R} \sep \dis{Q}{R}}{R}{$\vee$E1}\\[3.6ex]
-\irule{P}{\neg\neg P}{$\neg\neg$I} &
-\irule{\neg\neg P}{P}{$\neg\neg$E} &
-\irule{P \sep \neg P}{Q}{exF}\\[2.8ex]
-\multicolumn{3}{@{}l}{\textbf{Equality}}\\[0.9ex]
-\irule{a = b \sep Q\,a}{Q\,b}{=E} &
-\irule{a = b}{b = a}{=S} &
-\\[2.8ex]
-\multicolumn{3}{@{}l}{\textbf{Natural numbers}}\\[0.9ex]
-\iaxiom{0 \N}{0I} &
-\irule{\Suc{a} = \Suc{b}}{a = b}{S-inj} &
-\irule{a = b}{\Suc{a} = \Suc{b}}{S-cong}\\[2.4ex]
-\irule{a = b}{\Pre{a} = \Pre{b}}{P-cong} &
-\irule{a \N \sep b \N}{(a = b) \B}{eqBool} &
-\irule{a \N}{\Suc{a} \neq 0}{S$\neq$0}\\[2.4ex]
-\irule{a \N}{\Pre{\Suc{a}} = a}{PS} &
-\iaxiom{\Pre{0} = 0}{P0} &
-\irule{(a = b) \B}{a \N \wedge b \N}{eqE}\\[2.4ex]
-\irule{\Pre{a} \N}{a \N}{predTI} &
-\multicolumn{2}{c}{\irule{a \N \sep Q\,0 \sep \dis{x \N,\; Q\,x}{Q\,\Suc{x}}}{Q\,a}{Ind}}\\[2.8ex]
-\multicolumn{3}{@{}l}{\textbf{Quantifiers}}\\[0.9ex]
-\irule{\dis{x \N}{Q\,x}}{\forall x.\,Q\,x}{$\forall$I} &
-\irule{\forall x.\,Q\,x \sep a \N}{Q\,a}{$\forall$E} &
-\irule{a \N \sep Q\,a}{\exists x.\,Q\,x}{$\exists$I}\\[3.6ex]
-\irule{\exists x.\,Q\,x \sep \dis{a \N,\; Q\,a}{R}}{R}{$\exists$E} &
-\irule{a \N \sep \neg (Q\,a)}{\neg (\forall x.\,Q\,x)}{$\neg\forall$I} &
-\irule{\neg (\forall x.\,Q\,x) \sep \dis{a \N,\; \neg (Q\,a)}{R}}{R}{$\neg\forall$E}\\[2.8ex]
-\multicolumn{3}{@{}l}{\textbf{Conditionals}}\\[0.9ex]
-\multicolumn{1}{@{}c}{\irule{c \sep a \N}{(\ite{c}{a}{b}) = a}{condI1}} &
-\multicolumn{2}{c}{\irule{\neg c \sep b \N}{(\ite{c}{a}{b}) = b}{condI2}}\\[2.4ex]
-\multicolumn{1}{@{}c}{\irule{c \sep (\ite{c}{a}{b}) \N}{a \N}{condE1}} &
-\multicolumn{2}{c}{\irule{\neg c \sep (\ite{c}{a}{b}) \N}{b \N}{condE2}}\\[2.4ex]
-\multicolumn{1}{@{}c}{\irule{(\ite{c}{a}{b}) \N}{c \B}{condE3}} &
-\multicolumn{2}{c}{\irule{c \sep Q\,(\ite{c}{a}{b})}{Q\,a}{cond-then-E}}\\[2.4ex]
-\multicolumn{1}{@{}c}{\irule{c \sep Q\,a}{Q\,(\ite{c}{a}{b})}{cond-then-I}} &
-\multicolumn{2}{c}{\irule{\neg c \sep Q\,b}{Q\,(\ite{c}{a}{b})}{cond-else-I}}\\[2.8ex]
-\multicolumn{3}{@{}l}{\textbf{Definitions}}\\[0.9ex]
-\irule{a := b \sep Q\,b}{Q\,a}{defE} &
-\irule{a := b \sep Q\,a}{Q\,b}{defI} &
-\end{tabular}
-\caption{Inference rules of \QGA.  Each conditional rule has a formula-level
-twin with $=$ replaced by $\longleftrightarrow$ and $\mathsf{N}$ by
-$\mathsf{B}$, and each ``then'' rule has an ``else'' twin.}
-\label{tab:qga-rules}
 \end{table}
