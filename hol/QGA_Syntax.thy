@@ -5,29 +5,19 @@ theory QGA_Syntax
 begin
 
 text \<open>
-  A first-order presentation of the language of \<^file>\<open>../pure/GD.thy\<close>.
-
-  \<^item> The vocabulary is exactly the constants \<open>GD.thy\<close> axiomatizes: \<open>zero\<close>, \<open>suc\<close>,
-    \<open>pred\<close>, \<open>cond\<close>, the definition-list application, \<open>eq\<close>, \<open>not\<close>, \<open>disj\<close>,
-    \<open>forall\<close>, \<open>exists\<close>.  Everything \<open>GD.thy\<close> introduces by \<open>definition\<close> (\<open>\<and>\<close>, \<open>\<longrightarrow>\<close>,
-    \<open>\<longleftrightarrow>\<close>, \<open>\<noteq>\<close>, \<open>N\<close>, \<open>B\<close>, \<open>True\<close>, \<open>False\<close>) is an abbreviation here too, so no rule
-    about them is assumed.
-  \<^item> \<open>GD.thy\<close>'s \<open>cond :: o \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a\<close> is guarded by a FORMULA and is used at
-    both \<open>num\<close> and \<open>o\<close>, so terms and formulas are mutually recursive and there
-    are two conditional constructors, \<open>tmCond\<close> and \<open>fmCond\<close>.
-  \<^item> \<open>GD.thy\<close> uses higher-order abstract syntax (\<open>forall :: (num \<Rightarrow> o) \<Rightarrow> o\<close>), which
-    cannot be arithmetized; binding is therefore de Bruijn, as in
-    \<open>RGA_Syntax.thy\<close>.  \<open>fmAll b\<close> binds index 0 in \<open>b\<close>.  The eigenvariable
-    conditions of \<open>forallI\<close>, \<open>existsE\<close>, \<open>notForallE\<close> and \<open>ind\<close> then need no
-    freshness side conditions at all: the rules lift the hypothesis context,
-    which makes variable 0 fresh for it by construction.
+  First-order syntax for the language of \<^file>\<open>../pure/GD.thy\<close>, used by
+  \<open>QGA_Proof.thy\<close>.  The constructors are exactly GD.thy's primitives; its
+  defined connectives are abbreviations here too.  Terms and formulas are
+  mutually recursive because GD.thy's \<open>cond\<close> is used at both types.  Binding
+  is de Bruijn instead of HOAS, so the eigenvariable conditions become
+  context lifting.
 \<close>
 
 context
 begin
 
-text \<open>Terms and formulas.  Defined in a bare context rather than a locale,
-      following \<open>BGA_Syntax.thy\<close>: datatypes in locales cause trouble.\<close>
+text \<open>Terms and formulas.  Kept outside a locale, since datatypes in locales
+      cause trouble.\<close>
 
 datatype tm =
     tmVar   nat            \<comment> \<open>de Bruijn variable\<close>
@@ -96,9 +86,7 @@ abbreviation fmFalse :: "fm"  ("\<^bold>\<bottom>")
 
 subsection "Lifting and substitution"
 
-text \<open>Standard de Bruijn machinery.  \<open>lift k\<close> shifts every index at or above
-      \<open>k\<close> up by one; \<open>subst k s\<close> replaces index \<open>k\<close> by \<open>s\<close> and shifts the indices
-      above it down.  Both are mutual over the two datatypes.\<close>
+text \<open>De Bruijn lifting and substitution, mutual over terms and formulas.\<close>
 
 primrec lift_tm :: "nat \<Rightarrow> tm \<Rightarrow> tm"
     and lift_fm :: "nat \<Rightarrow> fm \<Rightarrow> fm" where
@@ -136,9 +124,8 @@ abbreviation subst0_fm :: "tm \<Rightarrow> fm \<Rightarrow> fm"  ("[\<mapsto>_]
 abbreviation lift0_fm :: "fm \<Rightarrow> fm"  ("\<upharpoonleft>_" [900] 900)
   where "\<upharpoonleft>p \<equiv> lift_fm 0 p"
 
-text \<open>Lifting then substituting at the same index is the identity: this is
-      what makes the lifted contexts of the quantifier rules behave, and it is
-      the de Bruijn replacement for a freshness side condition.\<close>
+text \<open>Lifting then substituting at the same index is the identity; this
+      replaces the freshness side condition of the quantifier rules.\<close>
 
 lemma subst_lift_tm [simp]: "subst_tm k s (lift_tm k a) = a"
   and subst_lift_fm [simp]: "subst_fm k s (lift_fm k p) = p"
@@ -147,13 +134,8 @@ lemma subst_lift_tm [simp]: "subst_tm k s (lift_tm k a) = a"
 
 subsection "Free-variable substitution, and free variables"
 
-text \<open>Two different substitutions are needed and conflating them is a classic
-      source of bugs.  \<open>subst_fm\<close> above INSTANTIATES A BINDER: it removes index
-      \<open>k\<close> and shifts what is above it down, which is what \<open>forallE\<close>, \<open>existsI\<close> and
-      \<open>notForallI\<close> do to a quantifier body.  \<open>psub_fm\<close> below fills a HOLE: it
-      replaces free occurrences of index \<open>k\<close> and shifts nothing, which is what
-      the context \<open>Q\<close> of \<open>eqSubst\<close>, \<open>ind\<close>, the lazy conditional rules and
-      \<open>defE\<close>/\<open>defI\<close> needs.\<close>
+text \<open>\<open>subst_fm\<close> instantiates a binder (quantifier rules); \<open>psub_fm\<close> below
+      fills a hole without shifting (rules over a context \<open>Q\<close>).\<close>
 
 primrec psub_tm :: "nat \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> tm"
     and psub_fm :: "nat \<Rightarrow> tm \<Rightarrow> fm \<Rightarrow> fm" where
@@ -194,8 +176,7 @@ abbreviation freein :: "nat \<Rightarrow> fm fset \<Rightarrow> bool"
 
 subsection "Hypothesis contexts"
 
-text \<open>Hypothesis sets are finite, as in \<open>Proof.thy\<close> --- deliberately, so that
-      proof checking stays primitive recursive when the syntax is coded.\<close>
+text \<open>Hypothesis sets are finite.\<close>
 
 abbreviation lift_ctx :: "fm fset \<Rightarrow> fm fset"  ("\<Up>_" [900] 900)
   where "\<Up>\<Gamma> \<equiv> fimage (lift_fm 0) \<Gamma>"
@@ -206,21 +187,16 @@ abbreviation subst_ctx :: "nat \<Rightarrow> tm \<Rightarrow> fm fset \<Rightarr
 
 subsection "Definition lists"
 
-text \<open>\<open>GD.thy\<close>'s recursive definitions are introduced by \<open>axiomatization\<close> with
-      \<open>:=\<close> equations, and are all two-argument.  A definition list assigns a body
-      to each definition number; the body uses \<open>\<^bold>v0\<close> and \<^bold>\<open>v1\<close> for its two
-      arguments, as in \<open>BGA\<close>.  Nothing is assumed about the list --- in
-      particular its entries may diverge on all arguments, which is what makes
-      \<open>omega := omega\<close> admissible.\<close>
+text \<open>A definition list gives each definition number a body over the two
+      arguments \<open>\<^bold>v0\<close> and \<open>\<^bold>v1\<close>.  Nothing is assumed about it, so a
+      definition may diverge everywhere.\<close>
 
 type_synonym dfns = "nat \<Rightarrow> tm"
 
 abbreviation dfn_body :: "dfns \<Rightarrow> nat \<Rightarrow> tm \<Rightarrow> tm \<Rightarrow> tm"
   where "dfn_body D d a b \<equiv> psub_tm 0 a (psub_tm 1 b (D d))"
 
-text \<open>Both arguments are filled by HOLE substitution, at the two distinct
-      indices 0 and 1.  \<open>psub\<close> shifts nothing, so the two fills commute and no
-      lifting is needed --- unlike a binder instantiation, which would have to
-      shift and would make the order matter.\<close>
+text \<open>Both arguments are filled by hole substitution, so the order does not
+      matter.\<close>
 
 end

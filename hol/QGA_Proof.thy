@@ -5,59 +5,23 @@ theory QGA_Proof
 begin
 
 text \<open>
-  \<^bold>\<open>Fidelity.\<close>  Every rule below is an axiom of \<^file>\<open>../pure/GD.thy\<close>, carries its
-  name, and quotes its statement verbatim.  Every object-logic axiom of
-  \<open>GD.thy\<close> appears.  What does not appear, and why:
+  A deep embedding of the proof system of \<^file>\<open>../pure/GD.thy\<close>: one rule per
+  GD.thy axiom, each with the original statement in a comment.  Provability
+  becomes an HOL predicate, which a soundness or completeness proof about
+  GD.thy would need.  No such proof is done here; \<open>QGA_Model.thy\<close> gives
+  consistency directly.
 
-  \<^item> \<open>eq_reflection\<close> and \<open>iff_reflection\<close> conclude in \<open>prop\<close>, not in \<open>o\<close>.  They are
-    statements about Isabelle/Pure and have no counterpart in a first-order
-    presentation.  \<open>eq_reflection\<close> is conservative here --- composed with Pure's
-    equality rules its only object-level effect is replacement of equals in an
-    arbitrary context, which is \<open>eqSubst\<close>.  \<open>iff_reflection\<close> is NOT: it is the
-    only route in \<open>GD.thy\<close> from \<open>p \<longleftrightarrow> q\<close> to substitutivity of \<open>\<longleftrightarrow>\<close>, so this
-    presentation is weaker than \<open>GD.thy\<close> at exactly that point.  If that matters
-    it should be added as \<open>iffSubst\<close> rather than left implicit.
-
-  \<^bold>\<open>The structural rules, and what they cost.\<close>  \<open>GD.thy\<close> states none, because
-  Pure supplies them --- and in a SHALLOW embedding (\<open>QGA_Model.thy\<close>) none are
-  needed either, since HOL has the same Pure connectives and hypotheses stay
-  Pure's.  They appear here only because \<open>derives\<close> replaces Pure's context
-  management with an explicit \<open>fm fset\<close>, which a deep embedding must do in
-  order that provability be a predicate HOL can quantify over --- and that is
-  the only reason to pay for a deep embedding at all.  They are therefore NOT
-  GD.thy axioms but an arithmetization of what Pure does, and they carry an
-  adequacy obligation: that \<open>derives\<close> proves exactly what GD.thy-in-Pure
-  proves.  Each comes from a specific kernel operation:
-  \<open>pr_hyp\<close> from \<open>Thm.assume\<close>; \<open>pr_weak\<close> from the fact that Pure carries
-  hypotheses as a set that is only ever enlarged (so contraction and exchange
-  are invisible); \<open>pr_cut\<close> from \<open>implies_intr\<close> followed by \<open>implies_elim\<close>;
-  \<open>pr_inst\<close> from \<open>Thm.instantiate\<close>, equivalently \<open>\<And>\<close> introduction followed by
-  \<open>\<And>\<close> elimination.  Pure's \<open>\<Longrightarrow>\<close> and \<open>\<And>\<close> in PREMISE position are not rules but
-  rule shapes: a premise \<open>P \<Longrightarrow> R\<close> becomes the judgment \<open>P, \<Gamma> \<turnstile> R\<close>, and a premise
-  \<open>\<And>x. x N \<Longrightarrow> Q x\<close> becomes \<open>v\<^sub>0 N, \<Up>\<Gamma> \<turnstile> Q\<close> --- with the context LIFTED, which is
-  the de Bruijn form of the eigenvariable condition and needs no freshness
-  side condition.
-
-  \<^bold>\<open>Two places where a context is a hole, not a binder.\<close>  \<open>eqSubst\<close>, \<open>ind\<close>, the
-  lazy conditional quartet and \<open>defE\<close>/\<open>defI\<close> quantify over an arbitrary context
-  \<open>Q\<close>.  A context is a formula with a distinguished free variable, filled by
-  \<open>psub_fm\<close> (no index shifting).  The quantifier rules instead instantiate a
-  binder, which is \<open>subst_fm\<close> (with shifting).  Conflating the two is a classic
-  bug; they are separate operations in \<open>QGA_Syntax.thy\<close>.
-
-  \<^bold>\<open>One discovered fact about GD.thy, recorded here.\<close>  The fourteen conditional
-  axioms sit in a single \<open>axiomatization where\<close> block that declares no constant
-  of its own, so Isabelle pins the block's type variable, and \<open>condI1\<close> pins it
-  to \<open>num\<close>.  The lazy quartet \<open>cond_thenQ_E\<close>, \<open>cond_thenQ_I\<close>, \<open>cond_elseQ_E\<close>,
-  \<open>cond_elseQ_I\<close> is therefore available in \<open>GD.thy\<close> at TERM-valued conditionals
-  only --- Isabelle reports their context type as \<open>num \<Rightarrow> o\<close>.  They are encoded
-  here at that arity, and not at the formula-valued one.
-
-  \<^bold>\<open>Call by name.\<close>  \<open>GD.thy\<close>'s \<open>:=\<close> is Isabelle substitution, so unfolding a
-  definition carries no habeas quid premise, and \<open>pr_defE\<close>/\<open>pr_defI\<close> have none.
-  The semantics must therefore be call-by-name at application, as RGA's is;
-  a call-by-value evaluator would force premises \<open>x N\<close>, \<open>y N\<close> that \<open>GD.thy\<close> does
-  not have.
+  Differences from GD.thy:
+  \<^item> \<open>eq_reflection\<close> and \<open>iff_reflection\<close> are statements about Pure and are left
+    out.  \<open>eqSubst\<close> covers the first; nothing covers the second, so this system
+    is weaker than GD.thy there.
+  \<^item> The structural rules (\<open>pr_hyp\<close>, \<open>pr_weak\<close>, \<open>pr_cut\<close>, \<open>pr_inst\<close>) are what Pure
+    does implicitly; they are needed because contexts are explicit here.
+  \<^item> Rules over a context \<open>Q\<close> (\<open>eqSubst\<close>, \<open>ind\<close>, \<open>defE\<close>, ...) fill a hole with
+    \<open>psub_fm\<close>; quantifier rules instantiate a binder with \<open>subst_fm\<close>.
+  \<^item> The lazy conditional rules (\<open>cond_thenQ_E\<close> etc.) are at term-valued
+    conditionals only, as in GD.thy, where their axiom block fixes the type.
+  \<^item> \<open>notExistsI\<close> and \<open>notExistsE\<close> are not included yet.
 \<close>
 
 locale qga_proof =
@@ -174,10 +138,9 @@ inductive derives :: "fm fset \<Rightarrow> fm \<Rightarrow> bool"  (infix "\<tu
 
 subsection "The consistency statements to aim at"
 
-text \<open>\<open>BGA\<close> has no primitive negation, so \<open>CONSISTENCY.md\<close> \<S>2.2 phrases syntactic
-      consistency through the equals/unequals pair.  QGA has \<open>not\<close>, so the
-      ordinary statement is available and is strictly stronger; both are
-      recorded, and the second is what \<open>QGA_Sound.thy\<close> will discharge.\<close>
+text \<open>Two consistency statements: via an equation and its negation (the form
+      used for BGA), and the ordinary one, which is stronger.  Neither is
+      proved yet.\<close>
 
 definition consistent_eq :: "fm fset \<Rightarrow> bool" where
   "consistent_eq \<Gamma> \<equiv> \<nexists>a b. (\<Gamma> \<turnstile> a \<^bold>= b) \<and> (\<Gamma> \<turnstile> a \<^bold>\<noteq> b)"

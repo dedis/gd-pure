@@ -3,60 +3,22 @@ theory QGA_Liar
 begin
 
 (*
-  ============================================================================
-  CONSISTENCY = UNPROVABILITY OF A SELF-REFUTING SENTENCE
+  Consistency versus unprovability of a self-refuting sentence L, over the
+  arithmetization in QGA_on_GA.thy.
 
-  Claim: "no proof code proves L" and "no checked proof list holds a formula
-  together with its negation" are EQUIVALENT.  Both directions, no
-  contraposition anywhere.
+  Consistency is stated over a single checked proof list: no list holds both
+  a formula and its negation.  Then each direction only extends a list by one
+  step, and no append or monotonicity lemmas are needed.
 
-  DESIGN NOTE (why this file looks the way it does).
+  - unprovable_imp_con_list: if some formula is unprovable, the system is
+    consistent.  Holds for any L.
+  - con_list_imp_L_unprovable: if the system is consistent, L is unprovable.
+    Needs L to refute itself.
 
-  An earlier draft of this file assumed proof COMPOSITION -- "from a proof of
-  f and a proof of ~f, a proof of anything" -- as a locale axiom.  That was
-  wrong twice over.  Explosion is already a branch of the checker
-  (\<open>find_exF\<close>, \<open>QGA_on_GA.thy\<close> line 884); assuming it hides the very thing
-  the arithmetization provides.  And composition needs an APPEND on proof
-  lists together with monotonicity of \<open>valid_step\<close> in its \<open>rest\<close> argument,
-  roughly twenty mechanical lemmas that do not exist yet.
-
-  Both problems disappear by stating consistency over a SINGLE proof list
-  rather than over two independent proof codes:
-
-      con_list:  no N-list \<open>pf\<close> with \<open>check_list pf\<close> holds both
-                 \<open>\<emptyset> \<tturnstile> f\<close> and \<open>\<emptyset> \<tturnstile> mkNot f\<close>.
-
-  Under that reading each direction extends a list by ONE judgment, so no
-  append and no monotonicity lemma is needed.  This is also the more natural
-  statement: it is what \<open>check_list\<close> actually quantifies over.
-
-  WHAT IS ASSUMED, AND WHY IT CANNOT YET BE PROVED.
-
-  Exactly one checker fact, \<open>exF_step\<close> in \<open>qga_explode\<close> below.  It says that
-  \<open>valid_step\<close> accepts \<open>\<emptyset> \<tturnstile> c\<close> when the tail already holds \<open>\<emptyset> \<tturnstile> f\<close> and
-  \<open>\<emptyset> \<tturnstile> mkNot f\<close>.  That is literally what \<open>find_exF\<close> tests for, so it ought
-  to be a theorem of \<open>valid_step_def\<close> / \<open>check_prop_rules_def\<close> /
-  \<open>find_exF_def\<close>.  It is not derivable TODAY because \<open>valid_step\<close> is a
-  thirteen-branch nested conditional and showing that a late branch fires
-  requires case-splitting on the twelve earlier guards -- which needs
-  \<open>check_weak\<close>, \<open>check_cut\<close>, \<open>check_inst\<close>, \<open>check_prop_rules\<close>, ... to be
-  individually decided.  \<open>QGA_on_GA.thy\<close> has no such per-branch lemmas: all
-  thirteen are bundled into the single sorried \<open>valid_step_bool\<close> (line 1285).
-  Unbundling that into one \<open>_bool\<close> lemma per checker function turns
-  \<open>exF_step\<close> into an ordinary derivation and empties this locale.  That is a
-  gap in the arithmetization, not a design choice here.
-
-  DEPENDENCIES.  The theorems below cite \<open>check_list_bool\<close> (line 1286), which
-  is sorried, so they inherit it.  Nothing here is sorry-free until that and
-  \<open>valid_step_bool\<close> are discharged.
-
-  WHERE THE LIAR IS AND IS NOT NEEDED.  \<open>unprovable_imp_con_list\<close> holds for
-  an ARBITRARY formula code: no self-reference, no property of L at all.
-  The converse, \<open>con_list_imp_L_unprovable\<close>, genuinely needs L to refute
-  itself -- it is plainly false otherwise, since a provable L exists.  That
-  direction lives in \<open>qga_explode_liar\<close> and costs one further one-step
-  checker fact, \<open>unfold_step\<close>, blocked for the same reason as \<open>exF_step\<close>.
-  ============================================================================
+  Status: both depend on the sorried check_list_bool in QGA_on_GA.thy.  Each
+  also assumes one fact about a single branch of the checker (exF_step,
+  unfold_step, in the locales below); these need per-branch decidability
+  lemmas that QGA_on_GA.thy does not have.
 *)
 
 context qga_proof_check
@@ -64,12 +26,7 @@ begin
 
 section \<open>Extending a checked list by one judgment\<close>
 
-text \<open>
-  The two structural facts everything below runs on.  Both are direct
-  unfoldings of \<open>check_list_def\<close> and \<open>is_valid_proof_def\<close>; the only subtlety
-  is that an \<open>o\<close>-valued conditional cannot be peeled to a branch without
-  groundedness of that branch, which here is \<open>check_list_bool\<close>.
-\<close>
+text \<open>Two unfolding facts about checked lists.\<close>
 
 lemma check_list_cons:
   assumes J: "J N" and rest: "rest N"
@@ -127,11 +84,8 @@ locale qga_explode = qga_proof_check +
      \<Longrightarrow> valid_step (\<emptyset> \<tturnstile> c) rest"
 begin
 
-text \<open>
-  Explosion, DERIVED: a checked list holding a formula and its negation
-  extends, in one step, to a proof of anything.  This is the fact the earlier
-  draft of this file assumed outright.
-\<close>
+text \<open>Explosion: a checked list holding a formula and its negation extends by
+  one step to a proof of anything.\<close>
 
 theorem exF_proof:
   assumes f: "f N" and c: "c N" and rest: "rest N"
@@ -149,12 +103,7 @@ qed
 
 section \<open>No code proves L implies consistency\<close>
 
-text \<open>
-  Here \<open>L\<close> does work, but still only as a target: given a checked list with a
-  formula and its negation, \<open>exF_proof\<close> manufactures a proof of \<open>L\<close>, which
-  the hypothesis forbids.  Any \<open>L\<close> whatever will do --- again no
-  self-reference is used.
-\<close>
+text \<open>Consistency from the unprovability of any formula.\<close>
 
 theorem unprovable_imp_con_list:
   assumes NL: "\<And>q. q N \<Longrightarrow> \<not> is_valid_proof q (\<emptyset> \<tturnstile> L)"
@@ -176,22 +125,11 @@ end
 
 section \<open>The converse, which is where the liar is actually needed\<close>
 
-text \<open>
-  \<open>Con \<Longrightarrow> \<not>Prov(L)\<close> is FALSE for an arbitrary \<open>L\<close> --- take \<open>L\<close> provable, e.g.
-  \<open>\<emptyset> \<tturnstile> mkNat tZero\<close>.  This direction is exactly where self-refutation earns
-  its keep, and it needs one further one-step checker fact: that a checked
-  list headed by \<open>\<emptyset> \<tturnstile> L\<close> extends by one step to \<open>\<emptyset> \<tturnstile> mkNot L\<close>.  For the
-  Liar proper that step is the \<open>:=\<close> unfolding \<open>L := \<not>L\<close>, accepted by
-  \<open>check_def\<close>.  Like \<open>exF_step\<close> it is a statement about one branch of
-  \<open>valid_step\<close> and is blocked by the same missing per-branch lemmas.
-
-  Note also that the encoding has no formula-level definition mechanism ---
-  \<open>dfns\<close> and \<open>T_APP\<close> are term-level, there is no \<open>F_APP\<close> --- so a genuine
-  liar has to be routed through a term liar, e.g.
-  \<open>g x := if g x = 0 then 1 else 0\<close> with \<open>L := (g 0 = 0)\<close>, and \<open>dfns\<close> must be
-  assumed to contain that entry, exactly as \<open>qga_encode.thy\<close> assumes
-  \<open>dfns_bot\<close> at index 0.
-\<close>
+text \<open>The converse needs L to refute itself (it fails for a provable L), and
+  one more checker step: from \<open>\<emptyset> \<tturnstile> L\<close> to \<open>\<emptyset> \<tturnstile> mkNot L\<close> by unfolding
+  \<open>L := \<not>L\<close>.  The encoding has definitions only at the term level, so L has to
+  go through a term, e.g. \<open>g x := if g x = 0 then 1 else 0\<close> and
+  \<open>L := (g 0 = 0)\<close>, with that entry assumed in \<open>dfns\<close>.\<close>
 
 locale qga_explode_liar = qga_explode +
   fixes L :: fm
@@ -286,21 +224,9 @@ qed
 end
 
 
-text \<open>
-  \<^bold>\<open>Reading of the pair.\<close>  Together the two theorems say: consistency (in the
-  single-list form) and unprovability of \<open>L\<close> are interderivable, for ANY
-  formula code \<open>L\<close>.  Self-reference contributes nothing, because \<open>exF\<close>
-  already makes every formula a consequence of any contradiction.  So the
-  Liar route to a consistency proof is not a shortcut --- \<open>\<not>Prov(L)\<close> is not a
-  weaker statement one might reach on the way to \<open>Con\<close>; it IS \<open>Con\<close>, and it
-  is \<open>Con\<close> for the trivial reason that \<open>L\<close> was never used.
-
-  \<^bold>\<open>Relation to \<open>syntactically_consistent\<close>.\<close>  The two-code form proved in
-  \<open>qga_suff_semantics\<close> implies the single-list form via \<open>suffix_is_proof\<close>
-  (\<open>QGA_on_GA.thy\<close> line 1315), which is already available: a checked list
-  containing \<open>\<emptyset> \<tturnstile> f\<close> and \<open>\<emptyset> \<tturnstile> mkNot f\<close> yields proof codes for each.  The
-  converse needs the append/monotonicity machinery described at the head of
-  this file and is left open.
-\<close>
+text \<open>Self-reference adds nothing beyond the second direction: by \<open>exF\<close>,
+  every formula follows from a contradiction, so "some formula is unprovable"
+  already is consistency.  The two-proof-code form in \<open>QGA_on_GA.thy\<close> implies
+  the single-list form; the converse is open.\<close>
 
 end

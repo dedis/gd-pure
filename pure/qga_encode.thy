@@ -3,29 +3,20 @@ theory qga_encode
 begin
 
 (*
-  ============================================================================
-  A concrete Goedel numbering for the QGA-on-QGA development, discharging the
-  interface of QGA_on_GA.thy.
+  A concrete encoding for QGA_on_GA.thy, as encode.thy is for BGA_on_GA.thy:
+  it fixes Cantor-pairing codes, proves the encoding obligations, and
+  instantiates the locale.
 
-  This file is to QGA_on_GA.thy what encode.thy is to BGA_on_GA.thy: it fixes
-  one encoding, pays the arithmetic cost once, and instantiates the abstract
-  result.  Nothing here is specific to QGA beyond the tag arities.
-
-  GENERATED IN PART.  The axiomatization block of section 3 is the list of
-  recursive equations of QGA_on_GA.thy, copied verbatim, so that the two files
-  cannot drift apart.
-  ============================================================================
+  The axiomatization block of section 3 copies the recursive equations of
+  QGA_on_GA.thy and must be kept in sync with them by hand; a mismatch makes
+  the interpretation at the end fail.
 *)
 
 section \<open>1.  Concrete encoders\<close>
 
 text \<open>
-  Identical to \<open>encode.thy\<close>.  Formula codes are the Cantor pairing directly,
-  since \<open>F_EQ = 0\<close> and \<open>cpx 0 = 0\<close>, so \<open>tag_F 0 = F_EQ\<close> holds on the nose.
-  Term codes compose the pairing with the involution exchanging 0 and 1,
-  because the interface requires \<open>tag_T 0 = T_ZERO\<close> and \<open>T_ZERO = 1\<close>: without
-  the relabelling the code 0 would denote a variable and the structural
-  decrease \<open>load_T t < t\<close> would have no atomic base to stop at.
+  As in \<open>encode.thy\<close>.  Term codes swap 0 and 1 so that code 0 is \<open>T_ZERO\<close>,
+  which the interface requires.
 \<close>
 
 definition swap01 :: "num \<Rightarrow> num" where
@@ -50,8 +41,8 @@ lemma swap01_inv [simp]: "t N \<Longrightarrow> swap01 (swap01 t) = t"
   apply (cases bool: "t = 1", simp+)
   done
 
-text \<open>The syntax constructors, repeated at theory level so that the recursive
-      equations below can be written the way the locale writes them.\<close>
+text \<open>The syntax constructors, restated at theory level for the equations
+      below.\<close>
 
 abbreviation tVar  :: "num \<Rightarrow> tm"            where "tVar i  \<equiv> pack_T T_VAR i"
 abbreviation tZero :: "tm"                    where "tZero    \<equiv> pack_T T_ZERO 0"
@@ -75,13 +66,8 @@ abbreviation mkFalse :: "fm"                   where "mkFalse    \<equiv> mkEq (
 section \<open>2.  The definition list and the divergent term\<close>
 
 text \<open>
-  \<open>dfns\<close> stays opaque: only its termination is assumed, so the result holds for
-  every terminating definition list, including lists all of whose definitions
-  diverge.  The one thing required of it is a divergent entry at index 0, the
-  object-language image of QGA\<^latex>\<open>'\<close>s own \<open>omega := omega\<close>: the body
-  \<open>d_0(v_0, v_1)\<close> unfolds to itself forever, so \<open>tBot = d_0(0, 0)\<close> converges at
-  no fuel.  \<open>tBot\<close> is what the closing substitution puts in place of a variable
-  that the assignment sends to bottom.
+  \<open>dfns\<close> is opaque; only its termination is assumed, plus a divergent entry at
+  index 0 (\<open>omega := omega\<close>), which gives \<open>tBot\<close>.
 \<close>
 
 axiomatization dfns :: "dfn" where
@@ -93,13 +79,7 @@ definition tBot :: "tm" where "tBot \<equiv> tApp 0 tZero tZero"
 
 section \<open>3.  Concrete definitions of every derived function\<close>
 
-text \<open>
-  One \<open>axiomatization\<close> block whose axioms are the recursive \<open>:=\<close> equations of
-  the locale, verbatim.  This is the definitional mechanism of grounded
-  arithmetic applied at scale, and it is why an evaluator that runs the
-  system\<^latex>\<open>'\<close>s own proof search can be written down at all: no termination
-  obligation is incurred when the definition is made.
-\<close>
+text \<open>The recursive equations of the locale, as \<open>:=\<close> axioms.\<close>
 
 axiomatization
   fresh_T              :: "num \<Rightarrow> tm \<Rightarrow> o" and
@@ -787,11 +767,7 @@ where
 section \<open>4.  Discharging the structural assumptions\<close>
 
 text \<open>
-  The habeas quid, retraction, decrease and monotonicity obligations are the
-  ones \<open>encode.thy\<close> discharges, unchanged: they are statements about the Cantor
-  pairing and \<open>swap01\<close> alone and know nothing about the syntax being encoded.
-  They are restated here rather than imported because this development sits
-  beside the BGA one rather than on top of it.
+  The encoding obligations, as in \<open>encode.thy\<close> (restated, not imported).
 \<close>
 
 lemma pack_F_N: "\<lbrakk>t N; L N\<rbrakk> \<Longrightarrow> pack_F t L N"
@@ -905,17 +881,14 @@ proof -
 qed
 
 lemma tBot_closed: "fresh_T 0 tBot"
-  \<comment> \<open>one \<open>defE\<close> step through \<open>fresh_T_def\<close>: the tag is \<open>T_APP\<close> and both
-      arguments are \<open>tZero\<close>, whose tag is \<open>T_ZERO\<close>, so both branches are \<open>True\<close>.\<close>
+  \<comment> \<open>one \<open>defE\<close> step through \<open>fresh_T_def\<close>\<close>
   sorry
 
 
 section \<open>5.  Interpretation\<close>
 
 text \<open>
-  Every goal generated by \<open>unfold_locales\<close> is closed by \<open>fact\<close>: the structural
-  obligations by the lemmas above, the definitional obligations by the \<open>:=\<close>
-  axioms of section 3, which are literally the equations the locale assumes.
+  \<open>unfold_locales\<close> goals are closed by the lemmas above and the \<open>:=\<close> axioms.
 \<close>
 
 interpretation qga: qga_full
@@ -948,20 +921,9 @@ interpretation qga: qga_full
 section \<open>6.  QGA is consistent\<close>
 
 text \<open>
-  Read out: for every formula code \<open>f\<close> and all proof codes \<open>p1\<close> and \<open>p2\<close>, it is
-  not the case that \<open>p1\<close> codes a QGA proof of \<open>f\<close> from no hypotheses while \<open>p2\<close>
-  codes a QGA proof of the negation of \<open>f\<close> from no hypotheses.  Every symbol in
-  that statement --- the quantifiers, the negation, the conjunction, the proof
-  checker --- belongs to QGA, and the system being talked about is QGA.
-
-  This does not contradict the second incompleteness theorem.  QGA is
-  paracomplete: its grounded truth is recursively enumerable and not closed
-  under classical negation, so the diagonal sentence comes out ungrounded
-  rather than true, and the derivability conditions fail --- \<open>implI\<close> carries a
-  habeas quid premise, so the internal necessitation and distribution steps
-  that Loeb\<^latex>\<open>'\<close>s theorem needs are not available.  RGA establishes the
-  corresponding facts for a stronger system in a classical metatheory; what is
-  new here is that the argument is carried out in the object logic.
+  For every formula code \<open>f\<close>, no two proof codes prove \<open>f\<close> and its negation
+  from no hypotheses.  This depends on the sorried lemmas of
+  \<open>QGA_on_GA.thy\<close>, so it is not established.
 \<close>
 
 theorem QGA_syntactically_consistent:
