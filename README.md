@@ -1,12 +1,74 @@
-# Grounded Arithmetic Formalized atop Isabelle/Pure
-This is the repository of [_Formalizing Grounded Arithmetic in Isabelle/Pure_](./docs/thesis/thesis.pdf), a B.Sc. thesis submitted by [Sascha Kehrli](https://skehrli.github.io) at ETH Zürich in September 2025.
+# Grounded Deduction in Isabelle
 
-It contains a prototype implementation of the [_Grounded Arithmetic_ (_GA_) logic](https://bford.info/pub/lang/gd/) in the minimal metalogical framework [Isabelle/Pure](https://isabelle.in.tum.de/), in the [`GD.thy`](./pure/GD.thy) file. In particular, this file contains the entire formalization described in the thesis [`thesis.pdf`](./docs/thesis/thesis.pdf), that is,
-- a full axiomatization of Grounded Arithmetic (GA)
-- a formalization of basic arithmetic functions and their properties
-- a formalization of Cantor tuples, its inverses, and some properties about them
-- a manual encoding of a `List` datatype along with proofs of all the properties making it an inductive type
+Isabelle implementations of [Grounded Deduction (GD)](https://bford.info/pub/lang/gd/), a logic that reasons about recursive definitions without requiring termination proofs: a term is only used as a value once it is shown to have one (*habeas quid*).
 
-The `./docs` subdirectory contains the thesis source `.typ` files and compiled pdf, and the `./pure` subdirectory contains the Isabelle `.thy` files and `.ML` files used by the main `./pure/GD.thy` file.
+The repository started as the B.Sc. thesis of [Sascha Kehrli](https://skehrli.github.io) (ETH Zürich, September 2025), *Formalizing Grounded Arithmetic in Isabelle/Pure* (`pure/GD.thy`, `docs/thesis/`). It now holds two generations of the implementation, an Isabelle/HOL model of the first one, and the accompanying documents.
 
-To go through the Isabelle source file, simply open the [`./pure/GD.thy`](./docs/pure/GD.thy) file in an editor supporting Isabelle interactively. For example, there are great installation instructions for Isabelle and its native IDE on the [Isabelle website](https://isabelle.in.tum.de/installation.html).
+| Directory | Contents |
+|-----------|----------|
+| [`gd2/`](./gd2) | Current development: GD as an Isabelle/Pure object logic, with first-class functions, definitional recursion and proof automation |
+| [`pure/`](./pure) | First-generation implementation, plus automation and consistency arithmetizations built on it; frozen |
+| [`hol/`](./hol) | Isabelle/HOL: a model of `pure/GD.thy`, a first-order presentation of its proof system, and HOL comparisons for the `gd2` examples |
+| [`docs/`](./docs) | Thesis, reports and slides |
+
+## `gd2/`: the current system
+
+A fresh kernel for GD as an object logic in Isabelle/Pure. Compared with `pure/GD.thy`:
+
+- **One universe.** Terms, numbers and formulas share one type; truth values are the numerals 1 and 0, as in PGA/RGA.
+- **First-class functions.** λ-abstraction and application are object-level, with call-by-name β, and binding by higher-order abstract syntax.
+- **Stronger equational rules.** β, decided conditionals, evaluated equalities and definition unfolding are meta-level equalities, so they rewrite in any context.
+- **Recursion without axioms.** `gd_def` reduces every (mutually) recursive definition to an ordinary Pure definition through a self-application fixed-point combinator and proves the recursive equation. No termination proof is needed to define or use a function.
+- **Modular trust.** ATI is an opt-in import. An experimental partial-correctness principle (`gd_approx`) is the only command that adds axioms.
+
+The intended model and the proof obligations a soundness proof must discharge are stated at the top of `GD_Core.thy`.
+
+| Theory | Contents |
+|--------|----------|
+| `GD_Core` | The trusted kernel: axioms, the fixed-point combinator, `gd_def` / `gd_fuel` / `gd_approx` |
+| `GD_ATI` | ATI, as an optional axiom |
+| `GD_Base` | Logic library, simplifier and `auto` setup, `induct` / `cases` / `subst` methods |
+| `GD_Arith` | Arithmetic, order, division and remainder, strong induction |
+| `GD_Def_Test`, `GD_Auto_Test` | Tests for definitions and automation |
+| `GD_Edge` | Examples beyond HOL and Lean: recursion by self-application, open recursion, nested recursion (HOL attempts in `hol/Edge_HOL.thy`) |
+| `GD_Approx` | Partial correctness with `gd_approx`, and why it is needed for silently diverging programs |
+| `GD_Data`, `GD_List`, `GD_Tree` | Lazy primitive pairs (opt-in axioms), lists and trees on them |
+| `GD_NPair`, `GD_NList` | Numeric pairing 2^a(2b+1) and lists on it, purely definitional |
+| `GD_Pairs_Compare` | The two pair backends compared on the same examples |
+
+ML tools: `gd_def.ML` (recursive definitions), `gd_simp.ML`, `gd_auto.ML`, `gd_induct.ML`, `gd_unfold.ML`, `gd_numerals.ML`. Apart from `gd_approx`, none of them can add axioms; everything they produce is checked by Isabelle's kernel.
+
+## `pure/`: the first implementation
+
+- `GD.thy`: Axiomatization of GA in Isabelle/Pure, arithmetic, Cantor pairing and its inverses, and a hand-built list datatype.
+- `GD_Def.thy`: examples for its `gd_def` command.
+- `GD_Classical.thy`, `GD_Hammer.thy`, `GD_Hammer_Test.thy`: the classical (decided and grounded) fragment, and a relevance oracle that translates goals to first-order logic and runs the E prover.
+- `BGA_on_GA.thy`, `encode.thy`, `provability.thy`: BGA arithmetized inside GA, with its proof checker shown sound, toward a self-consistency proof.
+- `QGA_on_GA.thy`, `qga_encode.thy`, `QGA_Liar.thy`: the same for QGA itself. These theories still contain `sorry` and are not in the default session (see `ROOT`).
+
+## `hol/`
+
+- `QGA_Model.thy`: interprets the object logic of `pure/GD.thy` in HOL and proves its axioms there, giving a consistency proof for `GD.thy`.
+- `QGA_Syntax.thy`, `QGA_Proof.thy`: a first-order, de Bruijn presentation of the same proof system, rule for rule.
+- `Edge_HOL.thy`: the `gd2/GD_Edge.thy` programs attempted with HOL's `function`, `partial_function` and `wfrec`, with the errors reported where HOL rejects them.
+
+## `docs/`
+
+- `thesis/`, `thesis_proposal/`, `thesis_presentation/`: the B.Sc. thesis (Typst sources and PDF), its proposal and defense slides.
+- `report_omar/`: *A consistency proof for BGA carried out inside grounded arithmetic*, the report on the `pure/` arithmetization. Isabelle snippets are extracted from `pure/` (see its README).
+- `Presentation_omar/`: *Reasoning Around Recursion*, talk slides on grounded arithmetic and its motivation.
+
+## Building
+
+Requires Isabelle2025-2.
+
+```
+isabelle build -d gd2 GD2            # gd2
+isabelle build -d . GD QGA_HOL       # pure/ and hol/ (sessions in the top-level ROOT)
+```
+
+To browse interactively, open any theory in Isabelle/jEdit, e.g. `isabelle jedit -d gd2 gd2/GD_Edge.thy`. `hol/Edge_HOL.thy` is not part of a session; open it directly. `GD_Hammer_Test` needs the E prover, which ships with Isabelle.
+
+## Authors
+
+Sascha Kehrli (`pure/GD.thy`, thesis) and Omar Muhammad (`gd2/`, the arithmetizations in `pure/`, `hol/`), in the [DEDIS lab](https://dedis.epfl.ch) with Bryan Ford.
