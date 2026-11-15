@@ -1,0 +1,51 @@
+\section{An unfinished attempt at QGA self-consistency}
+\label{sec:self}
+\label{sec:semantics}
+
+This appendix records an attempt to prove \QGA's consistency within
+\QGA{} itself.  The attempt was not completed and has been abandoned.
+I retain this account in case its ideas or difficulties are useful to
+future collaborators.  The experimental files
+\texttt{pure/QGA\_on\_GA.thy} and \texttt{pure/qga\_encode.thy} remain in
+the repository, but they contain unproved lemmas and do not establish
+\QGA{} self-consistency.
+
+\subsection{The proposed semantics}
+\label{sec:semantics:formulas}
+\label{sec:semantics:quant}
+
+The aim was to repeat the \BGA{} construction with encoded \QGA{} formulas
+and proofs.  A formula could evaluate to true, to false, or to neither;
+the last case would represent an ungrounded formula.  Equality would compare
+terminating terms, negation would exchange truth and falsity, and
+disjunction would be true when either disjunct was true and false when both
+were false.
+
+Quantifiers were the main difficulty.  Reading a universal as true when
+every numeral instance is true leaves infinitely many instances to check,
+even with a fixed evaluation budget.  The alternative explored was to
+search for a proof of the body for an arbitrary natural number, and for
+a refutation of an instance to establish falsity.  This was motivated by
+reflective grounded arithmetic~\cite{ford-rga}.  Bounding proof search
+would permit finite checks, but relating their results to truth would
+require further proofs: a certificate cannot be treated as sound merely
+because the checker accepts it.
+
+\subsection{Ideas retained from the attempt}
+
+The \BGA{} proof suggested keeping hypothesis satisfaction decidable at a
+fixed budget, while allowing a less restrictive predicate for conclusions.
+The attempt explored an additional ``witnessed'' semantics, in which a
+quantifier certificate was accompanied by the semantic facts it was meant
+to establish.  Separate searches for truth and falsity were also considered,
+to avoid making one search take priority over the other.
+
+Another proposal allowed a quantifier certificate to retain closed
+hypotheses, provided their satisfaction was checked within a recorded
+budget.  The intention was to reuse a derivation already present in the
+proof being checked, rather than first turn every satisfied hypothesis
+into a proof from no hypotheses.
+
+These were proposed ways to organize the argument, not established
+solutions.  In particular, the necessary substitution and soundness
+arguments were not completed.

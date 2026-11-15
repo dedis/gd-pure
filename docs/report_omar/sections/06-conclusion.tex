@@ -1,0 +1,20 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+This development carries out a consistency argument for the encoded \BGA{}
+proof system in \QGA{}, implemented as an extension of Isabelle/Pure.
+The theorem \isa{BGA\_syntactically\_consistent} states that no two proof
+codes are accepted, from empty hypotheses, for an equation and its
+corresponding disequality.  The argument proves the checker sound and uses
+determinism of evaluation to rule out such a pair.
+
+Two features make the proof manageable.  The abstract encoding interface
+separates the soundness argument from the arithmetic of a particular
+G\"odel numbering; the Cantor-pairing construction then supplies that
+interface.  Evaluation at a fixed fuel budget makes the satisfaction
+premises used in the proof-list induction decidable, allowing the argument
+to meet \QGA's habeas quid requirements.
+
+An attempt to
+extend the construction to \QGA{} itself is recorded in
+Appendix~\ref{sec:self} for future collaborators.
