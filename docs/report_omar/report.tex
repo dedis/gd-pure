@@ -25,9 +25,10 @@ inside a version of grounded arithmetic itself.  \QGA, an axiomatization of grou
 arithmetic with quantifiers, is embedded into
 Isabelle/Pure in \texttt{GD.thy}.  Basic grounded arithmetic \BGA{} is
 arithmetized on top of it in \texttt{BGA\_on\_GA.thy}: terms, formulas,
-judgments, proofs, the operational semantics and the proof checker are encoded
-as \QGA{} natural numbers, and the checker is proved sound with respect to the
-encoded semantics under a small set of abstract assumptions about the encoding.
+judgments and proofs are encoded as \QGA{} natural numbers, while the
+operational semantics and the proof checker are \QGA{} predicates over those
+codes, and the checker is proved sound with respect to the encoded semantics
+under a small set of abstract assumptions about the encoding.
 A concrete Cantor-pairing encoding in \texttt{encode.thy} discharges those
 assumptions and yields, as a theorem of \QGA: for any two numbers
 coding \BGA{} terms $a$ and $b$, no numbers $p_1$ and $p_2$ code \BGA{} proofs, from
