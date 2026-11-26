@@ -2,7 +2,7 @@
 
 Isabelle implementations of [Grounded Deduction (GD)](https://bford.info/pub/lang/gd/), a logic that reasons about recursive definitions without requiring termination proofs: a term is only used as a value once it is shown to have one (*habeas quid*).
 
-The repository started as the B.Sc. thesis of [Sascha Kehrli](https://skehrli.github.io) (ETH Zürich, September 2025), *Formalizing Grounded Arithmetic in Isabelle/Pure* (`pure/GD.thy`, `docs/thesis/`). It now holds two generations of the implementation, an Isabelle/HOL model of the first one, and the accompanying documents.
+The repository started as the B.Sc. thesis of Sascha Kehrli (ETH Zürich, September 2025), (pure/GD.thy, docs/thesis/). It now holds two generations of the implementation (GD2 and GD), an Isabelle/HOL model of the first one, and the accompanying documents.
 
 | Directory | Contents |
 |-----------|----------|
